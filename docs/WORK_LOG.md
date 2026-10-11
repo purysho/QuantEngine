@@ -62,3 +62,31 @@ Environment for this session: Linux container, Python 3.13.16 with NumPy 2.3.5 a
 **Did not work / caveats:** SVI slices are fitted independently, so the surface is not guaranteed arbitrage-free as a whole (no SSVI or joint fit). There are no discrete dividends and no live chain. American implied volatility is not inverted.
 
 **Next:** Chronological ridge alpha experiment (Task 3).
+
+---
+
+## Task 3 — Chronological ridge alpha experiment
+
+**Did** (`workers/quant_validation.py`)
+- `chronological_ridge` takes explicit information clocks. `feature_available[i] ≤ i` (otherwise rejected as a leaked feature before any fitting) and `label_end[i] > i` (otherwise rejected as an incomplete label).
+- Purged training: every fit uses only rows whose labels completed **strictly before** the evaluation start, as in López de Prado. Overlapping multi-step labels are handled.
+- Features are standardised on each training set only. The ridge intercept (target mean) is not penalised.
+- The penalty is chosen on inner chronological blocks before the final holdout. The holdout is scored once with a frozen model.
+- Every candidate and its per-block predictions are recorded in the ledger.
+- Scores: MSE; zero forecast (cash) and training-mean baselines; Campbell–Thompson out-of-sample R² against the mean; hit rate; sign-position mean.
+
+**Tests (7):** known linear coefficients recovered within 0.12; a leaked feature is rejected with its row named; bad labels, ragged arrays, NaNs and float clocks are rejected; purging under 5-step overlap (training rows = s − 5); holdout perturbation by 1000× leaves selection, ledger and fitted model identical; future perturbation leaves earlier block predictions unchanged; all candidates are logged.
+
+**Evidence:** `experiments/first_alpha.py` writes `experiments/results/first_alpha.json` (200 seeds × 3 scenarios, 1,000 rows, about 3.4 s).
+| Scenario | Holdout OOS R² vs mean (median) | Beats mean | Notes |
+| --- | --- | --- | --- |
+| Null | −0.0004 (p95 0.0066) | 44.5% | Selects maximum shrinkage (α = 1000) in 197/200 seeds |
+| Weak signal (true R² ≈ 2.2%) | 0.0167 | 85% | Median exceeds the null p95 |
+| Overlapping 5-step labels | 0.0097 | 78.5% | Purged |
+| Leaked label as feature | **Rejected** | — | With a falsified clock, the OOS R² would have been 0.99999998 |
+
+**Worked:** All four acceptance gates passed.
+
+**Did not work / caveats:** Synthetic Gaussian data only, so this is mechanism validation and not market alpha. There are no nonlinear models yet (trees or gradient boosting would be the next candidates, with the same clock protocol). There is no embargo after the test block, which is unnecessary here because we only ever train on the past.
+
+**Next:** Pairs trading with cointegration (from the deferred list), then desktop integration.
