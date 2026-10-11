@@ -249,3 +249,12 @@ Scope note from the user: focus only on the **Quant** half (not the AI desktop o
 **Not done / caveats:** No market-quote import for a *market* implied surface yet; `volatility_surface()` already supports quotes, but there is no CSV/UI path. The surface visual has not been checked on the Windows laptop's integrated GPU; the canvas draw is about 1,000 quads per frame.
 
 **Voice AI request (logged for the AI track, not built here):** `zachlatta/freeflow` (`20674709`, MIT) is a **macOS-only** Swift dictation app that sends audio to Groq's cloud API by default, so it does not run on the Windows 11 laptop. A Windows-local equivalent would combine CPU speech-to-text (e.g. whisper.cpp base/small), a small local LLM, and a permission-controlled action service with logs and undo, as discussed earlier. QuantEngine could expose read-only "ask the engine" endpoints (latest report, run options) for that assistant to call.
+
+---
+
+## CI observations (GitHub Actions, recorded as observed)
+
+- Run 1 (`7ee2da3`): Linux ✅ all steps, including the Xvfb native self-test. **Windows ❌**: 66/67 numerical tests. `test_valid_import_copies_content_and_preserves_its_source` compared the runner's 8.3 short temp path (`RUNNER~1`) with the store's resolved long path (`runneradmin`). The store's behaviour (a canonical path) is correct; the 0.1 test was fixed to compare against `source.resolve()`.
+- Run 2 (`7edf57c`): the same Windows failure (pushed before the fix).
+- Run 3 (`9e73159`): ✅ **all three jobs.** The Windows package job prepared the SHA-256-verified embedded runtime, passed all numerical tests **on that embedded Python 3.13.16**, built `QuantEngine.exe`, and the packaged executable printed `QUANT_SELF_TEST_OK` (option 4.759422392871532, a completed report, runtime 3.13.16 / 2.3.5 / 1.17.0). The artifact `QuantEngine-win-x64` (228.8 MB zip) was uploaded.
+- This is a Windows Server runner, **not** the user's Windows 11 Home laptop; the device check in `EVALUATION.md` is still pending.
