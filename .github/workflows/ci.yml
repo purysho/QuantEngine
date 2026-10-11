@@ -85,7 +85,7 @@ jobs:
             -RedirectStandardOutput self-test.log -RedirectStandardError self-test.err
           Get-Content self-test.log, self-test.err
           if ($process.ExitCode -ne 0) { throw "Self-test exited with $($process.ExitCode)" }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: QuantEngine-win-x64
           path: release/
