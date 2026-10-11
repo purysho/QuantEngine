@@ -117,3 +117,33 @@ Environment for this session: Linux container, Python 3.13.16 with NumPy 2.3.5 a
 - Close-price fills only. The synthetic results show the mechanism, not real-market profitability.
 
 **Next:** LOB market-making simulator, then desktop integration and CI.
+
+---
+
+## Task 5 — Limit-order-book market-making simulator (previously deferred)
+
+**Did** (`workers/quant_lob.py`)
+- Avellaneda–Stoikov (2008): reservation price `s − qγσ²(T−t)` and optimal spread `γσ²(T−t) + (2/γ)ln(1+γ/k)`. Fills are Poisson with intensity `A·e^{−kδ}`. Inventory-aware and symmetric strategies are compared on identical random numbers, with a no-quote baseline of 0.
+- Event order: quotes are set, then the mid moves, then orders arrive against the **new** mid. Fills therefore carry the latest move, which is the conservative choice.
+- `realistic` mode adds FIFO queue position (exponential queue ahead at each new price; an unchanged price keeps priority), negative-binomial market-order sizes with partial fills, quote latency in steps (quotes use a stale mid), tick rounding, maker/taker fees, adverse post-fill mid moves, a hard inventory limit, and a costed terminal exit (cross half the spread plus taker fee).
+
+**Tests (6):** closed-form quotes; inventory strategy has lower inventory and profit std than symmetric for γ ∈ {0.01, 0.1, 0.5}; reproduction of the paper's γ = 0.1 row (2% tolerance including the paper's own sampling error); reproducibility and validation; the inventory limit is never breached; frictions lower profit and fills.
+
+**Evidence:** `experiments/market_making.py` writes `experiments/results/market_making.json` (20,000 paths per row, about 6 s).
+| γ / strategy | Paper profit | Ours | Gap | Paper q std | Ours |
+| --- | --- | --- | --- | --- | --- |
+| 0.1 inventory | 62.94 | 62.15 | −1.3% | 2.80 | 2.96 |
+| 0.1 symmetric | 67.21 | 67.08 | −0.2% | 8.66 | 8.98 |
+| 0.01 inventory | 66.78 | 66.88 | +0.2% | 4.70 | 5.29 |
+| 0.01 symmetric | 67.36 | 67.21 | −0.2% | 8.65 | 8.90 |
+| **0.5 inventory** | **33.92** | **20.78** | **−39%** | 1.88 | 1.97 |
+| 0.5 symmetric | 66.20 | 66.04 | −0.2% | 9.06 | 9.30 |
+
+Friction ablation (γ = 0.1, inventory strategy, mean profit / fills): clean 54.1 / 87; adding queue-ahead (mean 3) gives 9.3 / 27; random sizes with quote size 2 gives 28.7; latency 26.4; tick 26.7; adverse selection 25.4; fees 25.1; inventory limit 25.1. The symmetric strategy's profit std rises from 13.1 to 17.1 under adverse selection, while the inventory strategy stays at about 6.7.
+
+**Did not work / caveats**
+- **The paper's γ = 0.5 inventory row is not reproduced.** I tried four variants (spread with/without the time term × mid moving before/after fills). None gives 33.92: they give about 21 or about 47. The paper's discretisation is ambiguous. I recorded this as a failed acceptance gate instead of tuning parameters to fit it.
+- The printed table spreads equal `(2/γ)ln(1+γ/k)`, so the reproduction omits the time term. The default (`spread_time_term=True`) follows the paper's formula.
+- This is a reduced-form book with no historical order-book data, no hidden liquidity and no venue rules.
+
+**Next:** Desktop integration (Options page, worker command), CI, and a research index.
