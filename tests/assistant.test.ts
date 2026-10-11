@@ -38,6 +38,8 @@ test('intents and permission tiers', async () => {
     ['set paths to fifty thousand', 'configure'], ['enable low cpu mode', 'configure'], ['refresh ECB rates', 'refresh-ecb'],
     ['undo', 'undo'], ['buy 100 shares of the stock', 'refuse'], ['send an order to my broker', 'refuse'],
     ['what are transaction costs in the backtest', 'answer'], ['help', 'help'], ['tell me a joke', 'unknown'],
+    ['explain black scholes', 'explain'], ['explain my VaR', 'explain'], ['show me the maths for the portfolio', 'explain'],
+    ['explain volatility clustering to me', 'unknown'],
   ];
   for (const [text, kind] of cases) assert.equal(parseCommand(text).kind, kind, text);
   assert.equal(TIERS.configure, 'change');

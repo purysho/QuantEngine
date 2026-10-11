@@ -439,3 +439,13 @@ All four gates pass. The warm start (US-market memories applied to the "Other" i
 | barbagrigia/FinanceSharp | `c570ecd` (2020) | Apache-2.0 | C# indicators; reference only. |
 | facebookresearch/matrix | `0801afd` | MIT | Large-scale LLM data-generation infrastructure (GPU clusters); not applicable to a 16 GB laptop. |
 | rossant/awesome-math | `21066c9` | CC0 | Reading index. |
+
+---
+
+## Task 18 — "Show the maths": step-by-step workings (idea from SymPy Gamma)
+
+- `workers/quant_explain.py` produces worked steps (formula, then your numbers substituted, then the result, with a note) for Black–Scholes (inputs, σ√T, d₁, d₂, N(·), price, delta, put–call parity), the CRR tree (Δt, u, d, p, backward induction), the Monte Carlo estimator and standard error, the VIX ÷ 16 rule, Gaussian horizon VaR, empirical VaR/ES with exact tail mass, Student-t VaR/ES, and the minimum-variance portfolio. Sources are cited.
+- Options and research reports now carry an `explanation` block. The UI shows "The maths, step by step" (Options) and "The maths behind this report" (Monitor), with tabs per method.
+- Assistant: "explain Black–Scholes", "explain my VaR", "explain expected shortfall" and "show the maths for the portfolio" answer from these workings. Other "explain …" questions still go to the optional local model.
+- **Verification so an explanation can never disagree with a result:** tests assert the explained price, VaR, ES, Monte Carlo price and portfolio volatility equal the engine's numbers. **All eight Black–Scholes Greeks are verified by SymPy symbolic differentiation to 9 decimal places** (SymPy is development-only via `requirements-dev.txt` and installed in CI; it is not in the Windows runtime).
+- Not adopted: the Wolfram|Alpha client (an API key, data leaves the machine, last updated 2013).

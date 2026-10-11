@@ -13,6 +13,11 @@ import numpy as np
 from scipy import stats
 from scipy.optimize import brentq, least_squares
 
+try:
+    from . import quant_explain as explain
+except ImportError:
+    import quant_explain as explain
+
 TRADING_DAYS = 252
 MAX_STEPS = 5_000
 MAX_PATHS = 2_000_000
@@ -387,6 +392,11 @@ def options_report(parameters: dict, progress: Callable[[str, float], None] | No
         "implied": implied,
         "surface": surface,
         "implied_moves": {"daily": move, "to_expiry": implied_move(p["volatility"], min(horizon_days, 3650)) if time > 0 else None},
+        "explanation": {"black_scholes": explain.black_scholes_steps(spot, strike, time, rate, p["volatility"], dividend, kind),
+                        "crr": explain.crr_steps(spot, strike, time, rate, p["volatility"], dividend, p["steps"]) if time > 0 and p["volatility"] > 0 else [],
+                        "monte_carlo": explain.monte_carlo_steps(monte_carlo),
+                        "implied_move": explain.implied_move_steps(p["volatility"]) if p["volatility"] > 0 else [],
+                        "sources": [explain.SOURCES["black_scholes"], explain.SOURCES["crr"]]},
         "units": {"time": "years", "rate": "continuously compounded annual decimal",
                   "volatility": "annual decimal", "vega": "price per 1.00 volatility", "vega_per_point": "price per 1 volatility point",
                   "theta_per_day": "price per calendar day (theta per year / 365)", "rho_per_point": "price per 1% rate"},

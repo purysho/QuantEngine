@@ -12,6 +12,11 @@ import numpy as np
 from scipy import stats
 from scipy.optimize import minimize
 
+try:
+    from . import quant_explain as explain
+except ImportError:
+    import quant_explain as explain
+
 TRADING_DAYS = 252
 MIN_OBSERVATIONS = 40
 MAX_ASSETS = 64
@@ -512,6 +517,13 @@ def analyse(dates, assets, prices, *, paths: int = 50_000, horizon: int = 20,
         "correlation": correlation.tolist(), "shrinkage": shrinkage,
         "monte_carlo": risk, "bootstrap": bootstrap, "student_t": student, "sensitivity": sensitivity,
         "volatility_surface": realised_vol_surface(dates, weighted_returns),
+        "explanation": {
+            "gaussian_var": explain.gaussian_horizon_steps(float(weighted_returns.mean()), float(weighted_returns.std(ddof=1)), horizon),
+            "empirical_tail_daily": explain.tail_steps(weighted_returns, .05),
+            "student_t": explain.student_t_steps(student["degrees_of_freedom"], student["location"], student["scale"], .01)
+                         if student["degrees_of_freedom"] and student["scale"] > 0 else [],
+            "minimum_variance": explain.minimum_variance_steps(shrunk * TRADING_DAYS, weights),
+            "sources": [explain.SOURCES["var"], explain.SOURCES["student_t"], explain.SOURCES["min_variance"]]},
         "backtest": backtest, "curve": curve,
         "stress": [{"name": "Worst observed portfolio day", "date": dates[worst + 1],
                     "return": float(weighted_returns[worst]), "kind": "historical"},

@@ -105,9 +105,9 @@ function render() {
   const runtime = current.runtime || {};
   $('runtime-details').innerHTML = ['Python', 'NumPy', 'SciPy'].map(name => '<div class="runtime-row"><span>' + name + '</span><span>' + esc(runtime[name.toLowerCase()] || 'Unavailable') + '</span></div>').join('') +
     '<div class="runtime-row"><span>Maximum numerical threads</span><span>' + (current.config.lowCpu ? '1' : '2') + '</span></div><p class="field-help">The numerical worker owns its research database. It does not send orders or connect to a brokerage.</p>';
-  if (previousReport !== report) { previousReport = report; renderReport(); drawChart(); updateSurfaces(); }
+  if (previousReport !== report) { previousReport = report; renderReport(); drawChart(); updateSurfaces(); renderMaths('report'); }
   if (previousRuns !== current.runs) { previousRuns = current.runs; renderRuns(); }
-  if (previousOptions !== current.options) { previousOptions = current.options; renderOptions(); updateSurfaces(); }
+  if (previousOptions !== current.options) { previousOptions = current.options; renderOptions(); updateSurfaces(); renderMaths('options'); }
   if (previousLearning !== current.learning || previousLearningError !== current.learningError) {
     previousLearning = current.learning; previousLearningError = current.learningError; renderEvolution();
   }
@@ -1019,3 +1019,25 @@ document.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); askOpen($('ask-panel').classList.contains('hidden')); }
   else if (event.key === 'Escape' && !$('ask-panel').classList.contains('hidden')) askOpen(false);
 });
+
+// ---- "Show the maths": step-by-step workings rendered from the report's own explanation ----
+const mathsSelection = { options: 'black_scholes', report: 'gaussian_var' };
+function renderMaths(scope) {
+  const source = scope === 'options' ? current.options : current.report;
+  const list = $(scope === 'options' ? 'maths-options' : 'maths-report');
+  const steps = source?.explanation?.[mathsSelection[scope]];
+  if (!steps || !steps.length) {
+    list.innerHTML = '<li class="details-empty">' + (source ? 'Not available for this result (e.g. an older report or a degenerate input).' : scope === 'options' ? 'Calculate an option to see its workings.' : 'Run an analysis to see its workings.') + '</li>';
+    return;
+  }
+  list.innerHTML = steps.map(step => '<li class="step"><span class="step-title">' + esc(step.title) + '</span><span class="step-formula">' + esc(step.formula) + '</span>' +
+    (step.substitution ? '<span class="step-sub">= ' + esc(step.substitution) + '</span>' : '') + (step.result !== '' ? '<span class="step-result">= ' + esc(step.result) + '</span>' : '') +
+    (step.note ? '<span class="step-note">' + esc(step.note) + '</span>' : '') + '</li>').join('') +
+    (source.explanation.sources ? '<li class="maths-sources">Sources: ' + source.explanation.sources.map(esc).join(' · ') + '</li>' : '');
+}
+document.querySelectorAll('[data-maths]').forEach(button => button.addEventListener('click', () => {
+  const [scope, key] = button.dataset.maths.split(':');
+  mathsSelection[scope] = key;
+  document.querySelectorAll('[data-maths^="' + scope + ':"]').forEach(b => { b.classList.toggle('active', b === button); b.setAttribute('aria-selected', String(b === button)); });
+  renderMaths(scope);
+}));

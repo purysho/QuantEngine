@@ -8,6 +8,7 @@ export type Intent =
   | { kind: 'help' }
   | { kind: 'answer'; topic: 'var' | 'volatility' | 'backtest' | 'weights' | 'status' | 'option' | 'surface' | 'learning' }
   | { kind: 'learn' }
+  | { kind: 'explain'; scope: 'options' | 'report'; key: string; label: string }
   | { kind: 'navigate'; page: string; chart?: string }
   | { kind: 'run-once' } | { kind: 'start' } | { kind: 'pause' }
   | { kind: 'price-option'; parameters: JsonRecord; assumed: string[] }
@@ -19,7 +20,7 @@ export type Intent =
 
 export const TIERS: Record<Intent['kind'], Tier> = {
   help: 'read', answer: 'read', navigate: 'read', unknown: 'read', 'run-once': 'compute', start: 'compute',
-  pause: 'compute', 'price-option': 'compute', learn: 'compute', configure: 'change', 'refresh-ecb': 'change', undo: 'change', refuse: 'refused',
+  pause: 'compute', 'price-option': 'compute', learn: 'compute', explain: 'read', configure: 'change', 'refresh-ecb': 'change', undo: 'change', refuse: 'refused',
 };
 
 const SMALL: Record<string, number> = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
@@ -99,8 +100,20 @@ export function parseCommand(input: string): Intent {
     return { kind: 'refuse', reason: 'QuantEngine is research-only: it has no brokerage connection and cannot place or send orders.' };
   }
   if (/^(help|what can you do|commands|\?)/.test(text)) return { kind: 'help' };
-  // Explanations go to the optional local model (or a pointer to help), not to a canned number.
-  if (/^(explain|why|teach me|tell me about|how does|how do|what does .+ mean|describe)\b/.test(text)) return { kind: 'unknown' };
+  // Explanations of QuantEngine's own maths are answered from the report's step-by-step workings;
+  // anything else goes to the optional local model (or a pointer to help), never to a canned number.
+  if (/^(explain|why|teach me|tell me about|how does|how do|how is|what does .+ mean|describe|show (me )?the math|show (me )?the working)/.test(text)) {
+    const topics: Array<[RegExp, 'options' | 'report', string, string]> = [
+      [/black.?scholes|option price|d1|d2|call price|put price/, 'options', 'black_scholes', 'Black–Scholes'],
+      [/binomial|tree|crr/, 'options', 'crr', 'the binomial tree'], [/monte carlo/, 'options', 'monte_carlo', 'Monte Carlo pricing'],
+      [/vix|rule of 16|implied move/, 'options', 'implied_move', 'the VIX ÷ 16 rule'],
+      [/student|fat tail|t distribution/, 'report', 'student_t', 'the Student-t risk model'],
+      [/shortfall|empirical|tail/, 'report', 'empirical_tail_daily', 'empirical VaR and expected shortfall'],
+      [/var|value at risk|risk/, 'report', 'gaussian_var', 'Gaussian VaR'],
+      [/portfolio|weights?|minimum variance|allocation/, 'report', 'minimum_variance', 'the minimum-variance portfolio']];
+    for (const [pattern, scope, key, label] of topics) if (pattern.test(text)) return { kind: 'explain', scope, key, label };
+    return { kind: 'unknown' };
+  }
   if (/^undo\b|undo (that|the last)/.test(text)) return { kind: 'undo' };
   if (/\b(price|value|quote)\b.*\b(call|put|option)s?\b|\b(call|put) option\b/.test(text)) {
     const assumed: string[] = [];
@@ -220,6 +233,7 @@ export const HELP = [
   'Navigate: "show the vol surface", "open options", "go to runs".',
   'Compute: "run once", "start the engine", "pause", "learn now", "price a put strike 95 spot 100 6 months vol 25%".',
   'Learning: "what have you learned", "show the evolution graph".',
+  'Maths: "explain Black-Scholes", "explain my VaR", "explain expected shortfall", "show the maths for the portfolio".',
   'Change (asks to confirm, undoable): "set paths to 100000", "set horizon to 10", "enable low cpu", "refresh ECB rates".',
   'Voice: dictate into this box with Handy (offline, free) or Windows voice typing.',
 ].join('\n');
@@ -346,6 +360,18 @@ export class Assistant {
     switch (intent.kind) {
       case 'help': return { reply: HELP, tier, intent: intent.kind };
       case 'refuse': return { reply: intent.reason, tier, intent: intent.kind };
+      case 'explain': {
+        const source = (intent.scope === 'options' ? snapshot.options : snapshot.report) as Record<string, any> | null | undefined;
+        const steps = source?.explanation?.[intent.key] as Array<Record<string, string>> | undefined;
+        if (!steps?.length) {
+          return { reply: `No ${intent.scope === 'options' ? 'option calculation' : 'report'} to explain yet. ` +
+            (intent.scope === 'options' ? 'Price an option first, e.g. "price a call strike 100 vol 20%".' : 'Say "run once" first.'), tier, intent: intent.kind };
+        }
+        const text = steps.map((s, i) => `${i + 1}. ${s.title}: ${s.formula}` + (s.substitution ? ` = ${s.substitution}` : '') + (s.result !== '' ? ` = ${s.result}` : '') +
+          (s.note ? ` (${s.note})` : '')).join('\n');
+        return { reply: `How ${intent.label} was calculated:\n${text}`, tier, intent: intent.kind, source: 'engine',
+          navigate: { page: intent.scope === 'options' ? 'options' : 'monitor' } };
+      }
       case 'answer': return { reply: answer(intent.topic, snapshot), tier, intent: intent.kind, source: 'engine' };
       case 'navigate': return { reply: `Opening ${intent.chart === 'surface' ? 'the 3D volatility surface' : intent.page}.`, tier, intent: intent.kind,
         navigate: { page: intent.page, chart: intent.chart } };
