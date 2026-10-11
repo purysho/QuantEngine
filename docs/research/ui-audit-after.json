@@ -1,0 +1,58 @@
+{
+ "monitor": {
+  "smallText": 0,
+  "lowContrast": 0,
+  "smallTargets": 0,
+  "examples": {
+   "small": [],
+   "low": [],
+   "tiny": []
+  }
+ },
+ "datasets": {
+  "smallText": 0,
+  "lowContrast": 0,
+  "smallTargets": 0,
+  "examples": {
+   "small": [],
+   "low": [],
+   "tiny": []
+  }
+ },
+ "options": {
+  "smallText": 0,
+  "lowContrast": 0,
+  "smallTargets": 0,
+  "examples": {
+   "small": [],
+   "low": [],
+   "tiny": []
+  }
+ },
+ "runs": {
+  "smallText": 0,
+  "lowContrast": 0,
+  "smallTargets": 0,
+  "examples": {
+   "small": [],
+   "low": [],
+   "tiny": []
+  }
+ },
+ "preferences": {
+  "smallText": 0,
+  "lowContrast": 0,
+  "smallTargets": 5,
+  "examples": {
+   "small": [],
+   "low": [],
+   "tiny": [
+    "config-field 20x20",
+    "config-field 20x20",
+    "config-field 20x20",
+    "config-field 20x20",
+    "config-field 20x20"
+   ]
+  }
+ }
+}

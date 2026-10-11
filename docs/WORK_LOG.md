@@ -333,3 +333,16 @@ On iid data, GARCH-t is as good as the static models (1.01 / 1.04), so it costs 
 3. "explain volatility clustering" was captured by a canned volatility answer, so explanation requests now go to the local model (or to help).
 
 **Not done:** no built-in microphone capture or speech model inside QuantEngine. This is deliberate: Handy already does offline speech-to-text well on Windows, and it types into the Ask box. A built-in whisper.cpp or sherpa-onnx path would add a roughly 100–600 MB model and a native runtime, and is a candidate for the AI-workspace track.
+
+---
+
+## Task 13 — UI/UX pass from the supplied design resources
+
+See `docs/research/UI_UX_AUDIT.md`. In short: I inspected six repositories (licences recorded) and a measured browser audit drove the changes. **Text under 12 px: 99 → 0; contrast below 4.5:1: 7 → 0; targets under 24 px: 6 → 5** (checkboxes inside full-row labels, which pass via the WCAG spacing exception).
+
+The 3D surfaces gained pause/rotate/reset controls, a keyboard alternative to dragging, and a pause on hover or focus. The Options form gained a busy state and inline errors.
+
+**What went wrong and what I learned**
+- The first audit reported 1.11:1 contrast on the green buttons. That was the script's mistake: dark text on a gradient it couldn't read. Gradient-backed buttons are now excluded, so the audit measures real problems.
+- Raising the type size exposed a unit-label/spinner collision on number inputs, which only a screenshot revealed. The fix was more right padding. Lesson: always re-screenshot after global CSS changes.
+- *The UI/UX Playbook* is paid. Pirated copies were not used.

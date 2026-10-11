@@ -1,0 +1,137 @@
+{
+ "monitor": {
+  "smallText": 30,
+  "lowContrast": 2,
+  "smallTargets": 1,
+  "examples": {
+   "small": [
+    "span 9px",
+    "span.eyebrow 8px",
+    "p 11px",
+    "span.version 10px",
+    "div#page-kicker 9px",
+    "kbd 9px",
+    "span.local-badge 9px",
+    "div.metric-detail 9px",
+    "div#metric-var-detail 9px",
+    "div#metric-run-detail 9px",
+    "p#chart-subtitle 10px",
+    "span#report-badge 8px"
+   ],
+   "low": [
+    "span.version 4.32",
+    "span 3.20"
+   ],
+   "tiny": [
+    "toggle-methodology 71x14"
+   ]
+  }
+ },
+ "datasets": {
+  "smallText": 18,
+  "lowContrast": 2,
+  "smallTargets": 0,
+  "examples": {
+   "small": [
+    "span 9px",
+    "span.eyebrow 8px",
+    "p 11px",
+    "span.version 10px",
+    "div#page-kicker 9px",
+    "kbd 9px",
+    "span.local-badge 9px",
+    "span#dataset-count 10px",
+    "span.tag 8px",
+    "div.dataset-meta 10px",
+    "div.dataset-source 10px",
+    "div.dataset-hash 9px"
+   ],
+   "low": [
+    "span.version 4.32",
+    "div.dataset-hash 4.32"
+   ],
+   "tiny": []
+  }
+ },
+ "options": {
+  "smallText": 22,
+  "lowContrast": 1,
+  "smallTargets": 0,
+  "examples": {
+   "small": [
+    "span 9px",
+    "span.eyebrow 8px",
+    "p 11px",
+    "span.version 10px",
+    "div#page-kicker 9px",
+    "kbd 9px",
+    "span.local-badge 9px",
+    "span.tag 8px",
+    "label 11px",
+    "p.field-help 10px",
+    "span#options-badge 10px",
+    "th 9px"
+   ],
+   "low": [
+    "span.version 4.32"
+   ],
+   "tiny": []
+  }
+ },
+ "runs": {
+  "smallText": 12,
+  "lowContrast": 1,
+  "smallTargets": 0,
+  "examples": {
+   "small": [
+    "span 9px",
+    "span.eyebrow 8px",
+    "p 11px",
+    "span.version 10px",
+    "div#page-kicker 9px",
+    "kbd 9px",
+    "span.local-badge 9px",
+    "span.subtle 10px",
+    "th 9px",
+    "span#footer-message 9px",
+    "span#footer-status 9px",
+    "strong 9px"
+   ],
+   "low": [
+    "span.version 4.32"
+   ],
+   "tiny": []
+  }
+ },
+ "preferences": {
+  "smallText": 17,
+  "lowContrast": 1,
+  "smallTargets": 5,
+  "examples": {
+   "small": [
+    "span 9px",
+    "span.eyebrow 8px",
+    "p 11px",
+    "span.version 10px",
+    "div#page-kicker 9px",
+    "kbd 9px",
+    "span.local-badge 9px",
+    "label 11px",
+    "small 10px",
+    "p.field-help 10px",
+    "span.tag 8px",
+    "strong 10px"
+   ],
+   "low": [
+    "span.version 4.32"
+   ],
+   "tiny": [
+    "config-field 13x14",
+    "config-field 14x14",
+    "config-field 14x14",
+    "config-field 14x14",
+    "config-field 14x14"
+   ]
+  }
+ }
+}

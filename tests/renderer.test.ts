@@ -14,7 +14,7 @@ test('accepted 60,000-observation histories render without argument overflow', a
     if (!elements.has(id)) elements.set(id, {
       id, style: {}, dataset: {}, textContent: '', innerHTML: '', value: '', type: '',
       classList: { add() {}, remove() {}, toggle() { return false; } },
-      addEventListener() {}, setAttribute() {},
+      addEventListener() {}, setAttribute() {}, removeAttribute() {}, querySelectorAll: () => [], querySelector: () => null,
       getBoundingClientRect() { return { width: 740, height: 268, left: 0, top: 0 }; },
       getContext() { return context2d; },
     });
@@ -49,7 +49,7 @@ test('options page and Student-t risk render from real worker reports', async ()
   const context2d = new Proxy({}, { get: (_t, key) => key === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {} });
   const element = (id: string): Record<string, unknown> => {
     if (!elements.has(id)) elements.set(id, { id, style: {}, dataset: {}, textContent: '', innerHTML: '', value: '', className: '',
-      classList: { add() {}, remove() {}, toggle() { return false; } }, addEventListener() {}, setAttribute() {},
+      classList: { add() {}, remove() {}, toggle() { return false; } }, addEventListener() {}, setAttribute() {}, removeAttribute() {}, querySelectorAll: () => [], querySelector: () => null,
       getBoundingClientRect() { return { width: 740, height: 268, left: 0, top: 0 }; }, getContext() { return context2d; } });
     return elements.get(id)!;
   };

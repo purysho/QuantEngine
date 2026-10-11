@@ -252,7 +252,7 @@ function surfaceColor(t, shade) {
 }
 
 function createSurface(canvas, hover, options = {}) {
-  const view = { azimuth: options.azimuth ?? -0.75, elevation: options.elevation ?? 0.55, drag: null, manual: false };
+  const view = { azimuth: options.azimuth ?? -0.75, elevation: options.elevation ?? 0.55, drag: null, manual: false, playing: true, hold: false };
   let data = null, previous = null, morphStart = 0, frame = 0, running = false, last = 0, offset = 0, projected = [], hoverPoint = null;
   const windowColumns = options.windowColumns || 0;
 
@@ -387,7 +387,7 @@ function createSurface(canvas, hover, options = {}) {
       ctx.textAlign = 'left'; ctx.fillText(data.yFormat(data.y[i]), p[0] + 8, p[1] + 3);
     }
     ctx.fillStyle = '#b4c8da';
-    ctx.font = '10px Segoe UI, Arial, sans-serif';
+    ctx.font = '12px Segoe UI, Arial, sans-serif';
     let p = project(0, -1, -.55); ctx.textAlign = 'center'; ctx.fillText(data.xLabel, p[0], p[1] + 30);
     p = project(1, 0, -.55); ctx.textAlign = 'left'; ctx.fillText(data.yLabel, p[0] + 34, p[1] + 16);
     p = project(corner.x, corner.y, .62); ctx.textAlign = 'center'; ctx.fillText(data.zLabel, p[0], p[1] - 8);
@@ -401,8 +401,9 @@ function createSurface(canvas, hover, options = {}) {
     if (now - last < 33) return;  // About 30 frames per second at most.
     const dt = last ? Math.min(100, now - last) : 0;
     last = now;
-    if (!view.drag && !view.manual) view.azimuth = (options.azimuth ?? -0.75) + Math.sin(now / 9000) * .32;
-    if (windowColumns && data) {
+    const moving = view.playing && !view.hold;  // Auto-motion stops while paused, hovered or focused.
+    if (moving && !view.drag && !view.manual) view.azimuth = (options.azimuth ?? -0.75) + Math.sin(now / 9000) * .32;
+    if (moving && windowColumns && data) {
       const maxOffset = Math.max(0, data.z[0].length - windowColumns);
       offset += dt / 1000 * (options.columnsPerSecond || 3);
       if (offset > maxOffset + 6) offset = 0;  // Short hold on the latest data, then replay.
@@ -436,7 +437,31 @@ function createSurface(canvas, hover, options = {}) {
     hoverPoint = { mx: event.clientX - rect.left, my: event.clientY - rect.top };
     showHover(hoverPoint.mx, hoverPoint.my);
   });
-  canvas.addEventListener('pointerleave', () => { hoverPoint = null; hover?.classList.add('hidden'); });
+  canvas.addEventListener('pointerleave', () => { hoverPoint = null; view.hold = false; hover?.classList.add('hidden'); });
+  canvas.addEventListener('pointerenter', () => { view.hold = true; });
+  canvas.addEventListener('focus', () => { view.hold = true; });
+  canvas.addEventListener('blur', () => { view.hold = false; });
+  const redraw = () => draw(performance.now());
+  const rotate = (da, de = 0) => { view.manual = true; view.azimuth += da; view.elevation = Math.max(.12, Math.min(1.2, view.elevation + de)); redraw(); };
+  const reset = () => { view.manual = false; view.azimuth = options.azimuth ?? -0.75; view.elevation = options.elevation ?? 0.55; redraw(); };
+  const setPlaying = playing => {
+    view.playing = playing;
+    if (options.toolbar) { const b = options.toolbar.querySelector('[data-surface=play]'); if (b) { b.setAttribute('aria-pressed', String(!playing)); b.textContent = playing ? 'Ⅱ' : '▶'; b.setAttribute('aria-label', playing ? 'Pause animation' : 'Play animation'); } }
+  };
+  // Keyboard alternative to dragging (WCAG 2.5.7): arrows rotate/tilt, space plays/pauses, Home resets.
+  canvas.addEventListener('keydown', event => {
+    const keys = { ArrowLeft: () => rotate(-.15), ArrowRight: () => rotate(.15), ArrowUp: () => rotate(0, .08), ArrowDown: () => rotate(0, -.08),
+      ' ': () => setPlaying(!view.playing), Home: reset };
+    if (keys[event.key]) { event.preventDefault(); keys[event.key](); }
+  });
+  if (options.toolbar) {
+    options.toolbar.querySelectorAll('[data-surface]').forEach(button => button.addEventListener('click', () => {
+      const action = button.dataset.surface;
+      if (action === 'play') setPlaying(!view.playing);
+      else if (action === 'left') rotate(-.25); else if (action === 'right') rotate(.25); else if (action === 'reset') reset();
+    }));
+  }
+  if (reducedMotion) setPlaying(false);
   canvas.addEventListener('dblclick', () => { view.manual = false; });
 
   return {
@@ -462,12 +487,12 @@ function surfaceRange(rows) {
   return [low - pad, high + pad, at(.02), at(.98)];
 }
 
-const monitorSurface = createSurface($('surface-chart'), $('chart-hover'), { windowColumns: 72, columnsPerSecond: 4, azimuth: -0.8, xTicks: 2,
+const monitorSurface = createSurface($('surface-chart'), $('chart-hover'), { windowColumns: 72, columnsPerSecond: 4, azimuth: -0.8, xTicks: 2, toolbar: $('surface-toolbar'),
   caption: (date, start, maxOffset) => {
     if (chartMode !== 'surface') return;
-    $('chart-subtitle').textContent = (maxOffset && start < maxOffset ? 'Replaying history · through ' : 'Latest · through ') + date + ' · drag to rotate, double-click to resume';
+    $('chart-subtitle').textContent = (maxOffset && start < maxOffset ? 'Replaying history · through ' : 'Latest · through ') + date + ' · drag or arrow keys to rotate · space pauses';
   } });
-const optionsSurface = createSurface($('options-surface'), $('options-surface-hover'), { azimuth: -0.65 });
+const optionsSurface = createSurface($('options-surface'), $('options-surface-hover'), { azimuth: -0.65, toolbar: $('options-surface-toolbar') });
 
 function updateSurfaces() {
   const surface = current.report?.volatility_surface;
@@ -504,7 +529,7 @@ function chartContext() {
   const context = canvas.getContext('2d');
   context.scale(ratio, ratio);
   context.clearRect(0, 0, rect.width, rect.height);
-  context.font = '9px Consolas, monospace';
+  context.font = '11px Consolas, monospace';
   return { context, width: rect.width, height: rect.height };
 }
 
@@ -544,6 +569,7 @@ function drawChart() {
   const surfaceMode = chartMode === 'surface';
   $('research-chart').classList.toggle('hidden', surfaceMode);
   $('chart-wrap').classList.toggle('surface-mode', surfaceMode);
+  $('surface-toolbar').classList.toggle('hidden', !surfaceMode);
   $('surface-chart').classList.toggle('hidden', !surfaceMode);
   if (surfaceMode) {
     if (!report?.volatility_surface) $('chart-subtitle').textContent = 'Run an analysis with this version to build the surface';
@@ -608,10 +634,10 @@ function drawChart() {
         const magnitude = Math.abs(value);
         ctx.fillStyle = value >= 0 ? `rgba(68,176,168,${.10 + magnitude * .65})` : `rgba(191,124,90,${.10 + magnitude * .65})`;
         ctx.fillRect(left + col * cell + 1, top + row * cell + 1, cell - 2, cell - 2);
-        if (cell >= 22) { ctx.textAlign = 'center'; ctx.font = '9px Consolas, monospace'; ctx.fillStyle = '#c4ddd8'; ctx.fillText(value.toFixed(2), left + col * cell + cell / 2, top + row * cell + cell / 2 + 3); }
+        if (cell >= 22) { ctx.textAlign = 'center'; ctx.font = '11px Consolas, monospace'; ctx.fillStyle = '#c4ddd8'; ctx.fillText(value.toFixed(2), left + col * cell + cell / 2, top + row * cell + cell / 2 + 3); }
       }
     }
-    ctx.textAlign = 'center'; ctx.font = '9px Consolas, monospace'; ctx.fillStyle = '#829bb2';
+    ctx.textAlign = 'center'; ctx.font = '11px Consolas, monospace'; ctx.fillStyle = '#9fb3c6';
     for (let col = 0; col < count; col++) ctx.fillText(String(col + 1).padStart(2, '0'), left + col * cell + cell / 2, top + count * cell + 16);
     $('chart-subtitle').textContent = 'Sample return correlations · ' + report.return_observations + ' observations' + (report.assets.length > 12 ? ' · first 12 assets shown' : '');
     $('chart-legend').innerHTML = '<span><i class="line mint"></i>Positive correlation</span><span><i class="line bootstrap"></i>Diagonal = 1.00</span>';
@@ -662,7 +688,16 @@ document.querySelectorAll('.config-field').forEach(input => input.addEventListen
 }));
 $('toggle-engine').addEventListener('click', () => { void action(() => current.state.busy || current.state.continuous ? window.quant.pause() : window.quant.start()); });
 $('run-once').addEventListener('click', () => { void action(() => window.quant.runOnce()); });
-$('calculate-options').addEventListener('click', () => { void action(async () => window.quant.calculateOptions(optionInputs()), 'Option calculated locally.'); });
+$('calculate-options').addEventListener('click', async () => {
+  const button = $('calculate-options');
+  $('options-error').textContent = '';
+  let inputs;
+  try { inputs = optionInputs(); } catch (error) { $('options-error').textContent = error.message; return; }
+  button.setAttribute('aria-busy', 'true'); button.textContent = 'Calculating…';
+  const result = await action(async () => window.quant.calculateOptions(inputs), 'Option calculated locally.');
+  button.removeAttribute('aria-busy'); button.textContent = 'Calculate option';
+  if (!result && current.state.lastError) $('options-error').textContent = current.state.lastError;
+});
 ['import-csv', 'datasets-import'].forEach(id => $(id).addEventListener('click', () => { void action(() => window.quant.importCSV(), 'Validated prices copied into an immutable local snapshot.'); }));
 ['refresh-ecb', 'datasets-refresh'].forEach(id => $(id).addEventListener('click', () => { void action(() => window.quant.refreshECB(), 'Official ECB reference-rate snapshot saved.'); }));
 ['export-report', 'runs-export'].forEach(id => $(id).addEventListener('click', () => { void action(() => window.quant.exportReport(), result => 'Exported ' + result.path); }));
