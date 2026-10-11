@@ -1,4 +1,4 @@
-# Quant Engine · first Windows release
+# Quant Engine · 0.2 research release
 
 ## Start on Windows
 
@@ -13,9 +13,10 @@ The app includes Python, NumPy and SciPy. Ordinary use needs no development term
 ## What each research cycle calculates
 
 - Sample covariance and correlation, configurable diagonal shrinkage, and a constrained long-only minimum-variance portfolio.
-- Seeded Gaussian horizon simulation with Value at Risk and Expected Shortfall.
+- Seeded Gaussian horizon simulation with Value at Risk and Expected Shortfall at 95% and 99%. Tails use exact empirical probability mass, and VaR/ES are signed losses (a negative value means even the tail is a gain).
 - Empirical circular block resampling, retaining short sequences of observed returns.
-- A chronological trailing-momentum/inverse-volatility backtest with holdings drift and explicit transaction costs, compared with equal-weight and cash baselines.
+- A fitted Student-t model (fat tails) with its degrees of freedom, plus a Hill estimate of the loss-tail index.
+- A chronological trailing-momentum/inverse-volatility backtest with holdings drift and explicit transaction costs, compared with equal-weight and cash baselines. A signal formed after a close trades at the **next** close; it never earns the move that created it.
 - Descriptive parameter sensitivity, historical stress and hypothetical shocks.
 
 The optimized static risk portfolio and the momentum backtest are different analyses. Their results are labelled separately. Sensitivity trials reuse history and have different warm-up windows; a high historical score is not independent evidence of a trading advantage.
@@ -46,10 +47,20 @@ Changing the storage root selects another workspace; it does not migrate existin
 
 Use **Win + Ctrl + D** to create a Windows desktop and **Win + Tab** to move this app's window there. Virtual desktops organise windows; they share CPU and RAM. Closing this app's window hides it in the notification tray and keeps the configured research schedule running.
 
+## Options calculator
+
+Open **Options** to price a hypothetical call or put. Enter spot, strike, years to expiry, and volatility, rate and dividend yield as annual percentages. The page shows the Black–Scholes price, CRR tree prices (European and American, with the early-exercise premium), a seeded Monte Carlo price with its standard error, the put–call parity gap, and Greeks with units. Enter a market price to get implied volatility; impossible quotes are rejected with the bound they violate. The implied-move panel explains the "VIX ÷ 16" rule: it is a one-standard-deviation daily move (√252 ≈ 15.87), and the expected absolute move is only about 0.8 of that.
+
+The calculation uses the same single worker as research. If a continuous cycle is waiting, it resumes afterwards; **Pause** cancels it. Option results never change stored datasets or research history.
+
+## Research modules outside the desktop (Python)
+
+`workers/quant_pairs.py` (cointegration pairs), `workers/quant_lob.py` (market-making simulator) and `workers/quant_validation.py` (leak-proof chronological ridge) run from the scripts in `experiments/`, for example `python experiments/pairs_cointegration.py`. Each writes measured JSON evidence to `experiments/results/`. They do not have desktop pages yet.
+
 ## Interpretation and next release
 
 Treat these calculations as research and scenario analysis. The initial release has no broker connection, order routing or live execution. Data import and the numerical methods are the first complete loop. An event-driven strategy framework, stronger out-of-sample experiment selection and paper execution are later milestones.
 
 ## Release status
 
-Version 0.1 is a portable native application. It is not yet code-signed or equipped with an automatic updater. This environment validates the desktop and numerical routines on Linux and inspects the Windows package; testing on your Windows laptop is still required. See EVALUATION.md for the device check. The product label is provisional.
+Version 0.2 is a portable native application. It is not yet code-signed or equipped with an automatic updater. This environment validates the desktop and numerical routines on Linux and inspects the Windows package; testing on your Windows laptop is still required. See EVALUATION.md for the device check. The product label is provisional.

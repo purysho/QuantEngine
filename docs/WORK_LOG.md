@@ -15,7 +15,7 @@ Environment for this session: Linux container, Python 3.13.16 with NumPy 2.3.5 a
 
 **Worked:** Baseline reproduced exactly.
 
-**Did not work / limits:** The three books (*Crisis Engineering*, *The Infinity Machine*, *AI for Good*) are not present as full texts in the repository or attachments. Nothing here claims to summarise their contents beyond publisher descriptions recorded in `docs/research/`.
+**Did not work / limits:** The three books (*Crisis Engineering*, *The Infinity Machine*, *AI for Good*) are not present as full texts in the repository or attachments. Nothing here summarises their contents; see `docs/research/RESEARCH_INDEX.md` for how they are treated. (Correction: an earlier draft of this entry said publisher descriptions were recorded in `docs/research/`; they were not.)
 
 **Next:** Execute the 0.2 plan in `docs/superpowers/plans/2026-10-11-research-release.md`.
 
