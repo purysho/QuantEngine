@@ -80,7 +80,7 @@ class QuantWorkerTests(unittest.TestCase):
         self.assertTrue(imported["ok"], imported.get("error"))
         dataset = imported["result"]["dataset"]
         self.assertEqual(dataset["kind"], "csv")
-        self.assertEqual(dataset["metadata"]["original_path"], str(source))
+        self.assertEqual(dataset["metadata"]["original_path"], str(source.resolve()))  # Windows may hand out 8.3 short temp paths.
         self.assertNotEqual(dataset["path"], str(source))
         source.unlink()
         _, analysis = self.command("analyse", dataset_id=dataset["id"], parameters={"paths": 5000})
