@@ -371,3 +371,35 @@ The 3D surfaces gained pause/rotate/reset controls, a keyboard alternative to dr
 **Improvement made from the lessons:** added `gjr_fhs` (an asymmetric GJR-GARCH fitted by maximum likelihood with t innovations; VaR = σₜ₊₁ × the empirical quantile of standardised residuals). Tests: leverage γ is recovered (true 0.10); causality under a shock; calibrated 5% rate on GARCH data. It is the best model on 100 years of real data and the recommended default for conditional VaR.
 
 **Still failing:** the 1920s (2.42×, short pre-1929 history); GJR-FHS independence at 95% (p < 0.001, clustering remains); momentum's recent decades. The desktop report still shows unconditional horizon-risk models; adding one-day GJR-FHS VaR to it is next.
+
+---
+
+## Task 15 — Self-improving evolutionary learning engine (`workers/quant_evolve.py`)
+
+**Design**
+- **Tasks:** a genome space plus a fitness that only uses data the genome could have seen.
+  - `risk`: next-day 99% VaR. Genes are method (5 models), window and refit interval; fitness is minus the pinball loss, a strictly consistent quantile score.
+  - `alpha`: next-day return. Model is zero, mean, ridge or **MLP** (NumPy, 1–2 tanh layers, Adam, L2, chronological early stopping); genes also cover a feature subset (6 causal features), ridge penalty, width, depth and L2. Fitness is out-of-sample R² vs the training mean.
+- **Evolution:** tournament selection, uniform crossover, mutation (feature bit-flips), elitism and random immigrants. Every genome records its parents and operator, which drives the **lineage graph** used by the 3D "second mind" view.
+- **Prequential evaluation:** the population evolves on data before block *t*; the champion is frozen, then scored on block *t*. That sequence is the honest learning curve.
+- **Experience store:** JSON lines of the best genomes per task and data fingerprint, so later runs warm-start from them.
+
+**Tests (6):** the MLP fits sin(2x) with under 30% of a linear model's error, deterministically; evolution finds the known toy optimum and its lineage edges are consistent; champions before a future shock are identical with or without it; the alpha task detects real autocorrelation; the experience store prefers same-data memories; results are identical under different `PYTHONHASHSEED` values.
+
+**Real data** (`experiments/results/evolution_real.json`; CRSP US market; 18 two-year blocks 1990–2026; about 340 s):
+| Version | Risk score (higher = better; baseline −4.43; best fixed in hindsight −3.34 = GJR-FHS) | Alpha R² % (mean forecast = 0) |
+| --- | --- | --- |
+| v1: one validation window | −3.68; champions jump between 5 families | **−0.69**: the MLP chosen in 7/18 blocks overfits noise |
+| v2: + 6 decay-weighted windows + significance guard vs baseline | −3.67; the guard keeps re-adopting the weak baseline | +0.24 |
+| **v3: + incumbency** (a challenger must significantly beat the *current* model) | **−3.45**, within 3.3% of the hindsight optimum; gain vs baseline grows from +0.15 (first half) to **+1.82** (second half) | **+0.27**, a stable ridge |
+
+All four gates pass. The warm start (US-market memories applied to the "Other" industry) gave **identical** results to a cold start: no measurable transfer benefit in that test.
+
+**What went wrong and what the system learned**
+1. *Winner's curse:* choosing on one noisy window picked whatever got lucky. Evidence is now accumulated across windows.
+2. *Over-flexible models on unpredictable targets:* the MLP looked best on validation and lost out of sample. The significance guard makes learning earn every change.
+3. *A guard anchored to a weak baseline* threw away earned improvements. Incumbency fixed it.
+4. *Non-reproducibility:* ranking through a Python `set` made tie-breaks depend on the hash seed. Fixed, with a cross-hash-seed test.
+5. Daily returns are nearly unpredictable: +0.27% R² is the honest ceiling found here, and no claim of tradeable alpha is made.
+
+**Next:** run the learner in the desktop's continuous cycle (bounded), and show its lineage as a 3D "second mind" graph in the new cyberpunk theme.
