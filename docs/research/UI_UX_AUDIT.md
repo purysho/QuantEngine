@@ -40,3 +40,12 @@ The script walks every visible text node and interactive control. Text inside gr
 - Screen-reader walkthrough with NVDA on Windows.
 - Responsive layout below 1080 px (the window's minimum width).
 - A user test on the actual laptop display.
+
+## 0.2b: Cyberpunk 2099 theme (user direction: high-tech, not "JARVIS blue")
+
+- **Palette:** a near-black base (`#07060a`) with a faint 40 px grid and a static scanline overlay (removed under reduced motion and forced colours). **Crimson neon `#ff2a55`** is the only brand accent. Cyan, amber, violet and acid yellow are reserved for data identity (model families), in a fixed order and never cycled.
+- **Shape:** angular cut corners (`clip-path`) on panels, metrics, buttons and nav items; a glowing 64 px neon tick on each panel; uppercase monospace (`Cascadia Mono`, Consolas) for headings and labels.
+- **3D surfaces:** the ramp changed from teal/amber to a **magma-like ramp** (deep violet → crimson → orange → gold). Lightness still rises monotonically, so values stay readable in greyscale and for colour-blind viewers, per the dataviz guidance.
+- **Charts:** strategy series in crimson, baselines dashed warm grey, correlations as a cyan ↔ crimson diverging scale.
+- **Accessibility re-audit after the theme:** 0 texts under 12 px. 5 contrast flags remain, all on `h1` titles, which use gradient-clipped text the script cannot measure; the gradient's darkest stop (`#ff7a95`) on `#07060a` is about 7:1. A `forced-colors` fallback restores solid titles in Windows High Contrast mode. Focus rings are cyan, so they stay visible against the crimson.
+- **Fixed during review:** the content security policy blocked inline `style=` colour swatches (now applied via the CSSOM); the learning-curve canvas had no CSS size; the Ask panel's clip-path doubled its border (now a straight border).

@@ -152,6 +152,7 @@ async function command(method: string, values?: unknown): Promise<unknown> {
     if (typeof token !== 'string' || typeof accept !== 'boolean') throw new Error('Invalid confirmation.');
     return { ...(await assistant.confirm(token, accept)), snapshot: engine.snapshot() };
   }
+  if (method === 'learn-now') { await engine.learnNow(); return engine.snapshot(); }
   if (method === 'calculate-options') { await engine.calculateOptions(validateOptions(values)); return engine.snapshot(); }
   if (method === 'configure') {
     const patch = validatePatch(values);
@@ -224,7 +225,7 @@ function dispatchCommand(method: string, values?: unknown): Promise<unknown> {
     settingsQueue = pending;
     return pending;
   }
-  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'calculate-options'].includes(method)) {
+  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'calculate-options', 'learn-now'].includes(method)) {
     return Promise.reject(new Error('Settings or storage are still being saved. Wait before starting another operation.'));
   }
   return command(method, values);
@@ -247,7 +248,10 @@ async function nativeSelfTest() {
   if (!/95% VaR: Gaussian \d/.test(asked)) throw new Error(`Self-test assistant answer was unexpected: ${asked}`);
   const refused = await window!.webContents.executeJavaScript(`window.quant.ask('buy 100 shares now').then(result => result.tier)`);
   if (refused !== 'refused') throw new Error('Self-test assistant did not refuse a trading request.');
-  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), completed: engine.state.completed,
+  await engine.learnNow();
+  const learned = engine.learning as { tasks?: Record<string, { graph: { nodes: unknown[] } }> } | null;
+  if (!learned?.tasks?.risk?.graph.nodes.length) throw new Error(`Self-test learning step failed: ${engine.learningError}`);
+  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), learnedModels: learned.tasks.risk.graph.nodes.length, completed: engine.state.completed,
     runtime: engine.runtime, report: engine.lastReportPath }));
   await quit();
 }
@@ -267,7 +271,7 @@ else {
       process.platform === 'win32' ? 'D:\\Quant-Engine' : path.join(app.getPath('documents'), 'Quant-Engine');
     configStore = new ConfigStore(path.join(app.getPath('userData'), 'settings.json'), defaultRoot);
     const config = await configStore.load();
-    if (selfTest) { config.paths = 5000; config.resumeOnLaunch = false; config.startAtLogin = false; }
+    if (selfTest) { config.paths = 5000; config.resumeOnLaunch = false; config.startAtLogin = false; config.learnBudgetSeconds = 8; }
     let python = '';
     try { python = pythonPath(); } catch (error) { config.lastError = (error as Error).message; }
     const transport = new WorkerTransport(python, path.join(app.getAppPath(), 'workers/quant_worker.py'),

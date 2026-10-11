@@ -6,7 +6,8 @@ import type { JsonRecord } from './transport.js';
 export type Tier = 'read' | 'compute' | 'change' | 'refused';
 export type Intent =
   | { kind: 'help' }
-  | { kind: 'answer'; topic: 'var' | 'volatility' | 'backtest' | 'weights' | 'status' | 'option' | 'surface' }
+  | { kind: 'answer'; topic: 'var' | 'volatility' | 'backtest' | 'weights' | 'status' | 'option' | 'surface' | 'learning' }
+  | { kind: 'learn' }
   | { kind: 'navigate'; page: string; chart?: string }
   | { kind: 'run-once' } | { kind: 'start' } | { kind: 'pause' }
   | { kind: 'price-option'; parameters: JsonRecord; assumed: string[] }
@@ -18,7 +19,7 @@ export type Intent =
 
 export const TIERS: Record<Intent['kind'], Tier> = {
   help: 'read', answer: 'read', navigate: 'read', unknown: 'read', 'run-once': 'compute', start: 'compute',
-  pause: 'compute', 'price-option': 'compute', configure: 'change', 'refresh-ecb': 'change', undo: 'change', refuse: 'refused',
+  pause: 'compute', 'price-option': 'compute', learn: 'compute', configure: 'change', 'refresh-ecb': 'change', undo: 'change', refuse: 'refused',
 };
 
 const SMALL: Record<string, number> = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
@@ -114,12 +115,14 @@ export function parseCommand(input: string): Intent {
   }
   const nav: Array<[RegExp, string, string?]> = [
     [/\b(vol(atility)? surface|3d|surface)\b/, 'monitor', 'surface'], [/\boptions?\b/, 'options'], [/\bdatasets?|data\b/, 'datasets'],
-    [/\b(runs?|history)\b/, 'runs'], [/\b(preferences|settings)\b/, 'preferences'], [/\b(monitor|overview|home|dashboard)\b/, 'monitor'],
+    [/\b(evolution|lineage|graph|second mind|learning)\b/, 'evolution'], [/\b(runs?|history)\b/, 'runs'], [/\b(preferences|settings)\b/, 'preferences'], [/\b(monitor|overview|home|dashboard)\b/, 'monitor'],
     [/\bequity\b/, 'monitor', 'equity'], [/\bcorrelations?\b/, 'monitor', 'correlation'], [/\b(risk distribution|histogram)\b/, 'monitor', 'risk'],
   ];
   if (/^(show|open|go to|navigate to|switch to|take me to|display)\b/.test(text)) {
     for (const [pattern, page, chart] of nav) if (pattern.test(text)) return { kind: 'navigate', page, chart };
   }
+  if (/\b(what|how much|show)\b.*\b(learn|learned|learnt|evolv|evolution)/.test(text)) return { kind: 'answer', topic: 'learning' };
+  if (/\b(learn|evolve|train)\b/.test(text)) return { kind: 'learn' };
   if (/\b(run|calculate|compute)\b.*\b(once|now|analysis|research)\b|^run( it)?$/.test(text)) return { kind: 'run-once' };
   if (/\b(start|resume|begin)\b.*\b(engine|research|continuous)\b|^start$/.test(text)) return { kind: 'start' };
   if (/\b(pause|stop|halt)\b/.test(text)) return { kind: 'pause' };
@@ -156,7 +159,7 @@ export function parseCommand(input: string): Intent {
 const pct = (value: unknown, digits = 2) => typeof value === 'number' && Number.isFinite(value) ? (value * 100).toFixed(digits) + '%' : 'n/a';
 const fixed = (value: unknown, digits = 2) => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'n/a';
 
-export interface Snapshot { state: JsonRecord; config: JsonRecord; report: JsonRecord | null; options?: JsonRecord | null; datasets?: unknown[] }
+export interface Snapshot { state: JsonRecord; config: JsonRecord; report: JsonRecord | null; options?: JsonRecord | null; datasets?: unknown[]; learning?: JsonRecord | null }
 
 export function answer(topic: string, snapshot: Snapshot): string {
   const report = snapshot.report as Record<string, any> | null;
@@ -171,6 +174,18 @@ export function answer(topic: string, snapshot: Snapshot): string {
     const p = o.parameters, bs = o.black_scholes;
     return `${String(p.kind).toUpperCase()} spot ${p.spot}, strike ${p.strike}, ${fixed(p.time)}y, vol ${pct(p.volatility, 1)}: Black–Scholes ${fixed(bs.price, 4)}, ` +
       `American tree ${fixed(o.trees.american, 4)}, delta ${fixed(bs.delta, 4)}, vega ${fixed(bs.vega_per_point, 4)} per vol point.`;
+  }
+  if (topic === 'learning') {
+    const l = snapshot.learning as Record<string, any> | null | undefined;
+    if (!l?.tasks) return 'Nothing learned yet. Say "learn now", or start the engine: each continuous cycle runs one bounded evolution step.';
+    const line = (name: string, unit: string) => {
+      const t = l.tasks[name]; if (!t) return '';
+      const champion = t.champion ? Object.entries(t.champion).map(([k, v]) => `${k}=${v}`).join(', ') : 'none';
+      return `${name}: champion ${champion}; out-of-sample ${fixed(t.mean_out_of_sample, 3)} vs baseline ${fixed(t.mean_baseline, 3)} ${unit} ` +
+        `over ${t.blocks} blocks (guard kept the incumbent ${pct(t.guard_share, 0)} of the time).`;
+    };
+    return [line('risk', '(minus pinball loss x1e4, higher is better)'), line('alpha', '(R^2 %)'),
+      `${(l.history || []).length} learning runs recorded; ${l.memories ?? 0} memories.`].filter(Boolean).join(' ');
   }
   if (!report) return 'There is no completed report yet. Say "run once" to calculate one.';
   const source = ` (run ${report.run?.id ?? 'unknown'}, ${report.provenance?.name ?? 'dataset'})`;
@@ -203,7 +218,8 @@ export function answer(topic: string, snapshot: Snapshot): string {
 export const HELP = [
   'Ask: "what is my VaR", "how volatile is the portfolio", "what is the Sharpe", "show the weights", "status".',
   'Navigate: "show the vol surface", "open options", "go to runs".',
-  'Compute: "run once", "start the engine", "pause", "price a put strike 95 spot 100 6 months vol 25%".',
+  'Compute: "run once", "start the engine", "pause", "learn now", "price a put strike 95 spot 100 6 months vol 25%".',
+  'Learning: "what have you learned", "show the evolution graph".',
   'Change (asks to confirm, undoable): "set paths to 100000", "set horizon to 10", "enable low cpu", "refresh ECB rates".',
   'Voice: dictate into this box with Handy (offline, free) or Windows voice typing.',
 ].join('\n');
@@ -259,6 +275,7 @@ export interface AssistantEngine {
   runOnce(): Promise<void>; start(): Promise<void>; pause(): Promise<void>;
   configure(patch: Partial<EngineConfig>): Promise<void>;
   calculateOptions(parameters: JsonRecord): Promise<JsonRecord>;
+  learnNow(): Promise<void>;
   dataCommand(command: 'refresh'): Promise<unknown>;
 }
 
@@ -335,6 +352,8 @@ export class Assistant {
       case 'run-once': await this.engine.runOnce(); return { reply: 'Calculated a new report. ' + answer('var', this.engine.snapshot()), tier, intent: intent.kind };
       case 'start': await this.engine.start(); return { reply: 'Continuous research started.', tier, intent: intent.kind };
       case 'pause': await this.engine.pause(); return { reply: 'Paused. Completed reports are kept.', tier, intent: intent.kind };
+      case 'learn': await this.engine.learnNow(); return { reply: 'Ran one evolution step. ' + answer('learning', this.engine.snapshot()), tier, intent: intent.kind,
+        navigate: { page: 'evolution' } };
       case 'price-option': {
         const report = await this.engine.calculateOptions({ ...intent.parameters, paths: 100_000 }) as Record<string, any>;
         const bs = report.black_scholes;

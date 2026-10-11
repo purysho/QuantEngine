@@ -99,7 +99,10 @@ class Task:
     def score(self, genome, start, end):
         key = (json.dumps(genome, sort_keys=True), start, end)
         if key not in self.cache:
-            self.cache[key] = float(self.evaluate(genome, start, end))
+            try:
+                self.cache[key] = float(self.evaluate(genome, start, end))
+            except (ValueError, np.linalg.LinAlgError, FloatingPointError):
+                self.cache[key] = -math.inf  # An unusable genome (e.g. window too short to fit) loses; the run continues.
         return self.cache[key]
 
 

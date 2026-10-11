@@ -15,6 +15,9 @@ let operation = false;
 let previousReport;
 let previousRuns;
 let previousOptions;
+let previousLearning;
+let previousLearningError;
+let evolutionTask = 'risk';
 let datasetKey = '';
 let toastTimer;
 let chartGeometry;
@@ -46,13 +49,14 @@ function receive(value) {
 
 function navigate(name) {
   page = name;
-  const labels = { monitor: 'Research monitor', datasets: 'Datasets', options: 'Options calculator', runs: 'Research runs', preferences: 'Preferences' };
-  const kickers = { monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', options: 'DERIVATIVES / PRICING', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
+  const labels = { monitor: 'Research monitor', datasets: 'Datasets', options: 'Options calculator', evolution: 'Evolution', runs: 'Research runs', preferences: 'Preferences' };
+  const kickers = { monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', options: 'DERIVATIVES / PRICING', evolution: 'LEARNING / SECOND MIND', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
   $('page-title').textContent = labels[name];
   $('page-kicker').textContent = kickers[name];
   document.querySelectorAll('.page').forEach(section => section.classList.toggle('hidden', section.id !== 'page-' + name));
   document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === name));
   if (name === 'monitor') requestAnimationFrame(drawChart);
+  if (name === 'evolution') requestAnimationFrame(renderEvolution);
   syncSurfaceAnimation();
 }
 
@@ -72,6 +76,7 @@ function renderControls() {
   ['import-csv', 'refresh-ecb', 'datasets-import', 'datasets-refresh', 'choose-root'].forEach(id => { $(id).disabled = locked || operation; });
   ['export-report', 'runs-export'].forEach(id => { $(id).disabled = !current.report; });
   $('calculate-options').disabled = state.busy || operation || state.settingsPending;
+  $('learn-now').disabled = state.busy || operation || state.settingsPending;
 }
 
 function render() {
@@ -103,6 +108,9 @@ function render() {
   if (previousReport !== report) { previousReport = report; renderReport(); drawChart(); updateSurfaces(); }
   if (previousRuns !== current.runs) { previousRuns = current.runs; renderRuns(); }
   if (previousOptions !== current.options) { previousOptions = current.options; renderOptions(); updateSurfaces(); }
+  if (previousLearning !== current.learning || previousLearningError !== current.learningError) {
+    previousLearning = current.learning; previousLearningError = current.learningError; renderEvolution();
+  }
 }
 
 function renderDatasets() {
@@ -239,7 +247,8 @@ function renderRuns() {
 
 // ---- 3D surface renderer (canvas 2D; no WebGL needed on integrated graphics) ----
 // Sequential ramp, lightness increasing with value; height also encodes value, so colour is never alone.
-const SURFACE_RAMP = [[0, [17, 42, 74]], [.3, [27, 104, 128]], [.58, [76, 182, 184]], [.8, [156, 211, 128]], [1, [236, 196, 120]]];
+// Magma-like ramp: lightness rises monotonically with value (readable in grey and for colour-blind viewers).
+const SURFACE_RAMP = [[0, [27, 12, 46]], [.28, [90, 20, 112]], [.55, [181, 36, 90]], [.8, [242, 96, 58]], [1, [252, 211, 107]]];
 const reducedMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function surfaceColor(t, shade) {
@@ -311,7 +320,7 @@ function createSurface(canvas, hover, options = {}) {
     // Back walls and floor grid, drawn first, recessive.
     const walls = [[-1, -1, -1, 1], [-1, 1, 1, 1]];
     ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(132,160,186,.18)';
+    ctx.strokeStyle = 'rgba(255,42,85,.16)';
     ctx.setLineDash([2, 4]);
     for (let t = 0; t <= 4; t++) {
       const z = -.55 + t / 4 * 1.1;
@@ -365,11 +374,11 @@ function createSurface(canvas, hover, options = {}) {
       ctx.stroke();
     }
     // Axes: z ticks on the back-left edge, x/y ticks along the floor.
-    ctx.fillStyle = '#8fa6bb';
+    ctx.fillStyle = '#bda9b2';
     ctx.font = '9px Consolas, monospace';
     const corner = [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([x, y]) => ({ x, y, p: project(x, y, -.55) }))
       .sort((a, b) => a.p[0] - b.p[0])[0];
-    ctx.strokeStyle = 'rgba(132,160,186,.35)';
+    ctx.strokeStyle = 'rgba(255,42,85,.4)';
     let a0 = project(corner.x, corner.y, -.55), a1 = project(corner.x, corner.y, .55);
     ctx.beginPath(); ctx.moveTo(a0[0], a0[1]); ctx.lineTo(a1[0], a1[1]); ctx.stroke();
     for (let t = 0; t <= 4; t++) {
@@ -386,7 +395,7 @@ function createSurface(canvas, hover, options = {}) {
       const i = Math.round(t / 3 * (rows - 1)), p = project(1, Y(i), -.55);
       ctx.textAlign = 'left'; ctx.fillText(data.yFormat(data.y[i]), p[0] + 8, p[1] + 3);
     }
-    ctx.fillStyle = '#b4c8da';
+    ctx.fillStyle = '#f3e9ee';
     ctx.font = '12px Segoe UI, Arial, sans-serif';
     let p = project(0, -1, -.55); ctx.textAlign = 'center'; ctx.fillText(data.xLabel, p[0], p[1] + 30);
     p = project(1, 0, -.55); ctx.textAlign = 'left'; ctx.fillText(data.yLabel, p[0] + 34, p[1] + 16);
@@ -516,8 +525,235 @@ function syncSurfaceAnimation() {
   const visible = !document.hidden;
   if (visible && page === 'monitor' && chartMode === 'surface' && current.report?.volatility_surface) monitorSurface.start(); else monitorSurface.stop();
   if (visible && page === 'options' && current.options?.surface) optionsSurface.start(); else optionsSurface.stop();
+  if (visible && page === 'evolution' && current.learning?.tasks) evolutionGraph.start(); else evolutionGraph.stop();
 }
 document.addEventListener('visibilitychange', syncSurfaceAnimation);
+
+// ---- 3D "second mind" lineage graph: force-directed layout in 3D, live settling, glow by fitness ----
+const FAMILY_ORDER = { risk: ['historical', 'gaussian', 'student_t', 'garch_t', 'gjr_fhs'], alpha: ['zero', 'mean', 'ridge', 'mlp'] };
+const FAMILY_COLORS = ['#ff2a55', '#ffb347', '#2de2e6', '#b06cff', '#f4f06b'];  // Fixed order, never cycled.
+const EDGE_STYLE = { mutation: 'rgba(255,42,85,.35)', crossover: 'rgba(176,108,255,.45)', elite: 'rgba(240,230,235,.22)', experience: 'rgba(45,226,230,.3)' };
+
+function createGraph3D(canvas, hover, toolbar) {
+  const view = { azimuth: .6, elevation: .35, playing: !reducedMotion, hold: false, drag: null };
+  let nodes = [], edges = [], heat = 1, running = false, frame = 0, last = 0, projected = [], order = [];
+  const family = (task, name) => FAMILY_COLORS[Math.max(0, FAMILY_ORDER[task].indexOf(name)) % FAMILY_COLORS.length];
+
+  function setData(task, graph) {
+    const previous = new Map(nodes.map(n => [n.id, n]));
+    const families = FAMILY_ORDER[task];
+    const scores = graph.nodes.map(n => n.fitness).filter(Number.isFinite).sort((a, b) => a - b);
+    const rank = v => scores.length > 1 && Number.isFinite(v) ? scores.findIndex(x => x >= v) / (scores.length - 1) : .3;
+    nodes = graph.nodes.map((n, i) => {
+      const old = previous.get(n.id);
+      const f = Math.max(0, families.indexOf(n.family));
+      const angle = f / families.length * Math.PI * 2;  // Families start in separate sectors, then the forces take over.
+      return { ...n, color: family(task, n.family), weight: rank(n.fitness),
+        x: old?.x ?? Math.cos(angle) * 1.2 + (Math.random() - .5) * .6, y: old?.y ?? (n.generation % 7 - 3) * .18 + (Math.random() - .5) * .3,
+        z: old?.z ?? Math.sin(angle) * 1.2 + (Math.random() - .5) * .6, vx: 0, vy: 0, vz: 0, index: i };
+    });
+    const index = new Map(nodes.map((n, i) => [n.id, i]));
+    edges = graph.edges.filter(e => index.has(e.source) && index.has(e.target)).map(e => ({ a: index.get(e.source), b: index.get(e.target), kind: e.kind }));
+    heat = 1;
+    draw();
+  }
+
+  function simulate() {
+    const n = nodes.length;
+    if (!n || heat < .002) return;
+    const k = .55, repulsion = .018 * heat;
+    for (let i = 0; i < n; i++) {
+      const a = nodes[i];
+      for (let j = i + 1; j < n; j++) {
+        const b = nodes[j];
+        let dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
+        const d2 = dx * dx + dy * dy + dz * dz + .01, f = repulsion / d2;
+        dx *= f; dy *= f; dz *= f;
+        a.vx += dx; a.vy += dy; a.vz += dz; b.vx -= dx; b.vy -= dy; b.vz -= dz;
+      }
+    }
+    for (const e of edges) {
+      const a = nodes[e.a], b = nodes[e.b];
+      const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, d = Math.sqrt(dx * dx + dy * dy + dz * dz) + 1e-6;
+      const f = (d - k * .5) * .04 * heat / d;
+      a.vx += dx * f; a.vy += dy * f; a.vz += dz * f; b.vx -= dx * f; b.vy -= dy * f; b.vz -= dz * f;
+    }
+    const centroids = {};
+    for (const a of nodes) { const c = centroids[a.family] ||= { x: 0, y: 0, z: 0, n: 0 }; c.x += a.x; c.y += a.y; c.z += a.z; c.n++; }
+    for (const a of nodes) {
+      const c = centroids[a.family];
+      a.vx += ((c.x / c.n - a.x) * .02 - a.x * .01) * heat; a.vy += ((c.y / c.n - a.y) * .02 - a.y * .01) * heat; a.vz += ((c.z / c.n - a.z) * .02 - a.z * .01) * heat;
+      a.vx *= .82; a.vy *= .82; a.vz *= .82;
+      a.x += a.vx; a.y += a.vy; a.z += a.vz;
+    }
+    heat *= .985;
+  }
+
+  function size() {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const ratio = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(rect.width * ratio)) { canvas.width = Math.round(rect.width * ratio); canvas.height = Math.round(rect.height * ratio); }
+    const ctx = canvas.getContext('2d'); ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return { ctx, width: rect.width, height: rect.height };
+  }
+
+  function draw() {
+    const setup = size();
+    if (!setup) return;
+    const { ctx, width, height } = setup;
+    ctx.clearRect(0, 0, width, height);
+    if (!nodes.length) return;
+    let radius = .5;
+    for (const n of nodes) radius = Math.max(radius, Math.hypot(n.x, n.y, n.z));
+    const scale = Math.min(width, height) * .42 / radius;
+    const ca = Math.cos(view.azimuth), sa = Math.sin(view.azimuth), ce = Math.cos(view.elevation), se = Math.sin(view.elevation);
+    projected = nodes.map(n => {
+      const xr = n.x * ca - n.z * sa, zr = n.x * sa + n.z * ca;
+      const yr = n.y * ce - zr * se, depth = n.y * se + zr * ce;
+      const persp = 1 / (1 + depth / radius * .35);
+      return { x: width / 2 + xr * scale * persp, y: height / 2 - yr * scale * persp, depth, persp, node: n };
+    });
+    for (const e of edges) {  // Edges first, faint, so nodes glow above them.
+      const a = projected[e.a], b = projected[e.b];
+      ctx.strokeStyle = EDGE_STYLE[e.kind] || 'rgba(200,180,190,.18)';
+      ctx.lineWidth = e.kind === 'crossover' ? 1.1 : .8;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    order = projected.map((p, i) => i).sort((i, j) => projected[j].depth - projected[i].depth);
+    ctx.globalCompositeOperation = 'lighter';
+    for (const i of order) {
+      const p = projected[i], n = p.node, r = (2 + n.weight * 5) * p.persp;
+      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * (n.champion ? 5 : 3.2));
+      glow.addColorStop(0, n.color + (n.champion ? 'cc' : '88')); glow.addColorStop(1, n.color + '00');
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(p.x, p.y, r * (n.champion ? 5 : 3.2), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    for (const i of order) {
+      const p = projected[i], n = p.node, r = (2 + n.weight * 5) * p.persp;
+      ctx.fillStyle = n.color; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+      if (n.champion) { ctx.strokeStyle = '#fff3f6'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(p.x, p.y, r + 3.5, 0, Math.PI * 2); ctx.stroke(); }
+    }
+  }
+
+  function tick(now) {
+    if (!running) return;
+    frame = requestAnimationFrame(tick);
+    if (now - last < 33) return;
+    last = now;
+    simulate();
+    if (view.playing && !view.hold && !view.drag) view.azimuth += .0035;
+    draw();
+  }
+  function showHover(mx, my) {
+    let best = null, distance = 14;
+    for (const p of projected) { const d = Math.hypot(p.x - mx, p.y - my); if (d < distance) { distance = d; best = p; } }
+    if (!best) { hover.classList.add('hidden'); return; }
+    const n = best.node;
+    hover.innerHTML = (n.champion ? '★ CHAMPION<br>' : '') + esc(n.family) + ' · gen ' + esc(n.generation) + ' · ' + esc(n.operator) +
+      '<br>' + esc(n.label) + '<br>fitness ' + (Number.isFinite(n.fitness) ? n.fitness.toFixed(3) : 'unscored');
+    hover.style.left = Math.max(8, best.x + 12) + 'px'; hover.style.top = Math.max(8, best.y - 60) + 'px';
+    hover.classList.remove('hidden');
+  }
+  canvas.addEventListener('pointerdown', event => { view.drag = { x: event.clientX, y: event.clientY, a: view.azimuth, e: view.elevation }; });
+  window.addEventListener('pointerup', () => { view.drag = null; });
+  canvas.addEventListener('pointermove', event => {
+    const rect = canvas.getBoundingClientRect();
+    if (view.drag) { view.azimuth = view.drag.a + (event.clientX - view.drag.x) / 160; view.elevation = Math.max(-1.2, Math.min(1.2, view.drag.e + (event.clientY - view.drag.y) / 200)); if (!running) draw(); }
+    showHover(event.clientX - rect.left, event.clientY - rect.top);
+  });
+  canvas.addEventListener('pointerenter', () => { view.hold = true; });
+  canvas.addEventListener('pointerleave', () => { view.hold = false; hover.classList.add('hidden'); });
+  canvas.addEventListener('focus', () => { view.hold = true; });
+  canvas.addEventListener('blur', () => { view.hold = false; });
+  const setPlaying = playing => { view.playing = playing; const b = toolbar.querySelector('[data-surface=play]'); if (b) { b.textContent = playing ? 'Ⅱ' : '▶'; b.setAttribute('aria-pressed', String(!playing)); b.setAttribute('aria-label', playing ? 'Pause animation' : 'Play animation'); } };
+  const rotate = (da, de = 0) => { view.azimuth += da; view.elevation = Math.max(-1.2, Math.min(1.2, view.elevation + de)); draw(); };
+  canvas.addEventListener('keydown', event => {
+    const keys = { ArrowLeft: () => rotate(-.15), ArrowRight: () => rotate(.15), ArrowUp: () => rotate(0, .08), ArrowDown: () => rotate(0, -.08),
+      ' ': () => setPlaying(!view.playing), Home: () => { view.azimuth = .6; view.elevation = .35; draw(); } };
+    if (keys[event.key]) { event.preventDefault(); keys[event.key](); }
+  });
+  toolbar.querySelectorAll('[data-surface]').forEach(button => button.addEventListener('click', () => {
+    const a = button.dataset.surface;
+    if (a === 'play') setPlaying(!view.playing); else if (a === 'left') rotate(-.3); else if (a === 'right') rotate(.3);
+    else if (a === 'reset') { view.azimuth = .6; view.elevation = .35; heat = .6; draw(); }
+  }));
+  if (reducedMotion) setPlaying(false);
+  return { setData, start() { if (running) return; if (reducedMotion) { for (let i = 0; i < 200; i++) simulate(); draw(); return; } running = true; last = 0; frame = requestAnimationFrame(tick); },
+    stop() { running = false; cancelAnimationFrame(frame); }, draw };
+}
+
+const evolutionGraph = createGraph3D($('evo-graph'), $('evo-hover'), $('evo-toolbar'));
+
+function renderEvolution() {
+  const learning = current.learning;
+  $('evo-error').textContent = current.learningError || '';
+  $('evo-memories').textContent = integer(learning?.memories || 0) + ' MEMORIES';
+  const task = learning?.tasks?.[evolutionTask];
+  if (!task) { syncSurfaceAnimation(); return; }
+  evolutionGraph.setData(evolutionTask, task.graph);
+  $('evo-subtitle').textContent = task.graph.nodes.length + ' models tested · ' + task.graph.edges.length + ' lineage links · ' + task.blocks +
+    ' forward-scored blocks · ' + esc(learning.dataset || '') + ' · drag or arrow keys to rotate';
+  // The CSP forbids inline style attributes, so swatch colours are applied through the CSSOM.
+  $('evo-legend').innerHTML = FAMILY_ORDER[evolutionTask].map((f, i) => '<span><i class="dot-swatch" data-color="' + i + '"></i>' + esc(f) + '</span>').join('') +
+    '<span><i class="line-swatch mutation"></i>mutation</span><span><i class="line-swatch crossover"></i>crossover</span><span>◎ champion</span>';
+  $('evo-legend').querySelectorAll?.('[data-color]').forEach(swatch => { swatch.style.background = FAMILY_COLORS[Number(swatch.dataset.color)]; swatch.style.color = FAMILY_COLORS[Number(swatch.dataset.color)]; });
+  const card = (name, unit) => {
+    const t = learning.tasks[name];
+    if (!t) return '';
+    const champion = t.champion ? Object.entries(t.champion).map(([k, v]) => esc(k) + '=' + esc(v)).join(' · ') : '—';
+    const better = Number.isFinite(t.mean_out_of_sample) && Number.isFinite(t.mean_baseline) && t.mean_out_of_sample > t.mean_baseline;
+    return '<div class="champion-card"><div class="champion-head"><span class="tag">' + esc(name.toUpperCase()) + '</span><span class="' + (better ? 'good' : 'neutral') + '">' +
+      (better ? '▲ beats baseline' : '■ baseline holds') + '</span></div><div class="champion-genome">' + champion + '</div>' +
+      '<div class="champion-stats">out-of-sample ' + number(t.mean_out_of_sample, 3) + ' vs baseline ' + number(t.mean_baseline, 3) + ' ' + unit +
+      '<br>' + integer(t.blocks) + ' blocks · incumbent kept ' + percent(t.guard_share, 0) + ' · ' + integer(t.evaluations) + ' evaluations</div></div>';
+  };
+  $('evo-champions').className = 'champions';
+  $('evo-champions').innerHTML = card('risk', '(−pinball ×1e4)') + card('alpha', '(R² %)') +
+    '<p class="field-help">' + integer((learning.history || []).length) + ' learning runs · last ' + esc(fullTime(learning.at)) + ' · ' + number(learning.seconds, 1) + ' s</p>';
+  drawLearningCurve(task);
+  syncSurfaceAnimation();
+}
+
+function drawLearningCurve(task) {
+  const canvas = $('evo-curve');
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.round(rect.width * ratio); canvas.height = Math.round(rect.height * ratio);
+  const ctx = canvas.getContext('2d'); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, rect.width, rect.height);
+  ctx.font = '11px Consolas, monospace';
+  const points = task.curve.filter(c => Number.isFinite(c.out_of_sample_score) && Number.isFinite(c.baseline_score));
+  if (!points.length) return;
+  const values = points.flatMap(c => [c.out_of_sample_score, c.baseline_score]);
+  let low = Math.min(...values), high = Math.max(...values); const pad = (high - low) * .15 || .1; low -= pad; high += pad;
+  const plot = grid(ctx, rect.width, rect.height, low, high, v => v.toFixed(1),
+    [points[0].period.slice(0, 10), '', '', '', points.at(-1).period.slice(-10)]);
+  const x = i => plot.left + (plot.right - plot.left) * (points.length === 1 ? .5 : i / (points.length - 1));
+  const y = v => plot.bottom - (v - low) / (high - low) * (plot.bottom - plot.top);
+  ctx.setLineDash([5, 4]); ctx.strokeStyle = '#a8939c'; ctx.lineWidth = 1.5; ctx.beginPath();
+  points.forEach((c, i) => i ? ctx.lineTo(x(i), y(c.baseline_score)) : ctx.moveTo(x(i), y(c.baseline_score))); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = '#ff2a55'; ctx.lineWidth = 2; ctx.beginPath();
+  points.forEach((c, i) => i ? ctx.lineTo(x(i), y(c.out_of_sample_score)) : ctx.moveTo(x(i), y(c.out_of_sample_score))); ctx.stroke();
+  points.forEach((c, i) => { ctx.beginPath(); ctx.arc(x(i), y(c.out_of_sample_score), 4, 0, Math.PI * 2);
+    if (c.guard_kept_baseline) { ctx.strokeStyle = '#ff2a55'; ctx.lineWidth = 1.5; ctx.fillStyle = '#0b0910'; ctx.fill(); ctx.stroke(); }
+    else { ctx.fillStyle = '#ff2a55'; ctx.fill(); } });
+  const wins = points.filter(c => c.out_of_sample_score > c.baseline_score).length;
+  $('evo-curve-badge').textContent = wins + ' of ' + points.length + ' blocks beat the baseline';
+  $('evo-curve-legend').innerHTML = '<span><i class="line"></i>Frozen champion, next block</span><span><i class="line dashed"></i>Fixed baseline</span><span>○ incumbent kept (change not significant)</span>';
+}
+
+document.querySelectorAll('[data-task]').forEach(button => button.addEventListener('click', () => {
+  evolutionTask = button.dataset.task;
+  document.querySelectorAll('[data-task]').forEach(b => { b.classList.toggle('active', b === button); b.setAttribute('aria-checked', String(b === button)); });
+  renderEvolution();
+}));
+$('learn-now').addEventListener('click', async () => {
+  const button = $('learn-now');
+  button.setAttribute('aria-busy', 'true'); button.textContent = 'Evolving…';
+  await action(() => window.quant.learnNow(), 'Learning step complete.');
+  button.removeAttribute('aria-busy'); button.textContent = 'Learn now';
+});
 
 function chartContext() {
   const canvas = $('research-chart');
@@ -537,18 +773,18 @@ function grid(context, width, height, low, high, format, labels = []) {
   const plot = { left: 43, top: 14, right: width - 15, bottom: height - 30 };
   for (let step = 0; step <= 4; step++) {
     const y = plot.top + (plot.bottom - plot.top) * step / 4;
-    context.strokeStyle = '#29405199';
+    context.strokeStyle = '#3a1a2899';
     context.lineWidth = .7;
     context.beginPath(); context.moveTo(plot.left, y); context.lineTo(plot.right, y); context.stroke();
-    context.fillStyle = '#7691a8'; context.textAlign = 'right';
+    context.fillStyle = '#bda9b2'; context.textAlign = 'right';
     context.fillText(format(high - (high - low) * step / 4), plot.left - 9, y + 3);
   }
   for (let step = 0; step <= 4; step++) {
     const x = plot.left + (plot.right - plot.left) * step / 4;
-    context.strokeStyle = '#26394966';
+    context.strokeStyle = '#3a1a2866';
     context.beginPath(); context.moveTo(x, plot.top); context.lineTo(x, plot.bottom); context.stroke();
     if (labels[step] !== undefined) {
-      context.fillStyle = '#68869e'; context.textAlign = step === 0 ? 'left' : step === 4 ? 'right' : 'center';
+      context.fillStyle = '#bda9b2'; context.textAlign = step === 0 ? 'left' : step === 4 ? 'right' : 'center';
       context.fillText(labels[step], x, height - 10);
     }
   }
@@ -591,16 +827,16 @@ function drawChart() {
     const x = i => plot.left + i / (curve.length - 1) * (plot.right - plot.left);
     const y = value => plot.bottom - (value - low) / (high - low) * (plot.bottom - plot.top);
     const gradient = ctx.createLinearGradient(0, plot.top, 0, plot.bottom);
-    gradient.addColorStop(0, '#61cfcb20'); gradient.addColorStop(1, '#61cfcb02');
+    gradient.addColorStop(0, '#ff2a5520'); gradient.addColorStop(1, '#ff2a5502');
     ctx.beginPath(); ctx.moveTo(x(0), plot.bottom);
     curve.forEach((point, i) => ctx.lineTo(x(i), y(point.strategy)));
     ctx.lineTo(x(curve.length - 1), plot.bottom); ctx.closePath(); ctx.fillStyle = gradient; ctx.fill();
-    for (const [key, color, dashed] of [['cash', '#526b7e', [2, 5]], ['equal_weight', '#8399ad', [5, 4]], ['strategy', '#61cfcb', []]]) {
+    for (const [key, color, dashed] of [['cash', '#6b5560', [2, 5]], ['equal_weight', '#a8939c', [5, 4]], ['strategy', '#ff2a55', []]]) {
       ctx.strokeStyle = color; ctx.lineWidth = key === 'strategy' ? 1.7 : 1.2; ctx.setLineDash(dashed);
       ctx.beginPath(); curve.forEach((point, i) => i ? ctx.lineTo(x(i), y(point[key])) : ctx.moveTo(x(i), y(point[key]))); ctx.stroke();
     }
     ctx.setLineDash([]);
-    const last = curve[curve.length - 1]; ctx.fillStyle = '#83e2dc'; ctx.beginPath(); ctx.arc(x(curve.length - 1), y(last.strategy), 3, 0, Math.PI * 2); ctx.fill();
+    const last = curve[curve.length - 1]; ctx.fillStyle = '#ff7a95'; ctx.beginPath(); ctx.arc(x(curve.length - 1), y(last.strategy), 3, 0, Math.PI * 2); ctx.fill();
     $('chart-subtitle').textContent = report.date_range.start + ' → ' + report.date_range.end + ' · equity starts at 1.00 · ' + report.parameters.cost_bps + ' bps trading cost';
     $('chart-legend').innerHTML = '<span><i class="line mint"></i>Momentum, net ' + percent(report.backtest.total_return) + '</span><span><i class="line dashed"></i>Equal weight, net</span><span><i class="line cash"></i>Cash</span>';
     chartGeometry = { plot, curve, x, y, width, height };
@@ -613,13 +849,13 @@ function drawChart() {
     const barWidth = (plot.right - plot.left) / bins.length;
     bins.forEach((bin, index) => {
       const barHeight = bin.count / (maximum * 1.1) * (plot.bottom - plot.top);
-      ctx.fillStyle = bin.high < -report.monte_carlo.var95 ? '#d99c665c' : '#61cfcb8a';
+      ctx.fillStyle = bin.high < -report.monte_carlo.var95 ? '#ff2a555c' : '#ff2a558a';
       ctx.fillRect(plot.left + index * barWidth + .6, plot.bottom - barHeight, Math.max(1, barWidth - 1.2), barHeight);
     });
     const q05 = -report.monte_carlo.var95;
     const x = plot.left + (q05 - left) / (right - left) * (plot.right - plot.left);
-    ctx.strokeStyle = '#e7b378'; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x, plot.top); ctx.lineTo(x, plot.bottom); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#dcb182'; ctx.fillText('5% tail', Math.min(plot.right - 50, x + 7), plot.top + 11);
+    ctx.strokeStyle = '#ffb347'; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x, plot.top); ctx.lineTo(x, plot.bottom); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#ffb347'; ctx.fillText('5% tail', Math.min(plot.right - 50, x + 7), plot.top + 11);
     $('chart-subtitle').textContent = integer(report.parameters.paths) + ' simulated paths · ' + report.parameters.horizon + ' observations · seed ' + report.parameters.seed;
     $('chart-legend').innerHTML = '<span><i class="line mint"></i>Gaussian paths per bin</span><span><i class="line bootstrap"></i>Bootstrap VaR ' + percent(report.bootstrap.var95) + '</span>';
   } else if (chartMode === 'correlation') {
@@ -627,17 +863,17 @@ function drawChart() {
     const cell = Math.min((width - 160) / count, (height - 50) / count, 60);
     const left = 117, top = 16;
     for (let row = 0; row < count; row++) {
-      ctx.textAlign = 'right'; ctx.fillStyle = '#91aec5'; ctx.font = '9px Segoe UI, sans-serif';
+      ctx.textAlign = 'right'; ctx.fillStyle = '#d8c8cf'; ctx.font = '9px Segoe UI, sans-serif';
       ctx.fillText(report.assets[row].length > 17 ? report.assets[row].slice(0, 15) + '…' : report.assets[row], left - 8, top + row * cell + cell / 2 + 3);
       for (let col = 0; col < count; col++) {
         const value = report.correlation[row][col];
         const magnitude = Math.abs(value);
-        ctx.fillStyle = value >= 0 ? `rgba(68,176,168,${.10 + magnitude * .65})` : `rgba(191,124,90,${.10 + magnitude * .65})`;
+        ctx.fillStyle = value >= 0 ? `rgba(45,226,230,${.10 + magnitude * .65})` : `rgba(255,42,85,${.10 + magnitude * .65})`;
         ctx.fillRect(left + col * cell + 1, top + row * cell + 1, cell - 2, cell - 2);
-        if (cell >= 22) { ctx.textAlign = 'center'; ctx.font = '11px Consolas, monospace'; ctx.fillStyle = '#c4ddd8'; ctx.fillText(value.toFixed(2), left + col * cell + cell / 2, top + row * cell + cell / 2 + 3); }
+        if (cell >= 22) { ctx.textAlign = 'center'; ctx.font = '11px Consolas, monospace'; ctx.fillStyle = '#fff3f6'; ctx.fillText(value.toFixed(2), left + col * cell + cell / 2, top + row * cell + cell / 2 + 3); }
       }
     }
-    ctx.textAlign = 'center'; ctx.font = '11px Consolas, monospace'; ctx.fillStyle = '#9fb3c6';
+    ctx.textAlign = 'center'; ctx.font = '11px Consolas, monospace'; ctx.fillStyle = '#bda9b2';
     for (let col = 0; col < count; col++) ctx.fillText(String(col + 1).padStart(2, '0'), left + col * cell + cell / 2, top + count * cell + 16);
     $('chart-subtitle').textContent = 'Sample return correlations · ' + report.return_observations + ' observations' + (report.assets.length > 12 ? ' · first 12 assets shown' : '');
     $('chart-legend').innerHTML = '<span><i class="line mint"></i>Positive correlation</span><span><i class="line bootstrap"></i>Diagonal = 1.00</span>';
@@ -650,11 +886,11 @@ function drawChart() {
     const zero = y(0), step = (plot.right - plot.left) / variants.length;
     variants.forEach((variant, index) => {
       const x = plot.left + step * index + step * .27, end = y(variant.total_return);
-      ctx.fillStyle = variant.lookback === report.parameters.lookback ? '#61cfcb' : '#395f66';
+      ctx.fillStyle = variant.lookback === report.parameters.lookback ? '#ff2a55' : '#5a1a30';
       ctx.fillRect(x, Math.min(zero, end), step * .46, Math.max(1, Math.abs(end - zero)));
-      ctx.textAlign = 'center'; ctx.fillStyle = '#b0c7d8';
+      ctx.textAlign = 'center'; ctx.fillStyle = '#d8c8cf';
       ctx.fillText(percent(variant.total_return, 1), x + step * .23, end + (variant.total_return >= 0 ? -8 : 15));
-      ctx.fillStyle = '#7f9ab1'; ctx.fillText(variant.lookback + ' obs', x + step * .23, height - 10);
+      ctx.fillStyle = '#bda9b2'; ctx.fillText(variant.lookback + ' obs', x + step * .23, height - 10);
     });
     $('chart-subtitle').textContent = 'Net strategy return by lookback · overlapping historical data · different warm-up windows';
     $('chart-legend').innerHTML = '<span><i class="line mint"></i>Current report lookback</span><span><i class="line dashed"></i>Descriptive comparison; no winning-parameter selection</span>';

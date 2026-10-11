@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('quant', Object.freeze({
   runOnce: () => call('run-once'),
   calculateOptions: (values: unknown) => call('calculate-options', values),
   ask: (text: string) => call('ask', text),
+  learnNow: () => call('learn-now'),
   confirmAsk: (token: string, accept: boolean) => call('ask-confirm', { token, accept }),
   configure: (values: unknown) => call('configure', values),
   chooseRoot: () => call('choose-root'),

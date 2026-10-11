@@ -403,3 +403,39 @@ All four gates pass. The warm start (US-market memories applied to the "Other" i
 5. Daily returns are nearly unpredictable: +0.27% R² is the honest ceiling found here, and no claim of tradeable alpha is made.
 
 **Next:** run the learner in the desktop's continuous cycle (bounded), and show its lineage as a 3D "second mind" graph in the new cyberpunk theme.
+
+---
+
+## Task 16 — Continuous learning in the desktop app, the 3D "second mind" Evolution page, and the Cyberpunk 2099 theme
+
+**Learning in the app**
+- `workers/quant_learning.py` and the worker commands `learn` / `learning`: a bounded evolution run (2–600 s budget) on the selected snapshot's equal-weight returns. Block sizes adapt to snapshot length (minimum 350 returns). It appends to `<storage>/learning/experience.jsonl` (warm-start memories) and `history.jsonl` (learning over time).
+- Engine: `learnContinuously` (default **on**) runs one learning step after every **continuous** cycle; a manual "Run once" does not learn. A learning failure is stored in `learningError` and **never** fails research. `learnNow()` shares the worker slot with the same busy, pause and shutdown rules as options.
+- Assistant: "learn now", "what have you learned", and "show the evolution graph".
+- The native self-test now runs a learning step in the real app (55 models tested on the sample).
+
+**Evolution page:** a 3D force-directed lineage graph in the style of Obsidian's graph view:
+- repulsion, springs along lineage edges, family-centroid attraction (clusters = model families) and cooling, so it settles live;
+- additive glow scaled by fitness, champion rings, and edges coloured by operator (mutation, crossover, elite);
+- auto-rotation that stops on hover and focus; drag, arrow keys and toolbar controls; a static layout under reduced motion;
+- Risk/Alpha toggle, champion cards (out-of-sample vs baseline, incumbent-kept rate, evaluations), the learning curve (frozen champion vs baseline per block, with hollow markers where the incumbent was kept), and the continuous-learning settings.
+
+**Theme:** see `docs/research/UI_UX_AUDIT.md` (0.2b).
+
+**Tests:** 3 new desktop tests (learning after continuous cycles, a failure that doesn't break research, the off switch; learn-now busy and cancel rules; the real worker learns twice and remembers). Two existing fake workers were updated because they never answered `learn`; one of them hung the suite until fixed. **27/27 TypeScript**, full Python suite and typecheck green; native self-test OK.
+
+**Did not work at first:** the CSP blocked inline swatch colours; the curve canvas defaulted to 300×150; an "−10.20" axis label was clipped; the Ask panel's border doubled. All four were found from screenshots and fixed.
+
+## Task 17 — Triage of the additional references (user list)
+
+| Repository | Inspected | Licence | Decision |
+| --- | --- | --- | --- |
+| sympy/sympy_gamma | `3da0b17` | BSD-style | The idea is adopted: a step-by-step "show the maths" explainer with your numbers substituted (next task). SymPy is used only as a dev-time checker, not as a runtime dependency. |
+| mkroman/wolfram-alpha | `f444d0b` (2013) | none | **Not adopted:** needs a Wolfram AppID, sends data off the machine, unmaintained. |
+| rahulnyk/graph_maker | `da00dc8` | Apache-2.0 | The idea is adopted: the knowledge graph is built from QuantEngine's own experiment lineage instead of LLM text extraction (offline, verifiable). |
+| tradingview/lightweight-charts | `cb06581` | Apache-2.0 + **attribution required** (NOTICE plus a link to tradingview.com) | Candidate for a candlestick/price view; it would ship with the required attribution. Not added yet. |
+| tradingview/charting-library-examples | `dfec6fc` | MIT examples, but the Charting Library itself needs a **licence from TradingView** | Not adopted. |
+| tt-a1i/archify | `58ab0b9` | MIT | An agent skill for architecture diagrams; useful for documentation, not a runtime component. |
+| barbagrigia/FinanceSharp | `c570ecd` (2020) | Apache-2.0 | C# indicators; reference only. |
+| facebookresearch/matrix | `0801afd` | MIT | Large-scale LLM data-generation infrastructure (GPU clusters); not applicable to a 16 GB laptop. |
+| rossant/awesome-math | `21066c9` | CC0 | Reading index. |

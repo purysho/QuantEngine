@@ -10,6 +10,8 @@ from __future__ import annotations
 import csv
 import datetime as dt
 import hashlib
+import http.client
+import time
 import io
 import json
 import math
@@ -42,8 +44,15 @@ def fetch(url: str, cache: str | Path, name: str, *, offline: bool = False, max_
     if offline:
         raise FileNotFoundError(f"{name} is not cached and offline mode is on.")
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=90) as response:
-        data = response.read(max_bytes + 1)
+    for attempt in range(3):  # Public endpoints occasionally drop connections; retry with backoff.
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                data = response.read(max_bytes + 1)
+            break
+        except (OSError, http.client.HTTPException) as exc:
+            if attempt == 2:
+                raise ConnectionError(f"Could not download {name} from {url}: {exc}") from exc
+            time.sleep(2 * 2 ** attempt)
     if len(data) > max_bytes:
         raise ValueError(f"{name} exceeded {max_bytes} bytes.")
     digest = hashlib.sha256(data).hexdigest()

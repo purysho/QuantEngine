@@ -54,7 +54,10 @@ test('continuous start and manual run cannot create overlapping work', async () 
   let resolve!: (value: Record<string, unknown>) => void;
   let calls = 0;
   const transport = {
-    request: async () => { calls++; return new Promise<Record<string, unknown>>(r => { resolve = r; }); },
+    request: async (command: string) => {
+      if (command === 'learn') return { learning: { tasks: {} } };
+      calls++; return new Promise<Record<string, unknown>>(r => { resolve = r; });
+    },
     cancel: async () => {},
   };
   const engine = new Engine(defaultConfig('/tmp/quant-test'), transport, async () => {});
@@ -194,6 +197,7 @@ test('failed automatic ECB refresh retains cached data and attempts only once pe
   const engine = new Engine(config, {
     request: async (command: string) => {
       if (command === 'refresh') { refreshes++; throw new Error('Offline'); }
+      if (command === 'learn') return { learning: null };
       calculations++;
       return { report, runs: [], stats: { completed: calculations } };
     }, cancel: async () => {},
@@ -304,5 +308,77 @@ test('real worker prices options without adding research history', async () => {
     await assert.rejects(() => transport.request('options', { parameters: { spot: -1, strike: 40, time: 1, rate: 0, volatility: .2 } }), /Spot/);
     const history = await transport.request('history', {});
     assert.deepEqual(history.runs, []);
+  } finally { await rm(folder, { recursive: true, force: true }); }
+});
+
+
+test('continuous cycles keep learning, and a learning failure never fails research', async () => {
+  const { Engine } = await engineModule();
+  const { defaultConfig } = await configModule();
+  const commands: string[] = [];
+  let failLearning = false;
+  const engine = new Engine(defaultConfig('/tmp/quant-learn'), {
+    request: async (command: string) => {
+      commands.push(command);
+      if (command === 'learn') {
+        if (failLearning) throw new Error('Learning needs at least 350 returns');
+        return { learning: { tasks: { risk: { blocks: 3 } }, history: [{}] } };
+      }
+      return { report, runs: [], stats: { completed: 1 } };
+    }, cancel: async () => {},
+  }, async () => {});
+  engine.datasets = [{ id: 'sample', kind: 'synthetic', rows: 504, retrieved_at: '2025-01-01' }];
+  await engine.runOnce();
+  assert.deepEqual(commands, ['analyse'], 'A manual run does not learn');
+  await engine.start();
+  assert.deepEqual(commands, ['analyse', 'analyse', 'learn']);
+  assert.deepEqual((engine.snapshot().learning as any).tasks.risk.blocks, 3);
+  failLearning = true;
+  await engine.pause();
+  await engine.start();
+  assert.equal(engine.state.lastError, null);
+  assert.match(String(engine.snapshot().learningError), /350 returns/);
+  assert.equal(engine.lastReport, report);
+  await engine.pause();
+  await engine.configure({ learnContinuously: false });
+  commands.length = 0;
+  await engine.start();
+  assert.deepEqual(commands, ['analyse']);
+  await engine.pause();
+});
+
+test('learn now uses the shared worker slot and is cancelled by pause', async () => {
+  const { Engine } = await engineModule();
+  const { defaultConfig } = await configModule();
+  let reject!: (reason: Error) => void;
+  const engine = new Engine(defaultConfig('/tmp/quant-learn-now'), {
+    request: async (command: string) => command === 'history' ? { runs: [] } : new Promise<Record<string, unknown>>((_, r) => { reject = r; }),
+    cancel: async () => { reject(new Error('killed')); },
+  }, async () => {});
+  engine.datasets = [{ id: 'sample', kind: 'synthetic', rows: 504, retrieved_at: '2025-01-01' }];
+  const pending = engine.learnNow();
+  assert.equal(engine.state.busy, true);
+  await assert.rejects(() => engine.runOnce(), /already/i);
+  await assert.rejects(() => engine.calculateOptions({}), /already/i);
+  await engine.pause();
+  await pending;
+  assert.equal(engine.state.busy, false);
+  assert.equal(engine.learningError, null, 'Cancellation is not reported as a learning failure');
+});
+
+test('real worker learns on the synthetic sample and remembers across runs', async () => {
+  const { WorkerTransport } = await import('../desktop/transport.js');
+  const folder = await mkdtemp(path.join(os.tmpdir(), 'quant-learn-real-'));
+  try {
+    const transport = new WorkerTransport(PYTHON, path.resolve('workers/quant_worker.py'), () => folder, () => true);
+    await transport.request('inspect', {});
+    const first = (await transport.request('learn', { dataset_id: 'sample', budget_seconds: 10 })).learning as any;
+    assert.ok(first.tasks.risk.graph.nodes.length > 5);
+    assert.ok(first.tasks.alpha.graph.edges.length > 0);
+    const second = (await transport.request('learn', { dataset_id: 'sample', budget_seconds: 10 })).learning as any;
+    assert.equal(second.history.length, 2);
+    const history = (await transport.request('learning', {})).learning as any;
+    assert.ok(history.memories >= 6);
+    await assert.rejects(() => transport.request('learn', { dataset_id: 'sample', budget_seconds: 9999 }), /budget/);
   } finally { await rm(folder, { recursive: true, force: true }); }
 });

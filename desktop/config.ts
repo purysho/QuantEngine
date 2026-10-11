@@ -25,6 +25,8 @@ export interface EngineConfig {
   lastEcbAttemptDate: string | null;
   assistantEndpoint: string;
   assistantModel: string;
+  learnContinuously: boolean;
+  learnBudgetSeconds: number;
 }
 
 export function defaultConfig(dataRoot: string): EngineConfig {
@@ -32,12 +34,13 @@ export function defaultConfig(dataRoot: string): EngineConfig {
     lookback: 20, rebalance: 5, costBps: 10, shrinkage: .1, intervalSeconds: 60,
     lowCpu: false, rotateVariants: true, autoRefreshEcb: true, startAtLogin: false,
     resumeOnLaunch: false, runSequence: 0, lastError: null, lastRefreshError: null, lastEcbAttemptDate: null,
-    assistantEndpoint: '', assistantModel: '' };
+    assistantEndpoint: '', assistantModel: '', learnContinuously: true, learnBudgetSeconds: 20 };
 }
 
 export const USER_SETTINGS = new Set(['datasetId', 'paths', 'horizon', 'seed', 'lookback',
   'rebalance', 'costBps', 'shrinkage', 'intervalSeconds', 'lowCpu', 'rotateVariants',
-  'autoRefreshEcb', 'startAtLogin', 'resumeOnLaunch', 'assistantEndpoint', 'assistantModel']);
+  'autoRefreshEcb', 'startAtLogin', 'resumeOnLaunch', 'assistantEndpoint', 'assistantModel',
+  'learnContinuously', 'learnBudgetSeconds']);
 
 export function validatePatch(patch: unknown): Partial<EngineConfig> {
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Settings must be an object.');
@@ -45,7 +48,7 @@ export function validatePatch(patch: unknown): Partial<EngineConfig> {
   const numeric: Record<string, [number, number, boolean]> = {
     version: [1, 1, true], paths: [1000, 1_000_000, true], horizon: [1, 252, true], seed: [0, 2 ** 32 - 1, true],
     lookback: [5, 2520, true], rebalance: [1, 63, true], costBps: [0, 500, false], shrinkage: [0, 1, false],
-    intervalSeconds: [5, 86400, true], runSequence: [0, Number.MAX_SAFE_INTEGER - 1, true],
+    intervalSeconds: [5, 86400, true], runSequence: [0, Number.MAX_SAFE_INTEGER - 1, true], learnBudgetSeconds: [2, 600, true],
   };
   for (const [key, value] of Object.entries(values)) {
     if (numeric[key]) {
@@ -53,7 +56,7 @@ export function validatePatch(patch: unknown): Partial<EngineConfig> {
       if (typeof value !== 'number' || !Number.isFinite(value) || value < low || value > high || (integral && !Number.isInteger(value))) {
         throw new Error(`${key} must be ${integral ? 'an integer' : 'a number'} from ${low} to ${high}.`);
       }
-    } else if (['lowCpu', 'rotateVariants', 'autoRefreshEcb', 'startAtLogin', 'resumeOnLaunch'].includes(key)) {
+    } else if (['lowCpu', 'rotateVariants', 'autoRefreshEcb', 'startAtLogin', 'resumeOnLaunch', 'learnContinuously'].includes(key)) {
       if (typeof value !== 'boolean') throw new Error(`${key} must be true or false.`);
     } else if (key === 'dataRoot') {
       if (typeof value !== 'string' || value.length > 4096 || !(path.isAbsolute(value) || /^[A-Za-z]:[\\/]/.test(value))) {

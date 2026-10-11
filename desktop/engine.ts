@@ -20,6 +20,8 @@ export class Engine {
   lastReport: JsonRecord | null = null;
   lastReportPath: string | null = null;
   optionsReport: JsonRecord | null = null;
+  learning: JsonRecord | null = null;
+  learningError: string | null = null;
   runtime: JsonRecord = {};
   onChange: () => void = () => {};
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -30,6 +32,7 @@ export class Engine {
   private configQueue: Promise<unknown> = Promise.resolve();
   private dataActive: Promise<Dataset> | null = null;
   private optionsActive: Promise<JsonRecord> | null = null;
+  private learnActive: Promise<void> | null = null;
   private initializationActive: Promise<void> | null = null;
   private shuttingDown = false;
   constructor(public config: EngineConfig, readonly transport: Transport,
@@ -40,7 +43,8 @@ export class Engine {
 
   snapshot() {
     return { state: { ...this.state }, config: { ...this.config }, datasets: this.datasets,
-      runs: this.runs, report: this.lastReport, options: this.optionsReport, runtime: this.runtime };
+      runs: this.runs, report: this.lastReport, options: this.optionsReport, runtime: this.runtime,
+      learning: this.learning, learningError: this.learningError };
   }
   private publish() { this.onChange(); }
 
@@ -58,6 +62,7 @@ export class Engine {
     this.runtime = result.runtime as JsonRecord;
     this.updateStats(result);
     if (!this.datasets.some(d => d.id === this.config.datasetId)) this.config.datasetId = 'sample';
+    try { this.learning = (await this.transport.request('learning', {})).learning as JsonRecord; } catch { /* History is optional. */ }
     const latest = this.runs.find(run => run.status === 'completed');
     if (latest) {
       const saved = await this.transport.request('report', { run_id: latest.id });
@@ -193,6 +198,8 @@ export class Engine {
       this.state.lastError = null;
       this.config.lastError = null;
       await this.persist(this.config);
+      // Continuous mode keeps learning: one bounded evolution run after each completed analysis.
+      if (this.state.continuous && this.config.learnContinuously && !this.cancelled) await this.learnStep();
     } catch (error) {
       if (this.cancelled) return;
       this.state.lastError = String((error as Error).message);
@@ -205,6 +212,42 @@ export class Engine {
         this.updateStats(result);
       } catch { /* Keep the original numerical/storage error. */ }
     }
+  }
+
+  private async learnStep() {
+    this.state.stage = 'Evolving models (learning)';
+    this.state.fraction = 0;
+    this.publish();
+    try {
+      const result = await this.transport.request('learn', { dataset_id: this.config.datasetId,
+        budget_seconds: this.config.learnBudgetSeconds }, event => this.workerEvent(event));
+      if (this.cancelled) return;
+      this.learning = result.learning as JsonRecord;
+      this.learningError = null;
+    } catch (error) {
+      // Learning never fails research: the completed report stands; the reason is shown separately.
+      if (!this.cancelled) this.learningError = String((error as Error).message);
+    }
+  }
+
+  /** Run one learning step now, in the shared worker slot (same rules as option calculations). */
+  learnNow(): Promise<void> {
+    if (this.shuttingDown) return Promise.reject(new Error('Quant Engine is shutting down.'));
+    if (this.pausing) return Promise.reject(new Error('Pause is still recovering research history.'));
+    if (this.state.settingsPending) return Promise.reject(new Error('Settings are still being saved.'));
+    if (this.state.busy) return Promise.reject(new Error('A numerical worker is already active. Wait or pause before learning.'));
+    this.clearTimer();
+    this.cancelled = false;
+    this.state.busy = true;
+    const pending = this.learnStep().finally(() => {
+      if (this.learnActive === pending) this.learnActive = null;
+      this.state.busy = this.pausing;
+      if (this.pausing) return;
+      if (this.state.continuous && !this.cancelled) this.schedule();
+      else { this.state.stage = 'Ready to run'; this.publish(); }
+    });
+    this.learnActive = pending;
+    return pending;
   }
 
   private workerEvent(event: WorkerEvent) {
@@ -223,7 +266,7 @@ export class Engine {
   private async pauseWork(): Promise<void> {
     const wasBusy = this.state.busy;
     const active = this.active, dataActive = this.dataActive, initializationActive = this.initializationActive,
-      optionsActive = this.optionsActive;
+      optionsActive = this.optionsActive, learnActive = this.learnActive;
     this.pausing = true;
     this.state.continuous = false;
     this.cancelled = true;
@@ -232,7 +275,7 @@ export class Engine {
       this.state.stage = 'Stopping worker and recovering history';
       this.publish();
       await this.transport.cancel();
-      await Promise.allSettled([active, dataActive, initializationActive, optionsActive, this.configQueue]);
+      await Promise.allSettled([active, dataActive, initializationActive, optionsActive, learnActive, this.configQueue]);
       // Keep the scheduler lock until the owned child has closed and SQLite history is recovered.
       this.state.busy = true;
       if (this.datasets.length) {
@@ -254,7 +297,7 @@ export class Engine {
   async shutdown(): Promise<void> {
     this.shuttingDown = true;
     await this.pause();
-    await Promise.allSettled([this.configQueue, this.dataActive, this.initializationActive, this.optionsActive]);
+    await Promise.allSettled([this.configQueue, this.dataActive, this.initializationActive, this.optionsActive, this.learnActive]);
   }
 
   /** Price a hypothetical option contract in the shared worker slot; never alters research history. */

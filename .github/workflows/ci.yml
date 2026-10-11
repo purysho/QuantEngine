@@ -58,6 +58,32 @@ jobs:
         env:
           QUANT_PYTHON: python
 
+  real-data:
+    name: Real-data backtests (FRED, Ken French) and evolutionary learning
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Cache public data snapshots (hash-verified on read)
+        uses: actions/cache@v4
+        with:
+          path: .cache/data
+          key: public-data-${{ github.run_id }}
+          restore-keys: public-data-
+      - name: 100-year backtest of the maths against what happened
+        run: python experiments/real_world_backtest.py
+      - name: Prequential evolutionary learning on real data
+        run: python experiments/evolution_real.py --offline
+      - name: Acceptance summary
+        run: |
+          python -c "import json; [print(p, json.load(open('experiments/results/'+p+'.json')).get('acceptance', json.load(open('experiments/results/'+p+'.json'))['findings'])) for p in ('real_world_backtest','evolution_real')]"
+
   windows-package:
     name: Windows portable package with embedded runtime
     needs: checks

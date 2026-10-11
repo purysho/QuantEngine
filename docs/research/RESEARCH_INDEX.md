@@ -63,3 +63,9 @@ AIA Macro (Bridgewater), Alpha-GPT, the Citadel AI assistant and Balyasny's tool
 4. GARCH(1,1)-t volatility for risk; a Kalman-filter hedge ratio for pairs, evaluated with the same clocks.
 5. Desktop pages for pairs, market making and alpha, using the shared worker slot.
 6. Elapsed-time windows (chrono-ta semantics) for irregular CSV data.
+
+## Real-data evidence and the learning system (added)
+
+- `experiments/results/real_world_backtest.json`: 100 years of CRSP US-market data, the VIX/16 rule, Black–Scholes priced at VIX vs realised payoffs, Brent–WTI cointegration through the 2020 negative price, and industry momentum since 1926. GJR-GARCH filtered historical simulation is the best VaR model on real data.
+- `experiments/results/evolution_real.json`: prequential evolutionary learning (v1 → v3) with an honest comparison against the best fixed choice in hindsight.
+- Additional references are triaged in `WORK_LOG.md` Task 17.

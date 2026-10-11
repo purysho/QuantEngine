@@ -19,6 +19,7 @@ import scipy
 
 from quant_core import analyse
 from quant_options import options_report
+from quant_learning import learn
 from quant_store import Store
 
 
@@ -77,6 +78,17 @@ def main():
             duration = (time.perf_counter() - started) * 1000
             path = store.finish_run(run_id, report, duration)
             result = {"report": report, "report_path": path, "runs": store.history(), "stats": store.stats()}
+        elif command == "learn":
+            # Bounded evolutionary learning on the selected snapshot; never alters datasets or reports.
+            dataset, (dates, assets, prices) = store.load(request.get("dataset_id", "sample"))
+            budget = request.get("budget_seconds", 20)
+            if isinstance(budget, bool) or not isinstance(budget, (int, float)) or not 2 <= budget <= 600:
+                raise ValueError("Learning budget must be 2-600 seconds.")
+            result = {"learning": learn(store.root, dataset, dates, prices, budget_seconds=float(budget),
+                                        progress=lambda stage, fraction: emit({"type": "progress", "stage": stage, "fraction": fraction}))}
+        elif command == "learning":
+            from quant_learning import history
+            result = {"learning": history(store.root)}
         elif command == "options":
             # Hypothetical option contracts: never touches price snapshots or research history.
             parameters = request.get("parameters")

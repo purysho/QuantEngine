@@ -14,6 +14,7 @@
       <button class="nav-item active" data-page="monitor"><svg viewBox="0 0 24 24"><path d="m3 18 5-6 4 3 7-10m-5 0h5v5"/></svg>Monitor</button>
       <button class="nav-item" data-page="datasets"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></svg>Datasets</button>
       <button class="nav-item" data-page="options"><svg viewBox="0 0 24 24"><path d="M3 20c4-1 6-8 9-8s5 7 9 8M12 4v16"/></svg>Options</button>
+      <button class="nav-item" data-page="evolution"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="12" cy="13" r="2.5"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6.6 7.2 10.4 11.4M17.4 6.3 13.7 11.3M10.5 14.6 7.2 17.6M14.1 14.6 16.6 16.9"/></svg>Evolution</button>
       <button class="nav-item" data-page="runs"><svg viewBox="0 0 24 24"><path d="m7 4 13 8-13 8Z"/></svg>Runs</button>
       <button class="nav-item" data-page="preferences"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z"/><circle cx="12" cy="12" r="3"/></svg>Preferences</button>
     </nav>
@@ -121,6 +122,24 @@
       </div>
     </section>
 
+    <section id="page-evolution" class="page hidden">
+      <div class="page-intro"><p>The engine breeds model configurations, freezes the best, and scores it only on data that came <em>after</em> the choice. Each node is a tested model, each line shows how it was bred, and the clusters are model families.</p><div class="inline-actions"><button id="learn-now" class="primary">Learn now</button></div></div>
+      <div class="evolution-layout">
+        <article class="panel graph-panel"><div class="panel-heading"><div><h2>Second mind · model lineage</h2><p id="evo-subtitle">Run “Learn now” or start the engine to grow the graph.</p></div><div class="segmented" role="radiogroup" aria-label="Learning task"><button type="button" class="seg active" data-task="risk" role="radio" aria-checked="true">Risk (VaR)</button><button type="button" class="seg" data-task="alpha" role="radio" aria-checked="false">Alpha (returns)</button></div></div>
+          <div class="graph-wrap"><canvas id="evo-graph" tabindex="0" class="surface-canvas" aria-label="3D lineage graph of evaluated models; drag or use arrow keys to rotate"></canvas><div id="evo-hover" class="chart-hover hidden"></div><div id="evo-toolbar" class="surface-toolbar" role="toolbar" aria-label="3D graph controls"><button type="button" data-surface="left" aria-label="Rotate left">⟲</button><button type="button" data-surface="right" aria-label="Rotate right">⟳</button><button type="button" data-surface="play" aria-pressed="false" aria-label="Pause animation">Ⅱ</button><button type="button" data-surface="reset" aria-label="Reset view">Reset</button></div></div>
+          <div id="evo-legend" class="chart-legend"></div>
+        </article>
+        <aside class="evolution-side">
+          <article class="panel"><div class="panel-heading"><h2>Champions</h2><span id="evo-memories" class="tag">0 MEMORIES</span></div><div id="evo-champions" class="details-empty">No learning run yet.</div></article>
+          <article class="panel"><div class="panel-heading"><h2>Continuous learning</h2></div><div class="preferences-content">
+            <label class="checkbox-row"><input class="config-field" data-key="learnContinuously" type="checkbox" checked><span>Learn after every research cycle<small>One time-boxed evolution step per cycle on the selected dataset. Champions must significantly beat the current model to replace it.</small></span></label>
+            <label for="learn-budget">Time budget per step</label><div class="input-wrap"><input id="learn-budget" class="config-field" data-key="learnBudgetSeconds" type="number" min="2" max="600" value="20"><span>SECONDS</span></div>
+            <p id="evo-error" class="inline-error" role="alert"></p>
+          </div></article>
+        </aside>
+      </div>
+      <article class="panel"><div class="panel-heading"><div><h2>Learning curve</h2><p>Each point is a frozen champion scored on the next unseen block, against the fixed baseline</p></div><span id="evo-curve-badge" class="subtle"></span></div><div class="chart-wrap curve-wrap"><canvas id="evo-curve" aria-label="Out-of-sample champion score versus baseline by block"></canvas></div><div id="evo-curve-legend" class="chart-legend"></div></article>
+    </section>
     <section id="page-runs" class="page hidden">
       <div class="page-intro"><p>Completed, failed and interrupted calculations. Open a saved report to inspect its output.</p><button id="runs-export" class="secondary">Export viewed report ↗</button></div>
       <article class="panel"><div class="panel-heading"><h2>Research history</h2><span class="subtle">Latest 200 runs</span></div><div class="table-scroll"><table class="runs-table"><thead><tr><th>Completed / started</th><th>Dataset</th><th>Parameters</th><th>Duration</th><th>Status</th><th></th></tr></thead><tbody id="runs-body"></tbody></table></div><div id="runs-empty" class="large-empty">No runs yet. Start with the synthetic example or import your own prices.</div></article>
