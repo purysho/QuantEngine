@@ -196,7 +196,13 @@ payload = {"purpose": "Compare QuantEngine's models with realised history across
            "var_us_market": {"window": WINDOW, "refit_every": 50, "rows": var_rows, "pinball_loss": pinball,
                              "exception_ratio_by_decade": by_decade, "crises": crisis, "black_monday": garch_1987},
            "vix_rule": vix_rule, "black_scholes_vs_reality": bs_reality, "pairs_brent_wti": pairs_real,
-           "industry_momentum": momentum, "findings": findings}
+           "industry_momentum": momentum, "findings": findings,
+           "acceptance": {
+               "gjr_fhs_passes_kupiec_at_99": get("gjr_fhs", .01)["kupiec_p_value"] > .05,
+               "gjr_fhs_lowest_pinball_at_99": min((k for k in pinball if k.endswith("@0.01")), key=pinball.get) == "gjr_fhs@0.01",
+               "gaussian_window_fails_at_99": get("gaussian", .01)["kupiec_p_value"] < .05,
+               "vix_exceeds_realised_most_days": vix_rule["vix_minus_forward_21d_realised_vol_points"]["share_vix_above_realised"] > .5,
+               "negative_oil_price_windows_refused": len(skipped_nonpositive) > 0}}
 path = write("real_world_backtest", payload, started, finished)
 print("\n".join(findings))
 print("written", path, round(finished - started, 1), "s")

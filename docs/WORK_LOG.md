@@ -449,3 +449,13 @@ All four gates pass. The warm start (US-market memories applied to the "Other" i
 - Assistant: "explain Black–Scholes", "explain my VaR", "explain expected shortfall" and "show the maths for the portfolio" answer from these workings. Other "explain …" questions still go to the optional local model.
 - **Verification so an explanation can never disagree with a result:** tests assert the explained price, VaR, ES, Monte Carlo price and portfolio volatility equal the engine's numbers. **All eight Black–Scholes Greeks are verified by SymPy symbolic differentiation to 9 decimal places** (SymPy is development-only via `requirements-dev.txt` and installed in CI; it is not in the Windows runtime).
 - Not adopted: the Wolfram|Alpha client (an API key, data leaves the machine, last updated 2013).
+
+---
+
+## CI repair: runs 12–13
+
+**Cause:** every experiment passed, but the CI summary step indexed `['acceptance']` on every result file, and `real_world_backtest.json` had only `findings`. The `KeyError` turned a green run red.
+
+**Fix:** the real-world backtest now has explicit acceptance gates (GJR-FHS passes Kupiec at 99% and has the lowest quantile loss; the Gaussian window fails; VIX exceeds realised volatility most days; negative-price oil windows are refused); all five are true. The summary step uses `.get` and can no longer fail on a missing block.
+
+**Lesson:** report-only steps must never be able to fail a build. Gates belong in tests or explicit assertions.
