@@ -23,18 +23,21 @@ export interface EngineConfig {
   lastError: string | null;
   lastRefreshError: string | null;
   lastEcbAttemptDate: string | null;
+  assistantEndpoint: string;
+  assistantModel: string;
 }
 
 export function defaultConfig(dataRoot: string): EngineConfig {
   return { version: 1, dataRoot, datasetId: 'sample', paths: 50_000, horizon: 20, seed: 17,
     lookback: 20, rebalance: 5, costBps: 10, shrinkage: .1, intervalSeconds: 60,
     lowCpu: false, rotateVariants: true, autoRefreshEcb: true, startAtLogin: false,
-    resumeOnLaunch: false, runSequence: 0, lastError: null, lastRefreshError: null, lastEcbAttemptDate: null };
+    resumeOnLaunch: false, runSequence: 0, lastError: null, lastRefreshError: null, lastEcbAttemptDate: null,
+    assistantEndpoint: '', assistantModel: '' };
 }
 
 export const USER_SETTINGS = new Set(['datasetId', 'paths', 'horizon', 'seed', 'lookback',
   'rebalance', 'costBps', 'shrinkage', 'intervalSeconds', 'lowCpu', 'rotateVariants',
-  'autoRefreshEcb', 'startAtLogin', 'resumeOnLaunch']);
+  'autoRefreshEcb', 'startAtLogin', 'resumeOnLaunch', 'assistantEndpoint', 'assistantModel']);
 
 export function validatePatch(patch: unknown): Partial<EngineConfig> {
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Settings must be an object.');
@@ -62,6 +65,13 @@ export function validatePatch(patch: unknown): Partial<EngineConfig> {
       if (value !== null && (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value))) throw new Error('Invalid saved ECB attempt date.');
     } else if (key === 'lastError' || key === 'lastRefreshError') {
       if (value !== null && (typeof value !== 'string' || value.length > 4000)) throw new Error('Invalid saved error.');
+    } else if (key === 'assistantEndpoint') {
+      // Only a model server on this computer: the assistant must never send research data off the machine.
+      if (typeof value !== 'string' || value.length > 300 || (value && !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d{1,5})?(\/[\w./-]*)?$/.test(value))) {
+        throw new Error('Assistant endpoint must be empty or a localhost URL such as http://127.0.0.1:8080.');
+      }
+    } else if (key === 'assistantModel') {
+      if (typeof value !== 'string' || !/^[\w.:/@-]{0,120}$/.test(value)) throw new Error('Assistant model name contains unsupported characters.');
     } else throw new Error(`Unknown setting: ${key}`);
   }
   return values as Partial<EngineConfig>;

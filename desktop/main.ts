@@ -1,11 +1,12 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, ipcMain, shell } from 'electron';
 import fs from 'node:fs';
-import { readFile, writeFile, mkdir, rename, unlink } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, unlink, appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { ConfigStore, USER_SETTINGS, validatePatch } from './config.js';
 import { Engine } from './engine.js';
+import { Assistant } from './assistant.js';
 import { WorkerTransport, type JsonRecord } from './transport.js';
 
 app.setName('Quant Engine');
@@ -21,6 +22,7 @@ let quitting = false;
 let exitAllowed = false;
 let quitPromise: Promise<void> | null = null;
 let engine: Engine;
+let assistant: Assistant;
 let configStore: ConfigStore;
 let lastSentReport: unknown;
 let lastSentRuns: unknown;
@@ -141,6 +143,15 @@ async function command(method: string, values?: unknown): Promise<unknown> {
   if (method === 'start') { await engine.start(); return engine.snapshot(); }
   if (method === 'pause') { await engine.pause(); return engine.snapshot(); }
   if (method === 'run-once') { await engine.runOnce(); return engine.snapshot(); }
+  if (method === 'ask') {
+    if (typeof values !== 'string' || values.length > 500) throw new Error('Requests are limited to 500 characters.');
+    return { ...(await assistant.handle(values)), snapshot: engine.snapshot() };
+  }
+  if (method === 'ask-confirm') {
+    const { token, accept } = (values ?? {}) as { token?: unknown; accept?: unknown };
+    if (typeof token !== 'string' || typeof accept !== 'boolean') throw new Error('Invalid confirmation.');
+    return { ...(await assistant.confirm(token, accept)), snapshot: engine.snapshot() };
+  }
   if (method === 'calculate-options') { await engine.calculateOptions(validateOptions(values)); return engine.snapshot(); }
   if (method === 'configure') {
     const patch = validatePatch(values);
@@ -232,7 +243,11 @@ async function nativeSelfTest() {
   const option = await window!.webContents.executeJavaScript(`window.quant.calculateOptions({ spot: 42, strike: 40, time: 0.5,
     rate: 0.1, volatility: 0.2, paths: 20000 }).then(state => state.options.black_scholes.price)`);
   if (Math.abs(option - 4.7594) > 1e-4) throw new Error(`Self-test option price ${option} differs from the reference.`);
-  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, completed: engine.state.completed,
+  const asked = await window!.webContents.executeJavaScript(`window.quant.ask('what is my VaR?').then(result => result.reply)`);
+  if (!/95% VaR: Gaussian \d/.test(asked)) throw new Error(`Self-test assistant answer was unexpected: ${asked}`);
+  const refused = await window!.webContents.executeJavaScript(`window.quant.ask('buy 100 shares now').then(result => result.tier)`);
+  if (refused !== 'refused') throw new Error('Self-test assistant did not refuse a trading request.');
+  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), completed: engine.state.completed,
     runtime: engine.runtime, report: engine.lastReportPath }));
   await quit();
 }
@@ -259,6 +274,11 @@ else {
       () => engine.config.dataRoot, () => engine.config.lowCpu);
     engine = new Engine(config, transport, async next => { await configStore.update(next); });
     engine.onChange = pushState;
+    // Every assistant request and outcome is appended to a local, human-readable action log.
+    assistant = new Assistant(engine, async entry => {
+      await mkdir(engine.config.dataRoot, { recursive: true });
+      await appendFile(path.join(engine.config.dataRoot, 'assistant-log.jsonl'), JSON.stringify(entry) + '\n', 'utf8');
+    }, () => engine.config.assistantEndpoint ? { endpoint: engine.config.assistantEndpoint, model: engine.config.assistantModel } : null);
     try { await engine.initialize(); } catch (error) { showError(error); engine.state.phase = 'error'; }
     if (!selfTest) {
       const image = nativeImage.createFromPath(path.join(app.getAppPath(), 'assets/app.png'));

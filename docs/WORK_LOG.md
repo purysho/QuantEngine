@@ -301,3 +301,35 @@ On iid data, GARCH-t is as good as the static models (1.01 / 1.04), so it costs 
 **Change:** `market_making.json` now carries the full coefficient sweep and the implied c. The gate `gamma_0.5_inventory_reproduced_by_stated_method` stays **false** (honest), and a new gate `gamma_0.5_discrepancy_localised` is **true**. `spread_time_coefficient` exists for sensitivity analysis only; I did **not** fit c = 0.32, because tuning a model to one published number is curve-fitting.
 
 **Lesson for the system:** before declaring a reproduction failure, sweep each ambiguous convention and check which published rows can discriminate between them. Two of the three rows were never evidence for the formula.
+
+---
+
+## Task 12 — Voice and assistant: a Windows FreeFlow equivalent plus our own engine assistant
+
+**Why FreeFlow failed:** `zachlatta/freeflow` is a macOS-only Swift app that sends audio to Groq's cloud API by default, so it cannot run on the Windows laptop.
+
+**Windows equivalents verified** (repositories inspected at their current commits):
+| Tool | Licence | Windows | Offline | Fit |
+| --- | --- | --- | --- | --- |
+| **Handy** (`cjpais/Handy` `48a3d8e`) | MIT | yes (`winget install cjpais.Handy`) | yes: Whisper or **Parakeet V3 (CPU-optimised)** | **Recommended dictation**: hold a shortcut, speak, and the text is pasted into any field |
+| OpenWhispr (`HeroTools/open-whispr` `5f9a88b`) | MIT | yes (.exe) | local or cloud (whisper.cpp, Parakeet via sherpa-onnx, llama.cpp) | Fuller voice-agent option for the AI-workspace track |
+| Windows `Win+H` voice typing | built in | yes | no (online speech service) | Zero-install fallback |
+
+**Built: QuantEngine's own assistant** (`desktop/assistant.ts`, an Ask panel on Ctrl+K)
+- Dictate into it with Handy or Win+H, or type. A deterministic parser maps text to intents in permission tiers:
+  - **read**: answers built from the latest real report (VaR/ES under 3 models, volatility with the latest realised value, backtest vs baselines, weights, status, last option), plus navigation (e.g. "show the vol surface");
+  - **compute**: run once, start, pause, and pricing options from spoken parameters, which also fills in the Options form;
+  - **change**: settings and the ECB refresh. These always ask for confirmation first, and can be undone (a 20-deep undo stack).
+  - **refused**: any request to buy, sell, order, trade or contact a broker. The engine has no brokerage connection.
+- Dictation hardening: spoken numbers ("one hundred and five", "two point five", "fifty thousand") and time phrases ("six months", "half a year"). Punctuation acts as a number boundary, so "one hundred, six months" is not read as 106.
+- **Action log:** every request, intent, tier and reply is appended to `<storage>/assistant-log.jsonl`.
+- **Optional local model** for free-form questions ("explain volatility clustering"): an OpenAI-compatible endpoint (llama.cpp, Ollama, LM Studio), validated as **localhost-only** in both settings and code. It receives a compact, path-free summary of the latest report, is told it cannot act, and its replies are labelled "LOCAL MODEL · UNVERIFIED". It can never trigger actions.
+
+**Tests (7 assistant + native):** spoken numbers; option parsing with explicit defaults; 16 intent cases including refusals; confirm/cancel/expired-token/undo; answers checked against report values; the local model tested against a real HTTP mock (correct path, model, a system prompt that forbids action, no file paths leaked); config rejects non-local endpoints. The native self-test now asks "what is my VaR?" through the sandboxed bridge (answer: `20-observation 95% VaR: Gaussian 3.61%, block bootstrap 3.68%, Student-t 3.63%`) and confirms a trading request is refused.
+
+**What went wrong along the way, and what changed:**
+1. Dictation punctuation ("ninety five, spot one hundred,") broke number reading, giving strike 90 and spot 1. Punctuation is now normalised first.
+2. That fix exposed the next problem, "one hundred, six months" → 106. Punctuation now ends a spoken number instead of disappearing.
+3. "explain volatility clustering" was captured by a canned volatility answer, so explanation requests now go to the local model (or to help).
+
+**Not done:** no built-in microphone capture or speech model inside QuantEngine. This is deliberate: Handy already does offline speech-to-text well on Windows, and it types into the Ask box. A built-in whisper.cpp or sherpa-onnx path would add a roughly 100–600 MB model and a native runtime, and is a candidate for the AI-workspace track.

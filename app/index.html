@@ -23,11 +23,19 @@
   <main>
     <header class="topbar">
       <div><div class="eyebrow" id="page-kicker">ENGINE / OVERVIEW</div><h1 id="page-title">Research monitor</h1></div>
-      <div class="header-actions"><span class="local-badge"><span class="tiny-dot"></span>LOCAL ENGINE</span><button id="toggle-engine" class="primary"><span class="play-icon">▶</span>Start engine</button><button id="run-once" class="secondary">Run once</button></div>
+      <div class="header-actions"><button id="open-ask" class="secondary ask-button" aria-haspopup="dialog" aria-controls="ask-panel" title="Ask or command the engine (Ctrl+K)"><span aria-hidden="true">◎</span>Ask<kbd>Ctrl K</kbd></button><span class="local-badge"><span class="tiny-dot"></span>LOCAL ENGINE</span><button id="toggle-engine" class="primary"><span class="play-icon">▶</span>Start engine</button><button id="run-once" class="secondary">Run once</button></div>
     </header>
     <div id="error-banner" class="banner error hidden" role="alert"></div>
     <div id="refresh-banner" class="banner warning hidden" role="status"></div>
-    <div id="toast" class="toast hidden" role="status"></div>
+    <div id="ask-backdrop" class="ask-backdrop hidden"></div>
+  <section id="ask-panel" class="ask-panel hidden" role="dialog" aria-modal="true" aria-labelledby="ask-title">
+    <div class="ask-head"><div><div class="eyebrow">ASSISTANT · LOCAL</div><h2 id="ask-title">Ask QuantEngine</h2></div><button id="close-ask" class="text-button" aria-label="Close assistant">Esc ✕</button></div>
+    <form id="ask-form" class="ask-form" autocomplete="off"><label for="ask-input" class="visually-hidden">Request</label><input id="ask-input" type="text" maxlength="500" placeholder="Type or dictate: “what is my VaR”, “price a put strike 95 vol 25%”, “show the vol surface”" aria-describedby="ask-hint"><button class="primary" type="submit">Send</button></form>
+    <p id="ask-hint" class="ask-hint">Voice: hold your <strong>Handy</strong> shortcut (free, offline) or press <kbd>Win</kbd>+<kbd>H</kbd> and speak into this box. Changes to settings always ask first and can be undone; nothing here can trade.</p>
+    <div class="ask-suggestions" aria-label="Suggestions"><button type="button" class="chip" data-ask="what is my VaR">What is my VaR?</button><button type="button" class="chip" data-ask="show the vol surface">Show the vol surface</button><button type="button" class="chip" data-ask="price a put strike 95 spot 100 6 months vol 25%">Price a put</button><button type="button" class="chip" data-ask="run once">Run once</button><button type="button" class="chip" data-ask="help">Help</button></div>
+    <ol id="ask-log" class="ask-log" aria-live="polite"></ol>
+  </section>
+  <div id="toast" class="toast hidden" role="status"></div>
 
     <section id="page-monitor" class="page">
       <div class="metrics">
@@ -125,6 +133,11 @@
           <div class="form-grid"><div><label for="seed-input">Base random seed</label><input id="seed-input" class="config-field" data-key="seed" type="number" min="0" max="4294967295" value="17"></div><div><label for="lookback-input">Momentum lookback</label><div class="input-wrap"><input id="lookback-input" class="config-field" data-key="lookback" type="number" min="5" max="2520" value="20"><span>observations</span></div></div><div><label for="rebalance-input">Rebalance interval</label><div class="input-wrap"><input id="rebalance-input" class="config-field" data-key="rebalance" type="number" min="1" max="63" value="5"><span>observations</span></div></div><div><label for="cost-input">Trading cost</label><div class="input-wrap"><input id="cost-input" class="config-field" data-key="costBps" type="number" min="0" max="500" step="0.5" value="10"><span>bps / notional</span></div></div><div><label for="shrinkage-input">Diagonal shrinkage</label><input id="shrinkage-input" class="config-field" data-key="shrinkage" type="number" min="0" max="1" step="0.01" value="0.1"></div></div>
           <label class="checkbox-row"><input class="config-field" data-key="rotateVariants" type="checkbox" checked><span>Rotate research lookbacks<small>Compare the chosen lookback with 20, 40 and 60 observations where the dataset permits. Each run records its parameter and seed.</small></span></label>
           <p class="field-help">Each successful run advances the seed by one. Risk uses static optimized weights; the separate backtest evaluates a chronological momentum strategy.</p>
+        </div></article>
+        <article class="panel preferences-card"><div class="panel-heading"><h2>Assistant & voice</h2><span class="tag">OFFLINE</span></div><div class="preferences-content">
+          <p class="field-help">Open the assistant with <kbd>Ctrl</kbd>+<kbd>K</kbd>. For voice, install <strong>Handy</strong> (free, offline speech-to-text: <code>winget install cjpais.Handy</code>), choose its CPU-friendly Parakeet model, then hold its shortcut and speak into the Ask box. Every request is logged to <code>assistant-log.jsonl</code> in the storage folder.</p>
+          <div class="form-grid"><div><label for="assistant-endpoint">Local model endpoint (optional)</label><input id="assistant-endpoint" class="config-field text-field" data-key="assistantEndpoint" type="text" placeholder="http://127.0.0.1:8080" spellcheck="false"></div><div><label for="assistant-model">Model name</label><input id="assistant-model" class="config-field text-field" data-key="assistantModel" type="text" placeholder="qwen2.5:3b" spellcheck="false"></div></div>
+          <p class="field-help">For free-form questions only, e.g. llama.cpp, Ollama or LM Studio running on this computer. Only localhost addresses are accepted. The model answers from a summary of your latest report and can never change settings or run work.</p>
         </div></article>
         <article class="panel preferences-card"><div class="panel-heading"><h2>Resource & background controls</h2></div><div class="preferences-content">
           <label class="checkbox-row"><input class="config-field" data-key="lowCpu" type="checkbox"><span>Low CPU mode<small>One numerical thread and lower worker priority. Standard mode caps numerical threads at two.</small></span></label>

@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('quant', Object.freeze({
   pause: () => call('pause'),
   runOnce: () => call('run-once'),
   calculateOptions: (values: unknown) => call('calculate-options', values),
+  ask: (text: string) => call('ask', text),
+  confirmAsk: (token: string, accept: boolean) => call('ask-confirm', { token, accept }),
   configure: (values: unknown) => call('configure', values),
   chooseRoot: () => call('choose-root'),
   importCSV: () => call('import-csv'),

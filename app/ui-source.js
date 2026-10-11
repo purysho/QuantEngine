@@ -686,3 +686,65 @@ if (window.quant) {
   document.querySelectorAll('button').forEach(button => { button.disabled = true; });
   document.body.dataset.transport = 'unavailable';
 }
+
+// ---- Assistant (typed or dictated with Handy / Win+H) ----
+let askPending = null;
+function askOpen(open = true) {
+  $('ask-panel').classList.toggle('hidden', !open);
+  $('ask-backdrop').classList.toggle('hidden', !open);
+  if (open) { $('ask-input').focus(); $('ask-input').select?.(); } else $('open-ask').focus();
+}
+function askEntry(kind, meta, text) {
+  const item = document.createElement('li');
+  item.className = kind;
+  item.innerHTML = '<span class="meta">' + esc(meta) + '</span>' + esc(text);
+  $('ask-log').prepend(item);
+  while ($('ask-log').children.length > 40) $('ask-log').lastChild.remove();
+  return item;
+}
+function askApply(result) {
+  if (result.snapshot) receive(result.snapshot);
+  const kind = result.tier === 'refused' ? 'refused' : result.source === 'local-model' ? 'model' : 'engine';
+  const meta = (result.source === 'local-model' ? 'LOCAL MODEL · UNVERIFIED' : 'ENGINE') + ' · ' + result.tier.toUpperCase();
+  const item = askEntry(kind, meta, result.reply);
+  if (result.options) {
+    const o = result.options, set = (id, value) => { if (value !== undefined && $(id)) $(id).value = value; };
+    set('opt-kind', o.kind); set('opt-spot', o.spot); set('opt-strike', o.strike); set('opt-time', Number(o.time.toFixed(4)));
+    set('opt-volatility', +(o.volatility * 100).toFixed(4)); set('opt-rate', +(o.rate * 100).toFixed(4)); set('opt-dividend', +(o.dividend * 100).toFixed(4));
+  }
+  if (result.navigate) {
+    navigate(result.navigate.page);
+    if (result.navigate.chart) document.querySelector('.chart-tab[data-chart="' + result.navigate.chart + '"]')?.click();
+  }
+  if (result.confirm) {
+    askPending = result.confirm.token;
+    const actions = document.createElement('div');
+    actions.className = 'ask-actions';
+    actions.innerHTML = '<button type="button" class="primary" data-accept="true">Confirm</button><button type="button" class="secondary" data-accept="false">Cancel</button>';
+    actions.querySelectorAll('button').forEach(button => button.addEventListener('click', async () => {
+      actions.remove();
+      const token = askPending; askPending = null;
+      try { askApply(await window.quant.confirmAsk(token, button.dataset.accept === 'true')); }
+      catch (error) { askEntry('refused', 'ERROR', error.message || String(error)); }
+    }));
+    item.append(actions);
+    actions.querySelector('button').focus();
+  }
+}
+async function askSend(text) {
+  text = String(text || '').trim();
+  if (!text) return;
+  askEntry('you', 'YOU', text);
+  $('ask-input').value = '';
+  try { askApply(await window.quant.ask(text)); }
+  catch (error) { askEntry('refused', 'ERROR', error.message || String(error)); }
+}
+$('open-ask').addEventListener('click', () => askOpen(true));
+$('close-ask').addEventListener('click', () => askOpen(false));
+$('ask-backdrop').addEventListener('click', () => askOpen(false));
+$('ask-form').addEventListener('submit', event => { event.preventDefault(); void askSend($('ask-input').value); });
+document.querySelectorAll('[data-ask]').forEach(chip => chip.addEventListener('click', () => { void askSend(chip.dataset.ask); }));
+document.addEventListener('keydown', event => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); askOpen($('ask-panel').classList.contains('hidden')); }
+  else if (event.key === 'Escape' && !$('ask-panel').classList.contains('hidden')) askOpen(false);
+});
