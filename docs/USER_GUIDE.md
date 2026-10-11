@@ -2,8 +2,8 @@
 
 ## Start on Windows
 
-1. Extract the entire ZIP into a folder such as `D:\Apps\QuantEngine`.
-2. Open **QuantEngine.exe**. Keep its resources and DLL files beside it.
+1. Download **[QuantEngine-win-x64.zip](https://github.com/purysho/QuantEngine/releases/latest/download/QuantEngine-win-x64.zip)**. This link always points to the newest release; checksums are on the [release page](https://github.com/purysho/QuantEngine/releases/latest).
+2. Extract the entire ZIP into a folder such as `D:\Apps`, then open **QuantEngine\QuantEngine.exe**. Keep its resources and DLL files beside it. The app is not code-signed yet, so if SmartScreen says it is unrecognised, choose **More info, then Run anyway**.
 3. Confirm the storage location. The default is `D:\Quant-Engine`; choose another writable folder if necessary.
 4. Keep **Synthetic example prices** selected and choose **Run once**.
 5. Inspect the completed risk, portfolio, backtest and sensitivity results. Then select **Start engine** to repeat research on the configured interval.

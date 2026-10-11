@@ -1,5 +1,15 @@
 # Quant Engine
 
+<p align="center">
+  <a href="https://github.com/purysho/QuantEngine/releases/latest/download/QuantEngine-win-x64.zip"><img alt="Download QuantEngine for Windows (x64)" src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download-QuantEngine%20for%20Windows%20x64-ff2a55?style=for-the-badge&amp;logo=windows&amp;logoColor=white&amp;labelColor=0d0a12"></a>
+  <br>
+  <sub><a href="https://github.com/purysho/QuantEngine/releases/latest">Release notes and SHA-256</a> · Windows 10/11 64-bit · portable, no installer · Python, NumPy and SciPy included</sub>
+</p>
+
+**Getting started:** extract the whole zip and open `QuantEngine\QuantEngine.exe`. The app is not code-signed yet, so if Windows SmartScreen says it is unrecognised, choose **More info, then Run anyway**. Research data is stored in `D:\Quant-Engine` by default.
+
+![QuantEngine research monitor](docs/screenshots/cyber-monitor.png)
+
 An independent local desktop application for continuous numerical research. It calculates covariance, constrained portfolios, Gaussian/block-bootstrap/Student-t risk with exact empirical tails, next-close costed momentum backtests, baselines, stress and parameter sensitivity, and prices options (Black–Scholes Greeks, CRR trees, Monte Carlo, implied volatility). Completed reports retain their source snapshots, seeds, parameters and software versions.
 
 Python research modules, each with tests and a measured experiment in `experiments/results/`:

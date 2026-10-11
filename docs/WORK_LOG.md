@@ -465,3 +465,12 @@ All four gates pass. The warm start (US-market memories applied to the "Other" i
 ## Task 19 — Real-data winner in the desktop report: one-day conditional VaR
 
 Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered historical simulation on the trailing 1,000 returns (minimum 300). It gives one-day VaR/ES at 95% and 99%, current vs long-run annualised volatility, and the fitted parameters, with the real-data evidence quoted. The Monitor's risk panel shows it as "Tomorrow, conditional", and the assistant's VaR answer includes it. Tests: VaR rises more than 2× after a volatility burst; ES ≥ VaR; returns `None` on too little history.
+
+---
+
+## Task 20 — One-click Windows download on the repository homepage
+
+- `.github/workflows/release.yml` runs on every push to `main`, on `v*` tags, or manually. It builds the portable package with the SHA-256-verified embedded runtime, runs the numerical tests on that runtime, runs the **packaged `QuantEngine.exe --self-test`** (publishing is blocked unless `QUANT_SELF_TEST_OK` is printed), zips the folder as `QuantEngine-win-x64.zip`, writes `SHA256SUMS.txt`, and publishes or updates the GitHub Release `v<package version>` (marked latest) with notes covering setup, SmartScreen and checksum verification.
+- The README has a download button at the top linking to the permanent URL `https://github.com/purysho/QuantEngine/releases/latest/download/QuantEngine-win-x64.zip`, plus quick-start steps and a screenshot. The user guide links to it too.
+- The repository is public, so downloads need no GitHub login; CI artifacts by contrast expire after 14 days and require a login.
+- **Pending:** the homepage shows `main`'s README, and the release workflow publishes on pushes to `main`. Both take effect when this branch is merged into `main`. No release existed before this.
