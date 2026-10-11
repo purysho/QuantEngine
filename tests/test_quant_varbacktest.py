@@ -45,3 +45,35 @@ class VarBacktestTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GarchTests(unittest.TestCase):
+    @staticmethod
+    def simulate(seed, n=3000, omega=2e-6, alpha=.08, beta=.9, df=5):
+        import math
+        rng = np.random.default_rng(seed)
+        z = rng.standard_t(df, n) / math.sqrt(df / (df - 2))
+        r, v = np.empty(n), omega / (1 - alpha - beta)
+        for t in range(n):
+            r[t] = math.sqrt(v) * z[t]
+            v = omega + alpha * r[t] ** 2 + beta * v
+        return r
+
+    def test_parameter_recovery(self):
+        fit = vb.fit_garch_t(self.simulate(7)[:2500])
+        self.assertAlmostEqual(fit["alpha"], .08, delta=.04)
+        self.assertAlmostEqual(fit["beta"], .90, delta=.05)
+        self.assertLess(fit["persistence"], 1)
+        self.assertAlmostEqual(fit["nu"], 5, delta=2.5)
+
+    def test_garch_var_is_causal_and_reacts_to_shocks(self):
+        r = self.simulate(3, n=900)
+        base = vb.rolling_var(r, window=500, method="garch_t", refit_every=50)
+        shocked = r.copy(); shocked[700] = -.08
+        changed = vb.rolling_var(shocked, window=500, method="garch_t", refit_every=50)
+        np.testing.assert_array_equal(base[:201], changed[:201])  # Forecasts for days 500..700.
+        self.assertGreater(changed[201], 1.5 * base[201])  # Volatility jumps the day after the shock.
+
+    def test_extreme_inputs_do_not_overflow(self):
+        r = np.r_[np.zeros(150), np.full(50, .2), -np.full(50, .2)] + np.random.default_rng(0).normal(0, 1e-4, 250)
+        self.assertTrue(np.isfinite(vb.fit_garch_t(r)["nu"]))

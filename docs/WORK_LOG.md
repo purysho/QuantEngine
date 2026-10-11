@@ -258,3 +258,29 @@ Scope note from the user: focus only on the **Quant** half (not the AI desktop o
 - Run 2 (`7edf57c`): the same Windows failure (pushed before the fix).
 - Run 3 (`9e73159`): ✅ **all three jobs.** The Windows package job prepared the SHA-256-verified embedded runtime, passed all numerical tests **on that embedded Python 3.13.16**, built `QuantEngine.exe`, and the packaged executable printed `QUANT_SELF_TEST_OK` (option 4.759422392871532, a completed report, runtime 3.13.16 / 2.3.5 / 1.17.0). The artifact `QuantEngine-win-x64` (228.8 MB zip) was uploaded.
 - This is a Windows Server runner, **not** the user's Windows 11 Home laptop; the device check in `EVALUATION.md` is still pending.
+
+---
+
+## Task 10 — Fix "static VaR windows fail under volatility clustering" with GARCH(1,1)-t
+
+**Why it failed before:** the Task 8 VaR models all used a fixed trailing window. When volatility clusters, a 500-day window reacts far too slowly, so exceptions bunch together right after a volatility jump (independence rejected in 20–65% of seeds).
+
+**Did**
+- `fit_garch_t`: maximum-likelihood GARCH(1,1) with unit-variance Student-t shocks. Parameters are transformed so every search point is valid (ω > 0, α, β ≥ 0, α + β < 1, ν > 2.1). The variance recursion is vectorised with `scipy.signal.lfilter`, and the fit runs on standardised data for conditioning.
+- In `rolling_var_levels`, parameters are refitted every 50 days on the trailing window, and the conditional variance is filtered **daily** through *t − 1*. One fit serves both the 95% and 99% levels.
+- Tests (3 new): parameter recovery (α ≈ 0.08, β ≈ 0.90, ν ≈ 5); causality, where a shock on day 700 leaves earlier forecasts untouched and raises the next day's VaR by more than 1.5×; extreme inputs do not overflow.
+
+**Result** (`var_backtest.json`, 20 seeds, GARCH(1,1)-t(5) data):
+| Method | 95% exceptions / expected | Independence rejects | 99% exceptions / expected | Kupiec rejects |
+| --- | --- | --- | --- | --- |
+| Historical window | 1.05 | 55% | 1.19 | 5% |
+| Student-t window | 1.18 | 55% | 1.44 | 35% |
+| **GARCH-t** | **1.01** | **5%** (nominal) | **1.07** | **0%** |
+On iid data, GARCH-t is as good as the static models (1.01 / 1.04), so it costs nothing when there is no clustering.
+
+**Lessons from things that went wrong in this task**
+1. **Overflow:** `math.exp(-x)` in a logistic transform overflowed during a bad line search. I switched to `scipy.special.expit` and clipping. Any optimiser transform must be total (defined everywhere).
+2. **Thread oversubscription:** the experiment used 17 CPU-minutes for 7 wall-minutes. Experiments now pin BLAS to one thread, matching the app's own thread policy.
+3. **Warm-start trap:** warm-starting GARCH from the previous refit was 6.5× faster but landed at a worse optimum in **29%** of refits (log-likelihood gap up to 43.5), which visibly worsened the backtest (independence rejections 5% → 15%). Fix: warm start **plus** one cold start, keeping the better likelihood. The gap to the full multi-start became 2e-5.
+4. **The opposite case:** for the Student-t fit, a warm start was never worse and beat SciPy's default start by up to 15.7 log-likelihood in 4.8% of refits, so it stays. Speed-ups must be checked against fit quality, not just runtime.
+5. **CI:** superseded runs queued behind each other for about 8 minutes, so the workflow now has a `concurrency` group that cancels in-progress runs on the same branch. The experiment went from 411 s to 110 s.
