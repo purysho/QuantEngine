@@ -346,3 +346,28 @@ The 3D surfaces gained pause/rotate/reset controls, a keyboard alternative to dr
 - The first audit reported 1.11:1 contrast on the green buttons. That was the script's mistake: dark text on a gradient it couldn't read. Gradient-backed buttons are now excluded, so the audit measures real problems.
 - Raising the type size exposed a unit-label/spinner collision on number inputs, which only a screenshot revealed. The fix was more right padding. Lesson: always re-screenshot after global CSS changes.
 - *The UI/UX Playbook* is paid. Pirated copies were not used.
+
+---
+
+## Task 14 — Backtest the maths against what really happened (100 years of real data)
+
+**Data library** (`workers/quant_data.py`): FRED graph CSV and the Kenneth R. French Data Library (CRSP-based). Downloads are cached in `.cache/data` with URL, SHA-256 and retrieval time; the cache verifies the hash on every read; raw data is **never committed**. Parsers are strict: dates must be strictly increasing, missing values become NaN (FRED blanks, French −99.99/−999), and French files are converted from percent to decimal. Four format tests use hand-built fixtures.
+
+*Download problem found and fixed:* FRED's CSV endpoint stalls one particular User-Agent string ("…research (local, non-commercial)", 3/3 timeouts at 25 s) but serves the honest identifier `QuantEngine/0.2 (+https://github.com/purysho/QuantEngine)` in 0.2 s (3/3). Stooq is blocked from this network, so the French market factor (Mkt-RF + RF, the CRSP value-weighted total market) is used instead of the S&P 500 index.
+
+**Results** (`experiments/results/real_world_backtest.json`, 65 s, sources and hashes recorded):
+
+| Question | What really happened | Why |
+| --- | --- | --- |
+| 99% VaR, US market 1928–2026 (25k+ forecasts, 500-day window) | Gaussian breached 2.22× the promised rate, Student-t window 1.99×, historical 1.30×, GARCH-t 1.58×. **New GJR-GARCH + filtered historical simulation: 1.10× (Kupiec p = 0.13; independence p = 0.50); lowest pinball loss** at both 95% and 99% | Fixed windows mix calm and turbulent regimes, so clustering looks like fat tails and VaR is too low exactly when volatility is high. Symmetric t shocks miss the leverage effect and negative skew. |
+| Crises at 99% (exceptions vs expected) | 2008–09: historical 15 vs 1.5, GARCH-t 3, **GJR-FHS 1**. COVID: historical 9 vs 0.5, **GJR-FHS 1**. 1929–32: GJR-FHS 10 vs 8.4 | Conditional volatility reacts within days; fixed windows take months |
+| Black Monday 1987 | −17.4% = **4.4×** the GARCH-t 99% VaR | A one-day jump no model fitted to the past anticipates; this is what stress tests are for |
+| VIX ÷ 16 rule (1990–2026) | Next-day move within ±1 implied σ on **81%** of days (normal: 68%); VIX exceeded subsequent 21-day realised vol **84%** of the time, by about 4.0 points | Variance risk premium: implied volatility is priced above realised |
+| Black–Scholes at VIX, 1-month at-the-money (non-overlapping months) | Puts returned **0.60** of their price (95% CI 0.49–0.72); calls 0.96; 0.5% of months fell below the 1% lognormal quantile | The same premium: insurance (puts) is priced rich; the lognormal is too wide in normal months |
+| Brent–WTI pairs (rolling 1 y formation / 6 m trading) | 49% of windows cointegrated; selected windows averaged **+3.1%** (63% profitable) vs +1.1% unselected; worst −14% in 2008–09 despite a strong test (p = 0.009) | Structural breaks (2008, 2011 WTI discount) invalidate a formation-period hedge |
+| WTI −36.98 on 2020-04-20 | 3 windows **skipped**: log prices do not exist | Negative futures-linked prices break every lognormal and log-spread model; the pairs code correctly refuses non-positive prices |
+| 12-industry momentum since 1926 (252-day, monthly, 10 bps) | Sharpe 0.78 vs 0.67 for equal weight, but negative excess in the 2000s, 2010s and 2020s; max drawdown −65% | The momentum premium has decayed and crashes around reversals (2009) |
+
+**Improvement made from the lessons:** added `gjr_fhs` (an asymmetric GJR-GARCH fitted by maximum likelihood with t innovations; VaR = σₜ₊₁ × the empirical quantile of standardised residuals). Tests: leverage γ is recovered (true 0.10); causality under a shock; calibrated 5% rate on GARCH data. It is the best model on 100 years of real data and the recommended default for conditional VaR.
+
+**Still failing:** the 1920s (2.42×, short pre-1929 history); GJR-FHS independence at 95% (p < 0.001, clustering remains); momentum's recent decades. The desktop report still shows unconditional horizon-risk models; adding one-day GJR-FHS VaR to it is next.

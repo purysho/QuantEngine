@@ -77,3 +77,28 @@ class GarchTests(unittest.TestCase):
     def test_extreme_inputs_do_not_overflow(self):
         r = np.r_[np.zeros(150), np.full(50, .2), -np.full(50, .2)] + np.random.default_rng(0).normal(0, 1e-4, 250)
         self.assertTrue(np.isfinite(vb.fit_garch_t(r)["nu"]))
+
+
+class GjrFhsTests(unittest.TestCase):
+    def test_gjr_recovers_leverage_effect(self):
+        import math
+        rng = np.random.default_rng(4)
+        n, omega, alpha, gamma, beta = 4000, 2e-6, .03, .10, .9
+        r, v = np.empty(n), omega / (1 - alpha - gamma / 2 - beta)
+        z = rng.standard_t(6, n) / math.sqrt(6 / 4)
+        for t in range(n):
+            r[t] = math.sqrt(v) * z[t]
+            v = omega + (alpha + gamma * (r[t] < 0)) * r[t] ** 2 + beta * v
+        fit = vb.fit_garch_t(r, asymmetric=True)
+        self.assertAlmostEqual(fit["gamma"], .10, delta=.06)
+        self.assertGreater(fit["gamma"], fit["alpha"])
+        self.assertLess(fit["persistence"], 1)
+
+    def test_fhs_is_causal_and_calibrated_on_garch(self):
+        r = GarchTests.simulate(11, n=2500)
+        base = vb.rolling_var(r, window=500, method="gjr_fhs", refit_every=50)
+        shocked = r.copy(); shocked[1500] = -.1
+        changed = vb.rolling_var(shocked, window=500, method="gjr_fhs", refit_every=50)
+        np.testing.assert_array_equal(base[:1001], changed[:1001])
+        result = vb.backtest_var(r, window=500, p=.05, method="gjr_fhs", refit_every=50)
+        self.assertAlmostEqual(result["exception_rate"], .05, delta=.015)

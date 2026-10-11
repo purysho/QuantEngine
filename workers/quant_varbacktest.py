@@ -15,7 +15,7 @@ import math
 import numpy as np
 from scipy import optimize, signal, special, stats
 
-METHODS = ("historical", "gaussian", "student_t", "garch_t")
+METHODS = ("historical", "gaussian", "student_t", "garch_t", "gjr_fhs")
 
 
 def _xlogy(x, y):
@@ -47,17 +47,22 @@ def kupiec_christoffersen(exceptions, p: float) -> dict:
             "transitions": {"n00": n00, "n01": n01, "n10": n10, "n11": n11}}
 
 
-def _garch_variance(r, omega, alpha, beta, initial):
-    """sigma2_t = omega + alpha r_{t-1}^2 + beta sigma2_{t-1}; returns sigma2 for t = 0..n (n is the forecast)."""
-    drive = omega + alpha * np.r_[0.0, r * r]
+def _garch_variance(r, omega, alpha, beta, initial, gamma=0.0):
+    """sigma2_t = omega + (alpha + gamma 1[r_{t-1} < 0]) r_{t-1}^2 + beta sigma2_{t-1} (GJR when gamma > 0).
+
+    Returns sigma2 for t = 0..n, where index n is the one-step-ahead forecast.
+    """
+    shock = (alpha + gamma * (r < 0)) * r * r
+    drive = omega + np.r_[0.0, shock]
     drive[0] = initial
     return signal.lfilter([1.0], [1.0, -beta], drive)
 
 
-def fit_garch_t(returns, start: dict | None = None) -> dict:
-    """Maximum-likelihood GARCH(1,1) with unit-variance Student-t innovations.
+def fit_garch_t(returns, start: dict | None = None, asymmetric: bool = False) -> dict:
+    """Maximum-likelihood GARCH(1,1) (or GJR-GARCH when ``asymmetric``) with unit-variance t innovations.
 
-    Constraints: omega > 0, alpha, beta >= 0, alpha + beta < 1, nu > 2.1.
+    Constraints: omega > 0; alpha, beta, gamma >= 0; alpha + beta + gamma / 2 < 1; nu > 2.1.
+    GJR adds gamma for negative shocks: equity volatility rises more after losses (leverage effect).
     """
     r = np.asarray(returns, dtype=np.float64)
     if r.ndim != 1 or len(r) < 100 or not np.isfinite(r).all():
@@ -72,14 +77,18 @@ def fit_garch_t(returns, start: dict | None = None) -> dict:
         x = np.clip(x, -30, 30)  # Unconstrained search space; transforms keep every parameter valid.
         omega = math.exp(x[0])
         persistence = float(special.expit(x[1])) * .9999
-        share = float(special.expit(x[2]))
         nu = 2.1 + math.exp(min(x[3], 6.0))
-        return omega, persistence * share, persistence * (1 - share), nu, x[4]
+        if asymmetric:
+            w = np.exp(np.r_[x[2], x[5], 0.0] - max(x[2], x[5], 0.0))
+            w /= w.sum()
+            return omega, persistence * w[0], persistence * w[2], nu, x[4], 2 * persistence * w[1]
+        share = float(special.expit(x[2]))
+        return omega, persistence * share, persistence * (1 - share), nu, x[4], 0.0
 
     def negative_log_likelihood(x):
-        omega, alpha, beta, nu, mu = unpack(x)
+        omega, alpha, beta, nu, mu, gamma = unpack(x)
         e = z - mu
-        s2 = _garch_variance(e, omega, alpha, beta, 1.0)[:-1]
+        s2 = _garch_variance(e, omega, alpha, beta, 1.0, gamma)[:-1]
         if not np.isfinite(s2).all() or (s2 <= 0).any():
             return 1e12
         c = math.lgamma((nu + 1) / 2) - math.lgamma(nu / 2) - .5 * math.log(math.pi * (nu - 2))
@@ -87,6 +96,8 @@ def fit_garch_t(returns, start: dict | None = None) -> dict:
         return -float(ll.sum())
 
     starts = [[math.log(.05), 2.5, -2.0, math.log(6), 0.0], [math.log(.1), 1.5, -1.0, math.log(10), 0.0]]
+    if asymmetric:
+        starts = [x + [-2.0] for x in starts]
     if start and start.get("_x") is not None:
         # A warm start alone stopped at a worse optimum in 29% of rolling refits (LL gap up to 43),
         # so it is always paired with a cold start and the better likelihood wins.
@@ -96,16 +107,21 @@ def fit_garch_t(returns, start: dict | None = None) -> dict:
         result = optimize.minimize(negative_log_likelihood, x0, method="L-BFGS-B")
         if best is None or result.fun < best.fun:
             best = result
-    omega, alpha, beta, nu, mu = unpack(best.x)
-    return {"_x": [float(v) for v in best.x],"omega": omega * var0, "alpha": alpha, "beta": beta, "nu": nu, "mu": mu0 + mu * scale,
-            "persistence": alpha + beta, "log_likelihood": -best.fun - len(r) * math.log(scale),
+    omega, alpha, beta, nu, mu, gamma = unpack(best.x)
+    return {"_x": [float(v) for v in best.x], "gamma": gamma, "asymmetric": asymmetric,"omega": omega * var0, "alpha": alpha, "beta": beta, "nu": nu, "mu": mu0 + mu * scale,
+            "persistence": alpha + beta + gamma / 2, "log_likelihood": -best.fun - len(r) * math.log(scale),
             "converged": bool(best.success)}
+
+
+def garch_filter(returns, params) -> np.ndarray:
+    """Conditional variances for every return in the window plus the one-step-ahead forecast."""
+    r = np.asarray(returns, dtype=np.float64) - params["mu"]
+    return _garch_variance(r, params["omega"], params["alpha"], params["beta"], float(r.var()), params.get("gamma", 0.0))
 
 
 def garch_forecast_variance(returns, params) -> float:
     """One-step-ahead conditional variance after the last return, filtered from the sample variance."""
-    r = np.asarray(returns, dtype=np.float64) - params["mu"]
-    return float(_garch_variance(r, params["omega"], params["alpha"], params["beta"], float(r.var()))[-1])
+    return float(garch_filter(returns, params)[-1])
 
 
 def rolling_var_levels(returns, *, window: int = 250, levels=(.01,), method: str = "historical",
@@ -149,6 +165,17 @@ def rolling_var_levels(returns, *, window: int = 250, levels=(.01,), method: str
             sigma = math.sqrt(garch_forecast_variance(past, garch))
             for p in levels:
                 forecasts[p][i] = -(garch["mu"] + sigma * t_q[p])
+        elif method == "gjr_fhs":
+            # Filtered historical simulation: GJR-GARCH volatility times the empirical quantile of
+            # standardised window residuals, so skew and tail shape come from data, not an assumed t.
+            if garch is None or i % refit_every == 0:
+                garch = fit_garch_t(past, start=garch, asymmetric=True)
+            s2 = garch_filter(past, garch)
+            standardised = np.sort((past - garch["mu"]) / np.sqrt(s2[:-1]))
+            sigma = math.sqrt(s2[-1])
+            for p in levels:
+                k = max(1, math.ceil(p * window - 1e-9))
+                forecasts[p][i] = -(garch["mu"] + sigma * standardised[k - 1])
         else:
             if df is None or i % refit_every == 0:
                 df, loc, scale = stats.t.fit(past, *(() if df is None else (df,)),
