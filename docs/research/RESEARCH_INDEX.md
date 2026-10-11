@@ -14,7 +14,7 @@ Every topic from the supplied learning list is mapped to where it lives in Quant
 | Poisson distribution | Market-order arrivals `λ(δ) = A·e^{−kδ}` (`quant_lob`) | Reproduces 5 of 6 Avellaneda–Stoikov rows within 1.3% | γ = 0.5 inventory row not reproduced (`market_making.json`) |
 | Student-t distribution | `student_t_risk`: MLE fit, horizon simulation, closed-form one-day ES | Heavier VaR99/ES99 than Gaussian on t(3) data; analytic and simulated quantiles agree | iid only; no GARCH-t |
 | Pareto distribution | `hill_tail_index` on daily losses, reported over several k | Recovers α = 3 ± 0.3 on Pareto samples | Hill is k-sensitive; no peaks-over-threshold/GPD fit |
-| Value at Risk | `empirical_tail`: lower inverse-CDF VaR and exact-mass ES at 95/99%, under Gaussian, block bootstrap and Student-t | Ties, fractional boundary, float rounding (5% of 100) | No backtesting of VaR exceptions (Kupiec/Christoffersen) yet |
+| Value at Risk | `empirical_tail`: lower inverse-CDF VaR and exact-mass ES at 95/99%, under Gaussian, block bootstrap and Student-t | Ties, fractional boundary, float rounding (5% of 100) | Kupiec/Christoffersen backtests in `quant_varbacktest` (`var_backtest.json`): Gaussian 99% fails on fat tails; all static windows fail independence under GARCH clustering. Next: GARCH-t |
 | Black–Scholes | `black_scholes`, with all Greeks including vanna/volga; implied vol by Brent | Published references, put–call parity, every Greek against finite differences, IV round trip from 5% to 250% | — |
 | Binomial trees | `crr_price`, European and American | O(1/N) convergence; American ≥ European; no early call exercise without dividends | No discrete dividends |
 | Monte Carlo | Gaussian/bootstrap/t risk; antithetic option pricing; LOB paths | Seeded reproducibility, SE scaling | No quasi-Monte Carlo or control variates |
@@ -57,7 +57,7 @@ AIA Macro (Bridgewater), Alpha-GPT, the Citadel AI assistant and Balyasny's tool
 
 ## Next research steps (ranked)
 
-1. VaR exception backtests (Kupiec POF, Christoffersen independence) on rolling out-of-sample windows.
+1. ~~VaR exception backtests~~ (done; see Task 8 in the work log). GARCH(1,1)-t conditional VaR, evaluated with the same backtests.
 2. Newey–West standard errors and a deflated Sharpe ratio for every reported strategy mean.
 3. Specification curve across lookback/rebalance/cost so parameter choice is visibly not cherry-picked.
 4. GARCH(1,1)-t volatility for risk; a Kalman-filter hedge ratio for pairs, evaluated with the same clocks.

@@ -192,3 +192,30 @@ Scope note from the user: focus only on the **Quant** half (not the AI desktop o
 - An honest observation, not a bug: with next-close execution, the sample momentum strategy on the synthetic dataset is −13.7% net (Sharpe −0.46), worse than equal weight. 0.1 traded at the signal close.
 
 **Next:** Observe CI, write the research index (resource coverage), and update the README/build plan.
+
+---
+
+## Task 8 — VaR exception backtests (research step 1 from the index)
+
+**Did** (`workers/quant_varbacktest.py`)
+- Kupiec proportion-of-failures, Christoffersen independence (first-order Markov) and conditional-coverage likelihood-ratio tests with χ² p-values.
+- `rolling_var`: one-day historical / Gaussian / Student-t VaR, where each forecast uses only the previous `window` returns. The Student-t MLE is refitted every `refit_every` days, with moment-matched location/scale in between; this cut test time from 75 s to 3.4 s without using future data.
+
+**Tests (5):** a hand-derived Kupiec LR (5 exceptions in 250 at 1% gives 1.9569; exactly-on-target gives 0); clustered exceptions fail independence while passing Kupiec; a shock on day 300 cannot change forecasts for days ≤ 300; Gaussian fails and Student-t passes on t(3) data; validation.
+
+**Evidence:** `experiments/var_backtest.py` writes `experiments/results/var_backtest.json` (20 seeds × 3,000 days, window 500, about 206 s).
+| Series | p | Method | Exceptions / expected | Kupiec rejects | Independence rejects |
+| --- | --- | --- | --- | --- | --- |
+| iid t(5) | 1% | Gaussian | **1.58** | **70%** | 5% |
+| iid t(5) | 1% | Student-t | 1.08 | 0% | 5% |
+| iid t(5) | 1% | Historical | 1.04 | 0% | 5% |
+| GARCH(1,1)-t(5) | 5% | Historical | 1.05 | 5% | **55%** |
+| GARCH(1,1)-t(5) | 1% | Gaussian | 1.87 | 100% | 35% |
+| GARCH(1,1)-t(5) | 5% | Student-t | 1.31 | 85% | 65% |
+
+**What worked / what didn't**
+- The first single-seed run was inconclusive: Gaussian 99% was *not* rejected (p = 0.058) despite 35 vs 25 exceptions, and the independence test flagged an iid series (p = 0.014). I replaced it with rejection rates over 20 seeds instead of reporting one lucky or unlucky draw.
+- Under volatility clustering, no static-window model is acceptable: exceptions bunch together. The fix is a conditional volatility model (GARCH-t), which is the next risk step.
+- The runtime is long because of Student-t refits; it is acceptable for CI but not for an interactive page.
+
+**Next:** Live 3D volatility-surface visual (user request), then GARCH-t.

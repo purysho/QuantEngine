@@ -43,7 +43,7 @@ jobs:
       - name: Experiments (measured evidence)
         shell: bash
         run: |
-          for script in options_reference first_alpha pairs_cointegration market_making; do
+          for script in options_reference first_alpha pairs_cointegration market_making var_backtest; do
             python experiments/$script.py > /dev/null
           done
           python -c "import json,glob; [print(p, json.load(open(p))['acceptance']) for p in sorted(glob.glob('experiments/results/*.json'))]"
