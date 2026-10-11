@@ -90,3 +90,30 @@ Environment for this session: Linux container, Python 3.13.16 with NumPy 2.3.5 a
 **Did not work / caveats:** Synthetic Gaussian data only, so this is mechanism validation and not market alpha. There are no nonlinear models yet (trees or gradient boosting would be the next candidates, with the same clock protocol). There is no embargo after the test block, which is unnecessary here because we only ever train on the past.
 
 **Next:** Pairs trading with cointegration (from the deferred list), then desktop integration.
+
+---
+
+## Task 4 — Pairs trading with cointegration (previously deferred)
+
+**Did** (`workers/quant_pairs.py`, no new runtime dependency)
+- ADF with Schwert maximum lag and AIC/BIC lag choice on a common sample, refitted at the chosen lag.
+- MacKinnon (2010) finite-sample critical values and MacKinnon (1994) approximate p-values for N = 1–3 series.
+- Engle–Granger two-step test: OLS with constant, then residual ADF with no constant and N = 2 critical values. Returns the hedge ratio and the AR(1) half-life of mean reversion. Collinear series are rejected.
+- `select_pairs`: both legs must look I(1) (level not rejected, difference rejected). All ordered pairs are tested, with Holm–Bonferroni family-wise error control.
+- `pairs_backtest`: hedge ratio, spread mean and spread volatility are fitted on the formation window only. The z-score at close *t* trades at close *t+1*. Legs are held in shares (no implicit daily rebalancing). Costs apply to traded notional, a daily borrow fee applies to short notional, there is a stop-loss with re-entry blocking, and positions are force-liquidated at the end with costs.
+
+**Cross-check:** Against statsmodels 0.14 in a scratch venv (not a project dependency), 60 seeds give identical AIC lags, statistics within 2.5e-13, p-values within 7e-14, and identical critical values at T = 50, 250, 1,000 and ∞.
+
+**Tests (10):** published MacKinnon values, the response-surface formula, ADF on a walk vs its differences, EG power and hedge ratio, the collinear/short guard, Holm step-down, selection of a planted pair from noise, formation-only prefix invariance, no trade at the signal close, and costs/borrow/liquidation.
+
+**Evidence:** `experiments/pairs_cointegration.py` writes `experiments/results/pairs_cointegration.json` (about 12 s).
+- Size at nominal 5% on 1,000 independent random walks (n = 250): **AIC lags 7.1% (fails the 3σ binomial band)**, BIC 6.3% (passes), fixed lag 0 6.1%, single-series ADF 5.9%.
+- Power at 5% by spread AR coefficient: 0.8 → 100%, 0.9 → 85%, 0.95 → 31%, 0.98 → 8%. Slow mean reversion is hard to detect in one year.
+- Trading after passing the formation test, with 5 bps costs and 50 bps/yr borrow: true pairs (176 selected) had a median return of **+8.4%** and 97% were profitable. Spurious pairs (102 of 2,000 independent pairs passed by chance) had a median of **−0.75%**, 43% profitable, and a worst drawdown of −15.6%.
+
+**Did not work / caveats**
+- AIC lag search over-rejects. This was found by the experiment, not assumed. I switched pair screening to BIC; raw `engle_granger` keeps AIC so it stays comparable with statsmodels.
+- The hedge ratio is static. There is no Kalman or rolling re-estimation, and no Johansen test for more than two legs.
+- Close-price fills only. The synthetic results show the mechanism, not real-market profitability.
+
+**Next:** LOB market-making simulator, then desktop integration and CI.

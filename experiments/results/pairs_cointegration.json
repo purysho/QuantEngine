@@ -1,0 +1,74 @@
+{
+  "experiment": "pairs_cointegration",
+  "recorded_at": "2026-10-11T13:26:38+00:00",
+  "duration_seconds": 12.113,
+  "runtime": {
+    "python": "3.13.16",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "platform": "Linux-6.18.44-fc-v114-x86_64-with-glibc2.39"
+  },
+  "purpose": "Validate Engle\u2013Granger size and power, and measure out-of-sample trading of true vs spurious pairs.",
+  "data": {
+    "kind": "synthetic log prices, daily vol 1%",
+    "formation": 250,
+    "total_closes": 500,
+    "first_true_pair_sha256": "3c20241a3fbe652e2ceae3ee15c6b5249389b7df006d3814f2afdd12d16618b6"
+  },
+  "size_independent_random_walks": {
+    "replications": 1000,
+    "rejection_rate_by_lag_criterion": {
+      "aic": {
+        "1%": 0.019,
+        "5%": 0.071,
+        "10%": 0.124
+      },
+      "bic": {
+        "1%": 0.015,
+        "5%": 0.063,
+        "10%": 0.101
+      }
+    },
+    "rejection_rate_fixed_lag_0_5pct": 0.061,
+    "single_series_adf_rejection_5pct": 0.059,
+    "share_p_below_0.05": 0.066
+  },
+  "power_by_spread_ar": {
+    "replications_each": 250,
+    "rejection_rate_5pct": {
+      "0.8": 1.0,
+      "0.9": 0.848,
+      "0.95": 0.312,
+      "0.98": 0.084
+    }
+  },
+  "trading_after_formation_test": {
+    "costs": "5 bps per traded notional, 50 bps/yr borrow",
+    "true_cointegrated_ar0.9": {
+      "selected_pairs": 176,
+      "mean_total_return": 0.08208295066941862,
+      "median_total_return": 0.08355608804544423,
+      "share_profitable": 0.9715909090909091,
+      "mean_round_trips": 5.005681818181818,
+      "mean_costs": 0.0058650823739541365,
+      "worst_drawdown": -0.07828088883727358
+    },
+    "spurious_independent_walks": {
+      "selected_pairs": 102,
+      "mean_total_return": -0.001906478083853322,
+      "median_total_return": -0.007534585378767666,
+      "share_profitable": 0.43137254901960786,
+      "mean_round_trips": 3.0392156862745097,
+      "mean_costs": 0.0038038132402614232,
+      "worst_drawdown": -0.15585905270307177
+    }
+  },
+  "acceptance": {
+    "bic_size_5pct_within_binomial_band": true,
+    "aic_size_5pct_within_binomial_band": false,
+    "adf_size_5pct_within_binomial_band": true,
+    "power_increases_with_mean_reversion": true,
+    "true_pairs_outperform_spurious": true
+  },
+  "interpretation": "AIC lag search is reported as a known over-rejection, not a pass. Finite-sample size checks the MacKinnon response surfaces. Spurious pairs are the realistic failure mode when many pairs are screened."
+}
