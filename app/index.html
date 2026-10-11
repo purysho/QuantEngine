@@ -66,7 +66,7 @@
         </aside>
       </div>
       <div class="detail-grid">
-        <article class="panel"><div class="panel-heading"><h2>Risk comparison</h2><span class="subtle">95% tail loss</span></div><div id="risk-comparison" class="details-empty">Gaussian, historical block-bootstrap and Student-t results appear after a run.</div></article>
+        <article class="panel"><div class="panel-heading"><h2>Risk comparison</h2><span class="subtle">95% / 99% tail loss</span></div><div id="risk-comparison" class="details-empty">Gaussian, historical block-bootstrap and Student-t results appear after a run.</div></article>
         <article class="panel"><div class="panel-heading"><h2>Minimum-variance allocation</h2><span class="subtle">Long only · fully invested</span></div><div id="allocation" class="details-empty">Constrained portfolio weights appear after a run.</div></article>
       </div>
       <article class="panel methodology-panel"><div class="panel-heading"><h2>Report & methodology</h2><button id="toggle-methodology" class="text-button">Show details ↓</button></div><div id="report-provenance" class="report-provenance">Completed reports retain the exact snapshot, seed, parameters and numerical runtime.</div><div id="methodology" class="hidden"></div></article>
@@ -86,7 +86,7 @@
       <div class="preferences-grid">
         <article class="panel preferences-card"><div class="panel-heading"><h2>Contract</h2><span class="tag neutral">HYPOTHETICAL</span></div><div class="preferences-content">
           <div class="form-grid">
-            <div><label for="opt-kind">Type</label><select id="opt-kind" class="option-field"><option value="call">European call</option><option value="put">European put</option></select></div>
+            <div><label for="opt-kind">Type</label><select id="opt-kind" class="option-field"><option value="call">Call</option><option value="put">Put</option></select></div>
             <div><label for="opt-spot">Spot</label><div class="input-wrap"><input id="opt-spot" class="option-field" type="number" min="0.000001" step="any" value="100"><span>PRICE</span></div></div>
             <div><label for="opt-strike">Strike</label><div class="input-wrap"><input id="opt-strike" class="option-field" type="number" min="0.000001" step="any" value="100"><span>PRICE</span></div></div>
             <div><label for="opt-time">Time to expiry</label><div class="input-wrap"><input id="opt-time" class="option-field" type="number" min="0" max="50" step="any" value="1"><span>YEARS</span></div></div>

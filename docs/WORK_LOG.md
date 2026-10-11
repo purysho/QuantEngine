@@ -172,3 +172,23 @@ Scope note from the user: focus only on the **Quant** half (not the AI desktop o
 **Did not work / caveats:** A visual review of the new page in a real window has not been done. The Electron self-test ran on Linux under Xvfb, **not on Windows**. Pairs, market-making and alpha experiments are available as Python modules and scripts but do not have desktop pages yet.
 
 **Next:** CI (Linux and Windows), a research index, and a screenshot review.
+
+---
+
+## Task 7 — CI, packaging and visual review
+
+**Did**
+- `.github/workflows/ci.yml` runs on Linux and Windows: typecheck, numerical tests, desktop tests, build, all four experiments (printing their acceptance gates), and the native Electron self-test under Xvfb on Linux. A separate `windows-package` job prepares the SHA-256 verified embedded Python 3.13.16/NumPy/SciPy, runs the numerical tests **on that embedded runtime**, builds `QuantEngine.exe`, runs `--self-test` on the packaged executable, and uploads the portable folder as an artifact.
+- `packaging/test-python.mjs` is a cross-platform test launcher (`QUANT_PYTHON`, otherwise `python` on Windows and `python3` elsewhere). It uses `-t .` because embedded `._pth` runtimes don't put the working directory on `sys.path`; `tests/__init__.py` was added for that.
+- **Packaging bug fixed:** `.cache/` (runtime wheels and, here, the Electron zip) was being copied into `resources/app`; it is now excluded, which took the build from 751 MB to 543 MB. `.github/` is excluded too.
+- `ELECTRON_ZIP_DIR` lets offline or proxied builds use a checksum-verified Electron zip. Here the zip's SHA-256 `eee30dc8…665c` matched Electron's published `SHASUMS256.txt`.
+- Visual review in headless Chromium with a stub bridge and real worker output: the Options and Monitor pages render with no page errors. Fixed two labels: "95% / 99% tail loss", and Call/Put instead of "European call", since American prices are shown too.
+
+**Results:** The Windows x64 portable folder was cross-built on Linux (543 MB: Electron EXE 235 MB, embedded runtime 174 MB). Locally: 67/67 Python, 17/17 TypeScript, typecheck and build clean, Linux native self-test OK.
+
+**Did not work / caveats**
+- Electron's own download inside `@electron/packager` failed in this container's network path (an undici assertion), hence the `ELECTRON_ZIP_DIR` route. CI on GitHub should download normally.
+- The packaged `QuantEngine.exe` was **not executed** here (no Windows). The CI `windows-package` job is the first real execution, and its result is recorded below once observed.
+- An honest observation, not a bug: with next-close execution, the sample momentum strategy on the synthetic dataset is −13.7% net (Sharpe −0.46), worse than equal weight. 0.1 traded at the signal close.
+
+**Next:** Observe CI, write the research index (resource coverage), and update the README/build plan.

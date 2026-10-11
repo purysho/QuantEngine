@@ -15,10 +15,12 @@ const packages=await packager({
   appCopyright:'Copyright 2026. Application code: UNLICENSED. Third-party notices included.',
   icon:path.join(root,'assets/app.ico'), out:path.join(root,'release'),
   overwrite:true, asar:false, prune:true,
+  // Optional offline/proxied builds: a folder holding a checksum-verified electron-v<version>-win32-x64.zip.
+  ...(process.env.ELECTRON_ZIP_DIR?{electronZipDir:path.resolve(process.env.ELECTRON_ZIP_DIR)}:{}),
   extraResource:[path.join(root,'runtime/quant-python')],
   ignore:[/^\/runtime(?:\/|$)/,/^\/release(?:\/|$)/,/^\/tests(?:\/|$)/,
     /^\/packaging(?:\/|$)/,/^\/desktop(?:\/|$)/,/^\/docs\/superpowers(?:\/|$)/,
-    /^\/docs\/PROGRESS\.md$/,/^\/\.git(?:\/|$)/,/^\/\.gitignore$/,
+    /^\/docs\/PROGRESS\.md$/,/^\/\.git(?:\/|$)/,/^\/\.github(?:\/|$)/,/^\/\.cache(?:\/|$)/,/^\/\.gitignore$/,
     /^\/tsconfig\.json$/,/^\/package-lock\.json$/,/__pycache__/,/\.pyc$/],
   win32metadata:{CompanyName:"Quant Engine",FileDescription:"Quant Engine",ProductName:"Quant Engine",OriginalFilename:"QuantEngine.exe"}
 });
