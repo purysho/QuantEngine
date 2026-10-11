@@ -1,0 +1,177 @@
+{
+  "experiment": "var_backtest",
+  "recorded_at": "2026-10-11T14:15:06+00:00",
+  "duration_seconds": 110.129,
+  "runtime": {
+    "python": "3.13.16",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "platform": "Linux-6.18.44-fc-v114-x86_64-with-glibc2.39"
+  },
+  "purpose": "Do rolling-window VaR models deliver the promised exception rate, and are exceptions independent?",
+  "data": {
+    "days": 3000,
+    "window": 500,
+    "seeds": 20,
+    "first_seed_hashes": {
+      "iid_student_t5": "782b9dee37bb62f8fe349f6867f9d3f923b4213719197649d55dc2b98c1c47e2",
+      "garch11_t5": "0eeda3af356accba40f1b3efd792db0ea83a3cd656fa0ec21a959b6ef6170a07"
+    },
+    "garch": "omega 2e-6, alpha .08, beta .90, unit-variance t(5) shocks",
+    "student_t_refit_every": 50
+  },
+  "results": [
+    {
+      "series": "iid_student_t5",
+      "p": 0.05,
+      "method": "historical",
+      "seeds": 20,
+      "mean_exception_ratio": 0.9944000000000001,
+      "kupiec_rejection_rate": 0.0,
+      "independence_rejection_rate": 0.05
+    },
+    {
+      "series": "iid_student_t5",
+      "p": 0.01,
+      "method": "historical",
+      "seeds": 20,
+      "mean_exception_ratio": 1.0379999999999998,
+      "kupiec_rejection_rate": 0.0,
+      "independence_rejection_rate": 0.05
+    },
+    {
+      "series": "iid_student_t5",
+      "p": 0.05,
+      "method": "gaussian",
+      "seeds": 20,
+      "mean_exception_ratio": 0.8788,
+      "kupiec_rejection_rate": 0.2,
+      "independence_rejection_rate": 0.1
+    },
+    {
+      "series": "iid_student_t5",
+      "p": 0.01,
+      "method": "gaussian",
+      "seeds": 20,
+      "mean_exception_ratio": 1.5819999999999999,
+      "kupiec_rejection_rate": 0.7,
+      "independence_rejection_rate": 0.05
+    },
+    {
+      "series": "iid_student_t5",
+      "p": 0.05,
+      "method": "student_t",
+      "seeds": 20,
+      "mean_exception_ratio": 1.0055999999999998,
+      "kupiec_rejection_rate": 0.0,
+      "independence_rejection_rate": 0.05
+    },
+    {
+      "series": "iid_student_t5",
+      "p": 0.01,
+      "method": "student_t",
+      "seeds": 20,
+      "mean_exception_ratio": 1.05,
+      "kupiec_rejection_rate": 0.0,
+      "independence_rejection_rate": 0.05
+    },
+    {
+      "series": "iid_student_t5",
+      "p": 0.05,
+      "method": "garch_t",
+      "seeds": 20,
+      "mean_exception_ratio": 1.0064,
+      "kupiec_rejection_rate": 0.0,
+      "independence_rejection_rate": 0.1
+    },
+    {
+      "series": "iid_student_t5",
+      "p": 0.01,
+      "method": "garch_t",
+      "seeds": 20,
+      "mean_exception_ratio": 1.04,
+      "kupiec_rejection_rate": 0.0,
+      "independence_rejection_rate": 0.05
+    },
+    {
+      "series": "garch11_t5",
+      "p": 0.05,
+      "method": "historical",
+      "seeds": 20,
+      "mean_exception_ratio": 1.0472000000000001,
+      "kupiec_rejection_rate": 0.05,
+      "independence_rejection_rate": 0.55
+    },
+    {
+      "series": "garch11_t5",
+      "p": 0.01,
+      "method": "historical",
+      "seeds": 20,
+      "mean_exception_ratio": 1.192,
+      "kupiec_rejection_rate": 0.05,
+      "independence_rejection_rate": 0.2
+    },
+    {
+      "series": "garch11_t5",
+      "p": 0.05,
+      "method": "gaussian",
+      "seeds": 20,
+      "mean_exception_ratio": 0.9132000000000001,
+      "kupiec_rejection_rate": 0.15,
+      "independence_rejection_rate": 0.5
+    },
+    {
+      "series": "garch11_t5",
+      "p": 0.01,
+      "method": "gaussian",
+      "seeds": 20,
+      "mean_exception_ratio": 1.8739999999999999,
+      "kupiec_rejection_rate": 1.0,
+      "independence_rejection_rate": 0.35
+    },
+    {
+      "series": "garch11_t5",
+      "p": 0.05,
+      "method": "student_t",
+      "seeds": 20,
+      "mean_exception_ratio": 1.1792,
+      "kupiec_rejection_rate": 0.5,
+      "independence_rejection_rate": 0.55
+    },
+    {
+      "series": "garch11_t5",
+      "p": 0.01,
+      "method": "student_t",
+      "seeds": 20,
+      "mean_exception_ratio": 1.4360000000000002,
+      "kupiec_rejection_rate": 0.35,
+      "independence_rejection_rate": 0.25
+    },
+    {
+      "series": "garch11_t5",
+      "p": 0.05,
+      "method": "garch_t",
+      "seeds": 20,
+      "mean_exception_ratio": 1.0096,
+      "kupiec_rejection_rate": 0.05,
+      "independence_rejection_rate": 0.05
+    },
+    {
+      "series": "garch11_t5",
+      "p": 0.01,
+      "method": "garch_t",
+      "seeds": 20,
+      "mean_exception_ratio": 1.074,
+      "kupiec_rejection_rate": 0.0,
+      "independence_rejection_rate": 0.05
+    }
+  ],
+  "acceptance": {
+    "gaussian_99_underestimates_on_fat_tails": true,
+    "student_t_99_calibrated_on_iid_t": true,
+    "garch_t_calibrated_under_clustering_99": true,
+    "garch_t_fewer_independence_rejections_than_static_95": true,
+    "clustering_raises_independence_rejections": true
+  },
+  "interpretation": "Rejection rates over seeds show power and size; one seed is not evidence. Static windows react slowly to volatility clustering; the conditional GARCH(1,1)-t forecast is the remedy tested here."
+}

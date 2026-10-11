@@ -1,0 +1,2 @@
+# Development-only: symbolic verification of formulas in tests. Not shipped in the Windows runtime.
+sympy==1.14.0

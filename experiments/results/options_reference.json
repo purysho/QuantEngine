@@ -1,0 +1,192 @@
+{
+  "experiment": "options_reference",
+  "recorded_at": "2026-10-11T13:20:22+00:00",
+  "duration_seconds": 0.155,
+  "runtime": {
+    "python": "3.13.16",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "platform": "Linux-6.18.44-fc-v114-x86_64-with-glibc2.39"
+  },
+  "purpose": "Verify analytic prices against published examples; measure tree convergence and Monte Carlo sampling error.",
+  "published_references": [
+    {
+      "source": "Hull, S=42 K=40 r=10% sigma=20% T=0.5 call",
+      "published": 4.76,
+      "args": [
+        42,
+        40,
+        0.5,
+        0.1,
+        0.2,
+        0,
+        "call"
+      ],
+      "computed": 4.759422392871532,
+      "absolute_difference": 0.000577607128468216
+    },
+    {
+      "source": "Hull, same contract put",
+      "published": 0.81,
+      "args": [
+        42,
+        40,
+        0.5,
+        0.1,
+        0.2,
+        0,
+        "put"
+      ],
+      "computed": 0.8085993729000922,
+      "absolute_difference": 0.0014006270999078474
+    },
+    {
+      "source": "Haug generalized BSM put S=75 K=70 T=0.5 r=10% q=5% sigma=35%",
+      "published": 4.087,
+      "args": [
+        75,
+        70,
+        0.5,
+        0.1,
+        0.35,
+        0.05,
+        "put"
+      ],
+      "computed": 4.086953828635355,
+      "absolute_difference": 4.617136464446503e-05
+    },
+    {
+      "source": "Haug Merton (1973) put S=100 K=95 T=0.5 r=10% q=5% sigma=20%",
+      "published": 2.4648,
+      "args": [
+        100,
+        95,
+        0.5,
+        0.1,
+        0.2,
+        0.05,
+        "put"
+      ],
+      "computed": 2.4647876467558305,
+      "absolute_difference": 1.2353244169371891e-05
+    }
+  ],
+  "european_tree_convergence": {
+    "contract": "S=K=100, T=1, r=5%, sigma=20% call",
+    "black_scholes": 10.450583572185565,
+    "rows": [
+      {
+        "steps": 10,
+        "price": 10.253409044871937,
+        "error": -0.19717452731362783
+      },
+      {
+        "steps": 50,
+        "price": 10.410691540732715,
+        "error": -0.03989203145284925
+      },
+      {
+        "steps": 100,
+        "price": 10.430611662249024,
+        "error": -0.0199719099365403
+      },
+      {
+        "steps": 250,
+        "price": 10.442588712622292,
+        "error": -0.007994859563272172
+      },
+      {
+        "steps": 500,
+        "price": 10.446585136445988,
+        "error": -0.003998435739577033
+      },
+      {
+        "steps": 1000,
+        "price": 10.448584103765096,
+        "error": -0.0019994684204682756
+      },
+      {
+        "steps": 2500,
+        "price": 10.449783724788258,
+        "error": -0.0007998473973067632
+      },
+      {
+        "steps": 5000,
+        "price": 10.450183638477482,
+        "error": -0.00039993370808311113
+      }
+    ]
+  },
+  "american_put_tree": {
+    "contract": "Hull S=K=50, r=10%, sigma=40%, T=5/12 put; published 5-step 4.49, converged ~4.28",
+    "rows": [
+      {
+        "steps": 5,
+        "price": 4.488458534725914
+      },
+      {
+        "steps": 30,
+        "price": 4.263426633239519
+      },
+      {
+        "steps": 50,
+        "price": 4.272020747668214
+      },
+      {
+        "steps": 100,
+        "price": 4.278058548145501
+      },
+      {
+        "steps": 500,
+        "price": 4.283021276450483
+      },
+      {
+        "steps": 2000,
+        "price": 4.283922344977117
+      }
+    ]
+  },
+  "monte_carlo": {
+    "rows": [
+      {
+        "paths": 2000,
+        "price": 10.43010962410314,
+        "standard_error": 0.2349341292646612,
+        "error": -0.020473948082424087,
+        "error_in_standard_errors": -0.0871476108920705
+      },
+      {
+        "paths": 20000,
+        "price": 10.452942866125927,
+        "standard_error": 0.07311639514079056,
+        "error": 0.0023592939403620505,
+        "error_in_standard_errors": 0.03226764579707562
+      },
+      {
+        "paths": 200000,
+        "price": 10.449357195868336,
+        "standard_error": 0.023323118094872437,
+        "error": -0.0012263763172288833,
+        "error_in_standard_errors": -0.052582005212180476
+      },
+      {
+        "paths": 2000000,
+        "price": 10.457816004637632,
+        "standard_error": 0.007353145650953224,
+        "error": 0.007232432452067172,
+        "error_in_standard_errors": 0.9835834614712953
+      }
+    ],
+    "standard_error_ratio_per_10x_paths": [
+      3.2131525195174033,
+      3.134932252341728,
+      3.171855856255064
+    ],
+    "expected_ratio": 3.1622776601683795
+  },
+  "acceptance": {
+    "references_within_rounding": true,
+    "tree_error_below_1e-3_at_5000_steps": true,
+    "mc_within_three_standard_errors": true
+  }
+}

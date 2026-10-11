@@ -1,0 +1,99 @@
+name: Release
+
+# Publishes a one-click Windows download at a permanent URL:
+#   https://github.com/purysho/QuantEngine/releases/latest/download/QuantEngine-win-x64.zip
+# Runs when main is updated, when a v* tag is pushed, or manually from the Actions tab.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Build, verify and publish QuantEngine for Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: npm ci
+      - name: Prepare SHA-256 verified embedded Python/NumPy/SciPy
+        run: python packaging/prepare_runtime.py
+      - name: Numerical tests on the embedded runtime
+        run: npm run test:quant
+        env:
+          QUANT_PYTHON: ${{ github.workspace }}\runtime\quant-python\python.exe
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run package:win
+      - name: Packaged executable self-test
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path release -Recurse -Filter QuantEngine.exe | Select-Object -First 1
+          if (-not $exe) { throw 'QuantEngine.exe was not produced.' }
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList '--self-test' -NoNewWindow -Wait -PassThru `
+            -RedirectStandardOutput self-test.log -RedirectStandardError self-test.err
+          Get-Content self-test.log, self-test.err
+          if ($process.ExitCode -ne 0 -or -not (Select-String -Path self-test.log -Pattern 'QUANT_SELF_TEST_OK' -Quiet)) {
+            throw "Self-test failed with exit code $($process.ExitCode)"
+          }
+      - name: Zip the portable folder and record its checksum
+        shell: pwsh
+        run: |
+          $folder = Get-ChildItem -Path release -Directory | Where-Object { $_.Name -like '*win32-x64' } | Select-Object -First 1
+          Rename-Item $folder.FullName QuantEngine
+          7z a -tzip -mx=7 QuantEngine-win-x64.zip .\release\QuantEngine | Out-Null
+          $hash = (Get-FileHash QuantEngine-win-x64.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  QuantEngine-win-x64.zip" | Out-File -Encoding ascii SHA256SUMS.txt
+          $size = [math]::Round((Get-Item QuantEngine-win-x64.zip).Length / 1MB)
+          "SHA256=$hash" >> $env:GITHUB_ENV
+          "ZIP_MB=$size" >> $env:GITHUB_ENV
+      - name: Publish the release (create, or replace the assets of this version)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false  # `gh release view` exits 1 when the release does not exist yet.
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}' } else { "v$version" }
+          $commit = '${{ github.sha }}'.Substring(0, 7)
+          $notes = @"
+          ## Download
+          **[QuantEngine-win-x64.zip](https://github.com/${{ github.repository }}/releases/download/$tag/QuantEngine-win-x64.zip)** ($env:ZIP_MB MB): Windows 10/11, 64-bit.
+
+          1. Download and extract the whole zip (for example to ``D:\QuantEngine``).
+          2. Open ``QuantEngine\QuantEngine.exe``. Nothing else needs installing: Python, NumPy and SciPy are included.
+          3. Windows SmartScreen may say the app is unrecognised because it is not code-signed yet. Choose **More info, then Run anyway**.
+
+          Research data is kept in ``D:\Quant-Engine`` by default. QuantEngine has no brokerage connection and cannot trade.
+
+          ## Verify
+          SHA-256: ``$env:SHA256`` (also in ``SHA256SUMS.txt``).
+          In PowerShell: ``Get-FileHash .\QuantEngine-win-x64.zip -Algorithm SHA256``
+
+          Built from commit $commit by [this workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}). Before publishing, the run passed the numerical tests on the bundled runtime and the packaged executable's self-test.
+          "@
+          $notes | Out-File -Encoding utf8 release-notes.md
+          gh release view $tag --repo ${{ github.repository }} *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag QuantEngine-win-x64.zip SHA256SUMS.txt --clobber --repo ${{ github.repository }}
+            gh release edit $tag --notes-file release-notes.md --latest --repo ${{ github.repository }}
+          } else {
+            gh release create $tag QuantEngine-win-x64.zip SHA256SUMS.txt --title "QuantEngine $version for Windows" `
+              --notes-file release-notes.md --target ${{ github.sha }} --latest --repo ${{ github.repository }}
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing the release failed.' }

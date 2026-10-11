@@ -1,6 +1,6 @@
 {
   "name": "quant-engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Continuous local quantitative research and numerical analysis",
   "private": true,
   "license": "UNLICENSED",
@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node packaging/build.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
-    "test:quant": "python3 -m unittest discover -s tests -p 'test_*.py'",
+    "test:quant": "node packaging/test-python.mjs",
     "typecheck": "tsc --noEmit",
     "start": "electron .",
     "package:win": "node packaging/package.mjs"

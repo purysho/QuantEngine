@@ -1,0 +1,354 @@
+{
+  "experiment": "market_making",
+  "recorded_at": "2026-10-11T14:17:46+00:00",
+  "duration_seconds": 8.992,
+  "runtime": {
+    "python": "3.13.16",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "platform": "Linux-6.18.44-fc-v114-x86_64-with-glibc2.39"
+  },
+  "purpose": "Reproduce Avellaneda\u2013Stoikov (2008) and measure how execution frictions change market-making P&L.",
+  "paper_settings": {
+    "mid": 100,
+    "horizon": 1,
+    "sigma": 2,
+    "dt": 0.005,
+    "k": 1.5,
+    "A": 140,
+    "paper_paths": 1000,
+    "our_paths": 20000,
+    "spread_time_term": false,
+    "note": "Published table spreads equal (2/gamma) ln(1 + gamma/k); the time term is omitted to match them."
+  },
+  "reproduction": [
+    {
+      "gamma": 0.1,
+      "strategy": "inventory",
+      "paper": {
+        "spread": 1.29,
+        "profit": 62.94,
+        "profit_std": 5.89,
+        "q_mean": 0.08,
+        "q_std": 2.8
+      },
+      "ours": {
+        "spread": 1.2907704227514234,
+        "profit": 62.145337286778414,
+        "profit_se": 0.04177404183271743,
+        "profit_std": 5.907741651497001,
+        "q_mean": -0.00095,
+        "q_std": 2.9603356696266463
+      },
+      "profit_relative_gap": -0.012625718354330906
+    },
+    {
+      "gamma": 0.1,
+      "strategy": "symmetric",
+      "paper": {
+        "spread": 1.29,
+        "profit": 67.21,
+        "profit_std": 13.43,
+        "q_mean": 0.01,
+        "q_std": 8.66
+      },
+      "ours": {
+        "spread": 1.2907704227514234,
+        "profit": 67.08304867111217,
+        "profit_se": 0.09803142796467451,
+        "profit_std": 13.86373749664438,
+        "q_mean": 0.0568,
+        "q_std": 8.979003557480322
+      },
+      "profit_relative_gap": -0.0018888755972001903
+    },
+    {
+      "gamma": 0.01,
+      "strategy": "inventory",
+      "paper": {
+        "spread": 1.33,
+        "profit": 66.78,
+        "profit_std": 8.76,
+        "q_mean": -0.02,
+        "q_std": 4.7
+      },
+      "ours": {
+        "spread": 1.3289085437337023,
+        "profit": 66.8831769720397,
+        "profit_se": 0.06260861870171071,
+        "profit_std": 8.854195768940508,
+        "q_mean": -0.0068,
+        "q_std": 5.2864497621328415
+      },
+      "profit_relative_gap": 0.0015450280329396548
+    },
+    {
+      "gamma": 0.01,
+      "strategy": "symmetric",
+      "paper": {
+        "spread": 1.33,
+        "profit": 67.36,
+        "profit_std": 13.4,
+        "q_mean": -0.31,
+        "q_std": 8.65
+      },
+      "ours": {
+        "spread": 1.3289085437337023,
+        "profit": 67.20828853660991,
+        "profit_se": 0.09769792271993855,
+        "profit_std": 13.816572732621564,
+        "q_mean": 0.0514,
+        "q_std": 8.899899912410394
+      },
+      "profit_relative_gap": -0.002252248565767334
+    },
+    {
+      "gamma": 0.5,
+      "strategy": "inventory",
+      "paper": {
+        "spread": 1.15,
+        "profit": 33.92,
+        "profit_std": 4.72,
+        "q_mean": -0.02,
+        "q_std": 1.88
+      },
+      "ours": {
+        "spread": 1.1507282898071234,
+        "profit": 20.776376756476285,
+        "profit_se": 0.03441169695682478,
+        "profit_std": 4.866548854061456,
+        "q_mean": 0.0028,
+        "q_std": 1.9728372371633238
+      },
+      "profit_relative_gap": -0.3874888927925624
+    },
+    {
+      "gamma": 0.5,
+      "strategy": "symmetric",
+      "paper": {
+        "spread": 1.15,
+        "profit": 66.2,
+        "profit_std": 14.53,
+        "q_mean": 0.25,
+        "q_std": 9.06
+      },
+      "ours": {
+        "spread": 1.1507282898071234,
+        "profit": 66.0367809587771,
+        "profit_se": 0.09959311097412764,
+        "profit_std": 14.084592825854005,
+        "q_mean": 0.0243,
+        "q_std": 9.297044221770868
+      },
+      "profit_relative_gap": -0.002465544429348987
+    }
+  ],
+  "friction_ablation": {
+    "base": {
+      "mode": "realistic",
+      "paths": 5000,
+      "seed": 21,
+      "gamma": 0.1,
+      "spread_time_term": true
+    },
+    "rows": [
+      {
+        "step": "clean realistic mode",
+        "inventory": {
+          "profit_mean": 54.133313525055556,
+          "profit_std": 6.408246038769046,
+          "final_inventory_std": 3.0059512884658868,
+          "fills_mean": 86.6728,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 4.1026
+        },
+        "symmetric": {
+          "profit_mean": 55.448724246151464,
+          "profit_std": 13.049817801571582,
+          "final_inventory_std": 7.934862030753239,
+          "fills_mean": 83.1644,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 9.6364
+        }
+      },
+      {
+        "step": "+ queue ahead (mean 3 units)",
+        "inventory": {
+          "profit_mean": 9.280641770128733,
+          "profit_std": 3.2053085970824555,
+          "final_inventory_std": 1.8389046317821318,
+          "fills_mean": 26.4966,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 2.407315513253449
+        },
+        "symmetric": {
+          "profit_mean": 8.806691640344896,
+          "profit_std": 5.192391490856523,
+          "final_inventory_std": 3.2851619588328655,
+          "fills_mean": 25.5822,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 3.7743629974705617
+        }
+      },
+      {
+        "step": "+ random order sizes (mean 2) / quote size 2",
+        "inventory": {
+          "profit_mean": 28.680349350037005,
+          "profit_std": 6.527547083554399,
+          "final_inventory_std": 3.562640443829355,
+          "fills_mean": 42.358,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 4.823828091391428
+        },
+        "symmetric": {
+          "profit_mean": 29.538567577441434,
+          "profit_std": 13.934026731455956,
+          "final_inventory_std": 8.681468589352205,
+          "fills_mean": 39.2668,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 10.052915713404115
+        }
+      },
+      {
+        "step": "+ 3-step quote latency",
+        "inventory": {
+          "profit_mean": 26.37883267581946,
+          "profit_std": 6.562348979406793,
+          "final_inventory_std": 3.8533376046774004,
+          "fills_mean": 44.202,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 5.151855259671023
+        },
+        "symmetric": {
+          "profit_mean": 27.492880980924493,
+          "profit_std": 15.768316727248648,
+          "final_inventory_std": 9.187715216519367,
+          "fills_mean": 41.4532,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 10.747451790465218
+        }
+      },
+      {
+        "step": "+ 0.05 tick",
+        "inventory": {
+          "profit_mean": 26.698117550475686,
+          "profit_std": 6.739519762656016,
+          "final_inventory_std": 3.7613642101082525,
+          "fills_mean": 42.9406,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 5.072430695814319
+        },
+        "symmetric": {
+          "profit_mean": 27.596341892961256,
+          "profit_std": 14.930580313358755,
+          "final_inventory_std": 8.991341650079795,
+          "fills_mean": 40.1916,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 10.579497780499473
+        }
+      },
+      {
+        "step": "+ adverse move 0.05 after fills",
+        "inventory": {
+          "profit_mean": 25.38250368322276,
+          "profit_std": 6.764337971837151,
+          "final_inventory_std": 3.889582818600283,
+          "fills_mean": 42.8092,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 5.191769485878521
+        },
+        "symmetric": {
+          "profit_mean": 24.212812427310013,
+          "profit_std": 17.087042745839636,
+          "final_inventory_std": 9.521029984101283,
+          "fills_mean": 40.1966,
+          "fees_mean": 0.0,
+          "max_abs_inventory_mean": 10.995050024314626
+        }
+      },
+      {
+        "step": "+ maker 0.5 bp, taker 2 bp",
+        "inventory": {
+          "profit_mean": 25.050786512161146,
+          "profit_std": 6.748888349180315,
+          "final_inventory_std": 3.889582818600283,
+          "fills_mean": 42.8092,
+          "fees_mean": 0.3317171710616159,
+          "max_abs_inventory_mean": 5.191769485878521
+        },
+        "symmetric": {
+          "profit_mean": 23.811599403818477,
+          "profit_std": 17.141788658471153,
+          "final_inventory_std": 9.521029984101283,
+          "fills_mean": 40.1966,
+          "fees_mean": 0.40121302349154986,
+          "max_abs_inventory_mean": 10.995050024314626
+        }
+      },
+      {
+        "step": "+ inventory limit 10",
+        "inventory": {
+          "profit_mean": 25.056647613718052,
+          "profit_std": 6.711656412788238,
+          "final_inventory_std": 3.8298901083072594,
+          "fills_mean": 42.796,
+          "fees_mean": 0.3308698104273747,
+          "max_abs_inventory_mean": 5.167791589506805
+        },
+        "symmetric": {
+          "profit_mean": 24.718033160286296,
+          "profit_std": 13.31126469995903,
+          "final_inventory_std": 6.19145732839701,
+          "fills_mean": 39.0664,
+          "fees_mean": 0.3459883097814022,
+          "max_abs_inventory_mean": 8.66371728031744
+        }
+      }
+    ]
+  },
+  "gamma_0.5_diagnosis": {
+    "spread_time_coefficient_sweep_inventory_profit": [
+      {
+        "coefficient": 0.0,
+        "0.1": 62.145337286778414,
+        "0.01": 66.8831769720397,
+        "0.5": 20.776376756476285
+      },
+      {
+        "coefficient": 0.25,
+        "0.1": 62.66034403741343,
+        "0.01": 66.89410892273436,
+        "0.5": 31.71175362037672
+      },
+      {
+        "coefficient": 0.5,
+        "0.1": 63.04590215518535,
+        "0.01": 66.90430566000056,
+        "0.5": 39.55049050308378
+      },
+      {
+        "coefficient": 0.75,
+        "0.1": 63.28004734571078,
+        "0.01": 66.91468070072494,
+        "0.5": 44.43813252419649
+      },
+      {
+        "coefficient": 1.0,
+        "0.1": 63.404943042240596,
+        "0.01": 66.93156513943029,
+        "0.5": 46.764406138263226
+      }
+    ],
+    "implied_coefficient_for_published_33.92": 0.320427366445188,
+    "finding": "Rows gamma=0.1 and 0.01 are insensitive to the spread convention; only gamma=0.5 discriminates. The published 33.92 implies an effective time-term coefficient near the value above, matching neither the paper's stated formula (c=1) nor its printed constant spread (c=0). The table is not reproducible from the stated method; it is reported, not fitted.",
+    "paper_procedure_source": "Avellaneda & Stoikov, section 3.3, people.orie.cornell.edu/sfs33/LimitOrderBook.pdf"
+  },
+  "acceptance": {
+    "inventory_strategy_lowers_profit_std_every_gamma": true,
+    "gamma_0.1_and_0.01_profits_within_3pct": true,
+    "gamma_0.5_inventory_reproduced_by_stated_method": false,
+    "gamma_0.5_discrepancy_localised": true,
+    "frictions_reduce_inventory_strategy_profit": true
+  },
+  "interpretation": "Stylised Poisson-fill model; useful for comparing quoting rules under stated frictions, not for forecasting venue P&L."
+}

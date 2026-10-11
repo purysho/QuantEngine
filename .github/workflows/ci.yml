@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch supersedes older runs (they were queuing for ~8 minutes each).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Numerical and desktop checks (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Numerical tests
+        run: npm run test:quant
+        env:
+          QUANT_PYTHON: python
+      - name: Desktop tests
+        run: npm test
+        env:
+          QUANT_PYTHON: python
+      - run: npm run build
+      - name: Experiments (measured evidence)
+        shell: bash
+        run: |
+          for script in options_reference first_alpha pairs_cointegration market_making var_backtest; do
+            python experiments/$script.py > /dev/null
+          done
+          python -c "import json,glob; [print(p, json.load(open(p)).get('acceptance', 'no acceptance block')) for p in sorted(glob.glob('experiments/results/*.json'))]"
+      - name: Native self-test (Linux, Xvfb)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npx electron . --self-test --no-sandbox | tee self-test.log && grep -q QUANT_SELF_TEST_OK self-test.log
+        env:
+          QUANT_PYTHON: python
+
+  real-data:
+    name: Real-data backtests (FRED, Ken French) and evolutionary learning
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Cache public data snapshots (hash-verified on read)
+        uses: actions/cache@v4
+        with:
+          path: .cache/data
+          key: public-data-${{ github.run_id }}
+          restore-keys: public-data-
+      - name: 100-year backtest of the maths against what happened
+        run: python experiments/real_world_backtest.py
+      - name: Prequential evolutionary learning on real data
+        run: python experiments/evolution_real.py --offline
+      - name: Acceptance summary
+        run: |
+          python -c "import json; [print(p, json.load(open('experiments/results/'+p+'.json')).get('acceptance')) for p in ('real_world_backtest','evolution_real')]"
+
+  windows-package:
+    name: Windows portable package with embedded runtime
+    needs: checks
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: npm ci
+      - name: Prepare SHA-256 verified embedded Python/NumPy/SciPy
+        run: python packaging/prepare_runtime.py
+      - name: Numerical tests on the embedded runtime
+        run: npm run test:quant
+        env:
+          QUANT_PYTHON: ${{ github.workspace }}\runtime\quant-python\python.exe
+      - run: npm run build
+      - run: npm run package:win
+      - name: Packaged executable self-test
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path release -Recurse -Filter QuantEngine.exe | Select-Object -First 1
+          if (-not $exe) { throw 'QuantEngine.exe was not produced.' }
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList '--self-test' -NoNewWindow -Wait -PassThru `
+            -RedirectStandardOutput self-test.log -RedirectStandardError self-test.err
+          Get-Content self-test.log, self-test.err
+          if ($process.ExitCode -ne 0) { throw "Self-test exited with $($process.ExitCode)" }
+      - uses: actions/upload-artifact@v5
+        with:
+          name: QuantEngine-win-x64
+          path: release/
+          if-no-files-found: error
+          retention-days: 14

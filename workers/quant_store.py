@@ -171,7 +171,7 @@ class Store:
                                  "currency": "Provided by importer; no currency conversion"})
 
     def refresh_ecb(self):
-        request = urllib.request.Request(ECB_URL, headers={"User-Agent": "Quant-Engine/0.1 research", "Accept": "application/xml"})
+        request = urllib.request.Request(ECB_URL, headers={"User-Agent": "Quant-Engine/0.2 research", "Accept": "application/xml"})
         with urllib.request.urlopen(request, timeout=20) as response:
             if response.status != 200:
                 raise ValueError(f"ECB server returned HTTP {response.status}.")

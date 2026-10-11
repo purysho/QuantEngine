@@ -1,11 +1,12 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, ipcMain, shell } from 'electron';
 import fs from 'node:fs';
-import { readFile, writeFile, mkdir, rename, unlink } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, unlink, appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { ConfigStore, USER_SETTINGS, validatePatch } from './config.js';
 import { Engine } from './engine.js';
+import { Assistant } from './assistant.js';
 import { WorkerTransport, type JsonRecord } from './transport.js';
 
 app.setName('Quant Engine');
@@ -21,9 +22,11 @@ let quitting = false;
 let exitAllowed = false;
 let quitPromise: Promise<void> | null = null;
 let engine: Engine;
+let assistant: Assistant;
 let configStore: ConfigStore;
 let lastSentReport: unknown;
 let lastSentRuns: unknown;
+let lastSentOptions: unknown;
 let settingsQueue: Promise<unknown> = Promise.resolve();
 let settingsPending = 0;
 
@@ -43,6 +46,8 @@ function pushState() {
     else lastSentReport = snapshot.report;
     if (lastSentRuns === snapshot.runs) delete snapshot.runs;
     else lastSentRuns = snapshot.runs;
+    if (lastSentOptions === snapshot.options) delete snapshot.options;
+    else lastSentOptions = snapshot.options;
     window.webContents.send('quant:state', snapshot);
   }
   if (tray) {
@@ -83,6 +88,7 @@ function createWindow(hidden = false) {
   window.on('closed', () => { window = null; });
   lastSentReport = undefined;
   lastSentRuns = undefined;
+  lastSentOptions = undefined;
   void window.loadFile(path.join(app.getAppPath(), 'app/index.html'));
   return window;
 }
@@ -106,6 +112,22 @@ function quit(): Promise<void> {
   return quitPromise;
 }
 
+const OPTION_FIELDS = new Set(['spot', 'strike', 'time', 'rate', 'volatility', 'dividend', 'kind', 'steps', 'paths', 'seed', 'market_price', 'surface_rho', 'surface_eta']);
+
+/** Shape check only; the numerical worker performs the authoritative range validation. */
+function validateOptions(values: unknown): JsonRecord {
+  if (!values || typeof values !== 'object' || Array.isArray(values)) throw new Error('Option inputs must be an object.');
+  const result: JsonRecord = {};
+  for (const [key, value] of Object.entries(values as JsonRecord)) {
+    if (!OPTION_FIELDS.has(key)) throw new Error(`Unknown option input: ${key}`);
+    if (key === 'kind') { if (value !== 'call' && value !== 'put') throw new Error('Option type must be call or put.'); }
+    else if (key === 'market_price' && value === null) continue;
+    else if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`Option input ${key} must be a finite number.`);
+    result[key] = value;
+  }
+  return result;
+}
+
 function checkedRun(id: unknown) {
   if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error('Invalid run identifier.');
   const run = engine.runs.find(value => value.id === id && value.status === 'completed');
@@ -121,6 +143,17 @@ async function command(method: string, values?: unknown): Promise<unknown> {
   if (method === 'start') { await engine.start(); return engine.snapshot(); }
   if (method === 'pause') { await engine.pause(); return engine.snapshot(); }
   if (method === 'run-once') { await engine.runOnce(); return engine.snapshot(); }
+  if (method === 'ask') {
+    if (typeof values !== 'string' || values.length > 500) throw new Error('Requests are limited to 500 characters.');
+    return { ...(await assistant.handle(values)), snapshot: engine.snapshot() };
+  }
+  if (method === 'ask-confirm') {
+    const { token, accept } = (values ?? {}) as { token?: unknown; accept?: unknown };
+    if (typeof token !== 'string' || typeof accept !== 'boolean') throw new Error('Invalid confirmation.');
+    return { ...(await assistant.confirm(token, accept)), snapshot: engine.snapshot() };
+  }
+  if (method === 'learn-now') { await engine.learnNow(); return engine.snapshot(); }
+  if (method === 'calculate-options') { await engine.calculateOptions(validateOptions(values)); return engine.snapshot(); }
   if (method === 'configure') {
     const patch = validatePatch(values);
     for (const key of Object.keys(patch)) if (!USER_SETTINGS.has(key)) throw new Error(`This setting is managed by the desktop: ${key}`);
@@ -192,7 +225,7 @@ function dispatchCommand(method: string, values?: unknown): Promise<unknown> {
     settingsQueue = pending;
     return pending;
   }
-  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb'].includes(method)) {
+  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'calculate-options', 'learn-now'].includes(method)) {
     return Promise.reject(new Error('Settings or storage are still being saved. Wait before starting another operation.'));
   }
   return command(method, values);
@@ -207,7 +240,18 @@ async function nativeSelfTest() {
   if (!ready.bridge || ready.rows < 40 || !ready.nodeUnavailable || ready.title !== 'Quant Engine') throw new Error('Renderer/preload health check failed.');
   await engine.runOnce();
   if (!engine.lastReport || engine.state.lastError) throw new Error(engine.state.lastError || 'Self-test numerical report is missing.');
-  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, completed: engine.state.completed,
+  // Exercise the sandboxed bridge end to end with a published reference contract (Hull: 4.7594).
+  const option = await window!.webContents.executeJavaScript(`window.quant.calculateOptions({ spot: 42, strike: 40, time: 0.5,
+    rate: 0.1, volatility: 0.2, paths: 20000 }).then(state => state.options.black_scholes.price)`);
+  if (Math.abs(option - 4.7594) > 1e-4) throw new Error(`Self-test option price ${option} differs from the reference.`);
+  const asked = await window!.webContents.executeJavaScript(`window.quant.ask('what is my VaR?').then(result => result.reply)`);
+  if (!/95% VaR: Gaussian \d/.test(asked)) throw new Error(`Self-test assistant answer was unexpected: ${asked}`);
+  const refused = await window!.webContents.executeJavaScript(`window.quant.ask('buy 100 shares now').then(result => result.tier)`);
+  if (refused !== 'refused') throw new Error('Self-test assistant did not refuse a trading request.');
+  await engine.learnNow();
+  const learned = engine.learning as { tasks?: Record<string, { graph: { nodes: unknown[] } }> } | null;
+  if (!learned?.tasks?.risk?.graph.nodes.length) throw new Error(`Self-test learning step failed: ${engine.learningError}`);
+  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), learnedModels: learned.tasks.risk.graph.nodes.length, completed: engine.state.completed,
     runtime: engine.runtime, report: engine.lastReportPath }));
   await quit();
 }
@@ -227,13 +271,18 @@ else {
       process.platform === 'win32' ? 'D:\\Quant-Engine' : path.join(app.getPath('documents'), 'Quant-Engine');
     configStore = new ConfigStore(path.join(app.getPath('userData'), 'settings.json'), defaultRoot);
     const config = await configStore.load();
-    if (selfTest) { config.paths = 5000; config.resumeOnLaunch = false; config.startAtLogin = false; }
+    if (selfTest) { config.paths = 5000; config.resumeOnLaunch = false; config.startAtLogin = false; config.learnBudgetSeconds = 8; }
     let python = '';
     try { python = pythonPath(); } catch (error) { config.lastError = (error as Error).message; }
     const transport = new WorkerTransport(python, path.join(app.getAppPath(), 'workers/quant_worker.py'),
       () => engine.config.dataRoot, () => engine.config.lowCpu);
     engine = new Engine(config, transport, async next => { await configStore.update(next); });
     engine.onChange = pushState;
+    // Every assistant request and outcome is appended to a local, human-readable action log.
+    assistant = new Assistant(engine, async entry => {
+      await mkdir(engine.config.dataRoot, { recursive: true });
+      await appendFile(path.join(engine.config.dataRoot, 'assistant-log.jsonl'), JSON.stringify(entry) + '\n', 'utf8');
+    }, () => engine.config.assistantEndpoint ? { endpoint: engine.config.assistantEndpoint, model: engine.config.assistantModel } : null);
     try { await engine.initialize(); } catch (error) { showError(error); engine.state.phase = 'error'; }
     if (!selfTest) {
       const image = nativeImage.createFromPath(path.join(app.getAppPath(), 'assets/app.png'));

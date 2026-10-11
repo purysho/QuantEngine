@@ -1,0 +1,678 @@
+{
+  "experiment": "real_world_backtest",
+  "recorded_at": "2026-10-11T15:24:16+00:00",
+  "duration_seconds": 67.771,
+  "runtime": {
+    "python": "3.13.16",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "platform": "Linux-6.18.44-fc-v114-x86_64-with-glibc2.39"
+  },
+  "purpose": "Compare QuantEngine's models with realised history across a century, several asset classes and named crises.",
+  "sources": {
+    "us_market": {
+      "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip",
+      "sha256": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "retrieved_at": "2026-10-11T14:31:57+00:00",
+      "first": "1926-07-01",
+      "last": "2026-08-31",
+      "days": 26317,
+      "construction": "Mkt-RF + RF (CRSP value-weighted total market), decimal daily returns"
+    },
+    "vix": {
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS",
+      "sha256": "d1fd366c92ba4211858a4272c593c292c274519bb96f81c06537edeec76b5aee",
+      "retrieved_at": "2026-10-11T14:37:01+00:00"
+    },
+    "oil": {
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILBRENTEU,DCOILWTICO",
+      "sha256": "6e7b3b40362bb3c5d417dc6abdcb143e3210f20e15bde0b48c3ad98bc8e8dd37",
+      "retrieved_at": "2026-10-11T14:37:02+00:00"
+    },
+    "industries": {
+      "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/12_Industry_Portfolios_daily_CSV.zip",
+      "sha256": "cde9864260d22e42fdbd29a8a1272b8a0ab67aaf4d8cc6fd7898e11c448f06b1",
+      "retrieved_at": "2026-10-11T14:37:03+00:00"
+    }
+  },
+  "attribution": "Kenneth R. French Data Library (CRSP); FRED, Federal Reserve Bank of St. Louis (CBOE VIX; EIA spot oil).",
+  "var_us_market": {
+    "window": 500,
+    "refit_every": 50,
+    "rows": [
+      {
+        "method": "historical",
+        "p": 0.05,
+        "forecasts": 25817,
+        "exceptions": 1374,
+        "expected_exceptions": 1290.8500000000001,
+        "exception_rate": 0.0532207460200643,
+        "kupiec_p_value": 0.018726445471547008,
+        "independence_p_value": 3.0705419059870634e-48,
+        "conditional_coverage_p_value": 3.5588959871543547e-48,
+        "exception_ratio": 1.0644149204012858
+      },
+      {
+        "method": "historical",
+        "p": 0.01,
+        "forecasts": 25817,
+        "exceptions": 335,
+        "expected_exceptions": 258.17,
+        "exception_rate": 0.012975946082038966,
+        "kupiec_p_value": 4.326668155594944e-06,
+        "independence_p_value": 1.5117461424154887e-18,
+        "conditional_coverage_p_value": 4.385182179786548e-22,
+        "exception_ratio": 1.2975946082038965
+      },
+      {
+        "method": "gaussian",
+        "p": 0.05,
+        "forecasts": 25817,
+        "exceptions": 1393,
+        "expected_exceptions": 1290.8500000000001,
+        "exception_rate": 0.05395669520083666,
+        "kupiec_p_value": 0.003954918585528314,
+        "independence_p_value": 5.584629783167891e-52,
+        "conditional_coverage_p_value": 1.677377761763236e-52,
+        "exception_ratio": 1.0791339040167331
+      },
+      {
+        "method": "gaussian",
+        "p": 0.01,
+        "forecasts": 25817,
+        "exceptions": 572,
+        "expected_exceptions": 258.17,
+        "exception_rate": 0.022155943757988922,
+        "kupiec_p_value": 3.2065658648492303e-64,
+        "independence_p_value": 5.9083265021227384e-30,
+        "conditional_coverage_p_value": 5.788682604886454e-91,
+        "exception_ratio": 2.215594375798892
+      },
+      {
+        "method": "student_t",
+        "p": 0.05,
+        "forecasts": 25817,
+        "exceptions": 1824,
+        "expected_exceptions": 1290.8500000000001,
+        "exception_rate": 0.07065112135414649,
+        "kupiec_p_value": 7.575850128003057e-47,
+        "independence_p_value": 4.779540902503087e-58,
+        "conditional_coverage_p_value": 1.3244148130379056e-101,
+        "exception_ratio": 1.4130224270829297
+      },
+      {
+        "method": "student_t",
+        "p": 0.01,
+        "forecasts": 25817,
+        "exceptions": 513,
+        "expected_exceptions": 258.17,
+        "exception_rate": 0.0198706278808537,
+        "kupiec_p_value": 7.71353299097476e-45,
+        "independence_p_value": 4.16356592374627e-26,
+        "conditional_coverage_p_value": 7.594690598908593e-68,
+        "exception_ratio": 1.98706278808537
+      },
+      {
+        "method": "garch_t",
+        "p": 0.05,
+        "forecasts": 25817,
+        "exceptions": 1719,
+        "expected_exceptions": 1290.8500000000001,
+        "exception_rate": 0.06658403377619398,
+        "kupiec_p_value": 1.9903049824846385e-31,
+        "independence_p_value": 2.911339430808116e-14,
+        "conditional_coverage_p_value": 8.264184747543506e-43,
+        "exception_ratio": 1.3316806755238795
+      },
+      {
+        "method": "garch_t",
+        "p": 0.01,
+        "forecasts": 25817,
+        "exceptions": 408,
+        "expected_exceptions": 258.17,
+        "exception_rate": 0.015803540302901188,
+        "kupiec_p_value": 5.587393954273899e-18,
+        "independence_p_value": 0.00865844331865183,
+        "conditional_coverage_p_value": 1.953809165202971e-18,
+        "exception_ratio": 1.580354030290119
+      },
+      {
+        "method": "gjr_fhs",
+        "p": 0.05,
+        "forecasts": 25817,
+        "exceptions": 1333,
+        "expected_exceptions": 1290.8500000000001,
+        "exception_rate": 0.051632645156292366,
+        "kupiec_p_value": 0.2311031657036433,
+        "independence_p_value": 0.0006900729930288262,
+        "conditional_coverage_p_value": 0.0015416112787401944,
+        "exception_ratio": 1.0326529031258471
+      },
+      {
+        "method": "gjr_fhs",
+        "p": 0.01,
+        "forecasts": 25817,
+        "exceptions": 283,
+        "expected_exceptions": 258.17,
+        "exception_rate": 0.010961769376767246,
+        "kupiec_p_value": 0.12616033222941828,
+        "independence_p_value": 0.4988729319536872,
+        "conditional_coverage_p_value": 0.24703393989076192,
+        "exception_ratio": 1.0961769376767245
+      }
+    ],
+    "pinball_loss": {
+      "historical@0.05": 0.0012142514622148198,
+      "historical@0.01": 0.0004069470503931518,
+      "gaussian@0.05": 0.0012251172884385204,
+      "gaussian@0.01": 0.00043992792483396056,
+      "student_t@0.05": 0.0012479551938200204,
+      "student_t@0.01": 0.00042943673372633625,
+      "garch_t@0.05": 0.0011153146116595562,
+      "garch_t@0.01": 0.00033857847354350353,
+      "gjr_fhs@0.05": 0.0010680352778548528,
+      "gjr_fhs@0.01": 0.0003201226965876622
+    },
+    "exception_ratio_by_decade": {
+      "historical@0.05": {
+        "1920s": 2.01,
+        "1930s": 1.04,
+        "1940s": 0.85,
+        "1950s": 1.02,
+        "1960s": 1.12,
+        "1970s": 1.2,
+        "1980s": 0.99,
+        "1990s": 1.2,
+        "2000s": 1.18,
+        "2010s": 0.92,
+        "2020s": 0.9
+      },
+      "historical@0.01": {
+        "1920s": 4.28,
+        "1930s": 1.1,
+        "1940s": 0.93,
+        "1950s": 1.0,
+        "1960s": 1.41,
+        "1970s": 1.62,
+        "1980s": 1.19,
+        "1990s": 1.27,
+        "2000s": 1.79,
+        "2010s": 0.79,
+        "2020s": 1.37
+      },
+      "gaussian@0.05": {
+        "1920s": 2.12,
+        "1930s": 0.88,
+        "1940s": 0.9,
+        "1950s": 1.06,
+        "1960s": 1.21,
+        "1970s": 1.24,
+        "1980s": 0.93,
+        "1990s": 1.19,
+        "2000s": 1.22,
+        "2010s": 1.02,
+        "2020s": 0.96
+      },
+      "gaussian@0.01": {
+        "1920s": 7.26,
+        "1930s": 1.74,
+        "1940s": 2.16,
+        "1950s": 1.96,
+        "1960s": 2.49,
+        "1970s": 1.94,
+        "1980s": 1.74,
+        "1990s": 2.22,
+        "2000s": 2.39,
+        "2010s": 2.27,
+        "2020s": 2.33
+      },
+      "student_t@0.05": {
+        "1920s": 2.38,
+        "1930s": 1.47,
+        "1940s": 1.34,
+        "1950s": 1.26,
+        "1960s": 1.45,
+        "1970s": 1.31,
+        "1980s": 1.21,
+        "1990s": 1.35,
+        "2000s": 1.42,
+        "2010s": 1.46,
+        "2020s": 1.77
+      },
+      "student_t@0.01": {
+        "1920s": 6.52,
+        "1930s": 1.97,
+        "1940s": 1.99,
+        "1950s": 1.46,
+        "1960s": 1.89,
+        "1970s": 1.5,
+        "1980s": 1.58,
+        "1990s": 1.74,
+        "2000s": 2.27,
+        "2010s": 2.07,
+        "2020s": 2.69
+      },
+      "garch_t@0.05": {
+        "1920s": 1.82,
+        "1930s": 1.19,
+        "1940s": 1.34,
+        "1950s": 1.44,
+        "1960s": 1.56,
+        "1970s": 1.24,
+        "1980s": 1.12,
+        "1990s": 1.35,
+        "2000s": 1.19,
+        "2010s": 1.35,
+        "2020s": 1.52
+      },
+      "garch_t@0.01": {
+        "1920s": 3.54,
+        "1930s": 1.31,
+        "1940s": 1.3,
+        "1950s": 1.96,
+        "1960s": 1.81,
+        "1970s": 1.39,
+        "1980s": 1.19,
+        "1990s": 2.02,
+        "2000s": 1.19,
+        "2010s": 1.67,
+        "2020s": 1.67
+      },
+      "gjr_fhs@0.05": {
+        "1920s": 1.38,
+        "1930s": 0.92,
+        "1940s": 0.97,
+        "1950s": 1.08,
+        "1960s": 0.96,
+        "1970s": 1.13,
+        "1980s": 1.05,
+        "1990s": 1.2,
+        "2000s": 1.0,
+        "2010s": 0.94,
+        "2020s": 1.03
+      },
+      "gjr_fhs@0.01": {
+        "1920s": 2.42,
+        "1930s": 0.9,
+        "1940s": 0.89,
+        "1950s": 0.96,
+        "1960s": 1.21,
+        "1970s": 1.5,
+        "1980s": 1.11,
+        "1990s": 1.15,
+        "2000s": 1.07,
+        "2010s": 0.91,
+        "2020s": 1.02
+      }
+    },
+    "crises": {
+      "1929 crash and early Depression (1929-10 to 1932-07)": {
+        "historical@0.05": {
+          "days": 841,
+          "exceptions": 72,
+          "expected": 42.1
+        },
+        "historical@0.01": {
+          "days": 841,
+          "exceptions": 18,
+          "expected": 8.4
+        },
+        "gaussian@0.05": {
+          "days": 841,
+          "exceptions": 56,
+          "expected": 42.1
+        },
+        "gaussian@0.01": {
+          "days": 841,
+          "exceptions": 21,
+          "expected": 8.4
+        },
+        "student_t@0.05": {
+          "days": 841,
+          "exceptions": 113,
+          "expected": 42.1
+        },
+        "student_t@0.01": {
+          "days": 841,
+          "exceptions": 32,
+          "expected": 8.4
+        },
+        "garch_t@0.05": {
+          "days": 841,
+          "exceptions": 71,
+          "expected": 42.1
+        },
+        "garch_t@0.01": {
+          "days": 841,
+          "exceptions": 13,
+          "expected": 8.4
+        },
+        "gjr_fhs@0.05": {
+          "days": 841,
+          "exceptions": 47,
+          "expected": 42.1
+        },
+        "gjr_fhs@0.01": {
+          "days": 841,
+          "exceptions": 10,
+          "expected": 8.4
+        }
+      },
+      "1987 crash (1987-10)": {
+        "historical@0.05": {
+          "days": 22,
+          "exceptions": 7,
+          "expected": 1.1
+        },
+        "historical@0.01": {
+          "days": 22,
+          "exceptions": 5,
+          "expected": 0.2
+        },
+        "gaussian@0.05": {
+          "days": 22,
+          "exceptions": 8,
+          "expected": 1.1
+        },
+        "gaussian@0.01": {
+          "days": 22,
+          "exceptions": 7,
+          "expected": 0.2
+        },
+        "student_t@0.05": {
+          "days": 22,
+          "exceptions": 8,
+          "expected": 1.1
+        },
+        "student_t@0.01": {
+          "days": 22,
+          "exceptions": 7,
+          "expected": 0.2
+        },
+        "garch_t@0.05": {
+          "days": 22,
+          "exceptions": 7,
+          "expected": 1.1
+        },
+        "garch_t@0.01": {
+          "days": 22,
+          "exceptions": 5,
+          "expected": 0.2
+        },
+        "gjr_fhs@0.05": {
+          "days": 22,
+          "exceptions": 5,
+          "expected": 1.1
+        },
+        "gjr_fhs@0.01": {
+          "days": 22,
+          "exceptions": 3,
+          "expected": 0.2
+        }
+      },
+      "Global financial crisis (2008-09 to 2009-03)": {
+        "historical@0.05": {
+          "days": 146,
+          "exceptions": 34,
+          "expected": 7.3
+        },
+        "historical@0.01": {
+          "days": 146,
+          "exceptions": 15,
+          "expected": 1.5
+        },
+        "gaussian@0.05": {
+          "days": 146,
+          "exceptions": 29,
+          "expected": 7.3
+        },
+        "gaussian@0.01": {
+          "days": 146,
+          "exceptions": 20,
+          "expected": 1.5
+        },
+        "student_t@0.05": {
+          "days": 146,
+          "exceptions": 39,
+          "expected": 7.3
+        },
+        "student_t@0.01": {
+          "days": 146,
+          "exceptions": 24,
+          "expected": 1.5
+        },
+        "garch_t@0.05": {
+          "days": 146,
+          "exceptions": 15,
+          "expected": 7.3
+        },
+        "garch_t@0.01": {
+          "days": 146,
+          "exceptions": 3,
+          "expected": 1.5
+        },
+        "gjr_fhs@0.05": {
+          "days": 146,
+          "exceptions": 9,
+          "expected": 7.3
+        },
+        "gjr_fhs@0.01": {
+          "days": 146,
+          "exceptions": 1,
+          "expected": 1.5
+        }
+      },
+      "COVID crash (2020-02-20 to 2020-04-30)": {
+        "historical@0.05": {
+          "days": 50,
+          "exceptions": 15,
+          "expected": 2.5
+        },
+        "historical@0.01": {
+          "days": 50,
+          "exceptions": 9,
+          "expected": 0.5
+        },
+        "gaussian@0.05": {
+          "days": 50,
+          "exceptions": 16,
+          "expected": 2.5
+        },
+        "gaussian@0.01": {
+          "days": 50,
+          "exceptions": 12,
+          "expected": 0.5
+        },
+        "student_t@0.05": {
+          "days": 50,
+          "exceptions": 18,
+          "expected": 2.5
+        },
+        "student_t@0.01": {
+          "days": 50,
+          "exceptions": 12,
+          "expected": 0.5
+        },
+        "garch_t@0.05": {
+          "days": 50,
+          "exceptions": 7,
+          "expected": 2.5
+        },
+        "garch_t@0.01": {
+          "days": 50,
+          "exceptions": 2,
+          "expected": 0.5
+        },
+        "gjr_fhs@0.05": {
+          "days": 50,
+          "exceptions": 5,
+          "expected": 2.5
+        },
+        "gjr_fhs@0.01": {
+          "days": 50,
+          "exceptions": 1,
+          "expected": 0.5
+        }
+      }
+    },
+    "black_monday": {
+      "date": "1987-10-19",
+      "return": -0.1741,
+      "garch_t_var99_forecast": 0.039517507628178336,
+      "loss_in_forecast_multiples": 4.4056422190921865
+    }
+  },
+  "vix_rule": {
+    "days": 9229,
+    "first": "1990-01-02",
+    "last": "2026-08-31",
+    "share_within_1_sigma": 0.8099469064904107,
+    "normal_within_1_sigma": 0.6826894921370859,
+    "share_beyond": {
+      "2_sigma": 0.01636146928161231,
+      "3_sigma": 0.0024921443276628022,
+      "4_sigma": 0.0003250623036081916
+    },
+    "normal_beyond": {
+      "2_sigma": 0.04550026389635839,
+      "3_sigma": 0.0026997960632601866,
+      "4_sigma": 6.334248366623973e-05
+    },
+    "mean_abs_move_over_sigma": 0.5970207320361003,
+    "normal_mean_abs_over_sigma": 0.7978845608028654,
+    "vix_minus_forward_21d_realised_vol_points": {
+      "mean": 3.9858831257228537,
+      "median": 4.63962620262513,
+      "share_vix_above_realised": 0.8437228496959166
+    },
+    "rule_of_16_vs_sqrt252_error": -0.00790526135793912
+  },
+  "black_scholes_vs_reality": {
+    "months": 439,
+    "horizon_trading_days": 21,
+    "atm_put_realised_payoff_over_bs_price": 0.6007820387464018,
+    "atm_call_realised_payoff_over_bs_price": 0.9591710938766519,
+    "put_payoff_ratio_95ci": [
+      0.4926205001222232,
+      0.719981594060972
+    ],
+    "pit_deciles": [
+      0.041,
+      0.0524,
+      0.0934,
+      0.0843,
+      0.0979,
+      0.1071,
+      0.1686,
+      0.2073,
+      0.1139,
+      0.0342
+    ],
+    "pit_ks_statistic": 0.1394533294430867,
+    "pit_ks_p_value": 6.552303205934797e-08,
+    "share_below_1pct_quantile": 0.004555808656036446,
+    "share_above_99pct_quantile": 0.0,
+    "note": "VIX is 30-calendar-day S&P 500 implied vol under Q; the underlying here is the CRSP total market. The ratio compares average realised payoff to the Black-Scholes price at VIX vol."
+  },
+  "pairs_brent_wti": {
+    "windows": 61,
+    "cointegrated_share": 0.4918032786885246,
+    "skipped_nonpositive_prices": [
+      "2020-03-23..2020-09-23",
+      "2020-09-24..2021-03-26",
+      "2021-03-29..2021-09-29"
+    ],
+    "selected_mean_return": 0.031070120672371904,
+    "selected_share_profitable": 0.6333333333333333,
+    "unselected_mean_return": 0.010627686299793904,
+    "all_windows_mean_return": 0.020681342548602755,
+    "worst_windows": [
+      {
+        "trading": "2008-12-03..2009-06-05",
+        "cointegrated": true,
+        "p_value": 0.008993079292335903,
+        "hedge_ratio": 1.0641219625316325,
+        "half_life": 1.2909752478175953,
+        "return": -0.13954417244387674,
+        "round_trips": 9
+      },
+      {
+        "trading": "2025-11-13..2026-05-20",
+        "cointegrated": false,
+        "p_value": 0.15466239198453335,
+        "hedge_ratio": 0.9717876143948075,
+        "half_life": 3.4012286312956586,
+        "return": -0.08711981538368363,
+        "round_trips": 4
+      },
+      {
+        "trading": "1990-07-03..1990-12-27",
+        "cointegrated": true,
+        "p_value": 0.00026175166231525354,
+        "hedge_ratio": 1.0336726437915327,
+        "half_life": 2.2010097092160783,
+        "return": -0.06119146932976083,
+        "round_trips": 6
+      }
+    ]
+  },
+  "industry_momentum": {
+    "60": {
+      "sharpe": 0.6856934641961187,
+      "annualized_return": 0.09429078477167496,
+      "max_drawdown": -0.7230795579197908,
+      "equal_weight_sharpe": 0.6778707101536311,
+      "equal_weight_annualized": 0.10412448426639753,
+      "turnover": 948.490233604483,
+      "by_decade_excess_annualized": {
+        "1920s": 0.04148532339846833,
+        "1930s": 0.004281618699473209,
+        "1940s": -0.004795763829340251,
+        "1950s": 0.0077140819960827235,
+        "1960s": 0.03247580804837937,
+        "1970s": -0.012086125308901467,
+        "1980s": -0.006085288880254164,
+        "1990s": -0.029917820486825956,
+        "2000s": -0.026101513541045576,
+        "2010s": -0.029515249940059708,
+        "2020s": -0.11538570000681639
+      }
+    },
+    "252": {
+      "sharpe": 0.780153845494551,
+      "annualized_return": 0.10862081720811223,
+      "max_drawdown": -0.6482999459306589,
+      "equal_weight_sharpe": 0.6729804625844231,
+      "equal_weight_annualized": 0.10348805126105454,
+      "turnover": 461.86082118805336,
+      "by_decade_excess_annualized": {
+        "1920s": 0.04617859037318844,
+        "1930s": 0.03700103696885862,
+        "1940s": -0.03468756351281594,
+        "1950s": 0.021126952265964928,
+        "1960s": 0.023557263768796362,
+        "1970s": 0.0026960890247393673,
+        "1980s": 0.0032709519077716792,
+        "1990s": 0.009045875944019306,
+        "2000s": -0.04153239609354711,
+        "2010s": -0.005954616534888996,
+        "2020s": -0.025451210577810905
+      }
+    }
+  },
+  "findings": [
+    "VaR, 100 years: at 99%, Gaussian windows breach 2.22x the promised rate, historical 1.30x, Student-t 1.99x, GARCH-t 1.58x, GJR-GARCH filtered historical simulation 1.10x (Kupiec p 0.13). Lowest pinball loss at 99%: gjr_fhs@0.01.",
+    "1987-10-19: the market fell 17.4%, 4.4x the GARCH-t 99% VaR. No model estimated from prior data anticipates a one-day jump of that size; that is what stress tests are for.",
+    "VIX/16: next-day moves stayed within one implied sigma 81.0% of days (normal: 68.3%), yet moves beyond 3 sigma happened 0.9x as often as a normal predicts. VIX exceeded subsequent 21-day realised volatility 84% of the time (mean gap 4.0 points): the variance risk premium.",
+    "Black-Scholes at VIX: 1-month ATM puts paid back 0.60 of their price on average (95% CI 0.49-0.72); calls 0.96. Outcomes below the 1% lognormal quantile: 0.5% of months.",
+    "Brent-WTI: 49% of rolling formation windows passed Engle-Granger; 3 window(s) skipped because WTI went negative in April 2020.",
+    "Industry momentum (252-day, monthly rebalance, 10 bps): Sharpe 0.78 vs equal weight 0.67."
+  ],
+  "acceptance": {
+    "gjr_fhs_passes_kupiec_at_99": true,
+    "gjr_fhs_lowest_pinball_at_99": true,
+    "gaussian_window_fails_at_99": true,
+    "vix_exceeds_realised_most_days": true,
+    "negative_oil_price_windows_refused": true
+  }
+}

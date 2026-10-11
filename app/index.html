@@ -13,20 +13,30 @@
     <nav aria-label="Main navigation">
       <button class="nav-item active" data-page="monitor"><svg viewBox="0 0 24 24"><path d="m3 18 5-6 4 3 7-10m-5 0h5v5"/></svg>Monitor</button>
       <button class="nav-item" data-page="datasets"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></svg>Datasets</button>
+      <button class="nav-item" data-page="options"><svg viewBox="0 0 24 24"><path d="M3 20c4-1 6-8 9-8s5 7 9 8M12 4v16"/></svg>Options</button>
+      <button class="nav-item" data-page="evolution"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="12" cy="13" r="2.5"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6.6 7.2 10.4 11.4M17.4 6.3 13.7 11.3M10.5 14.6 7.2 17.6M14.1 14.6 16.6 16.9"/></svg>Evolution</button>
       <button class="nav-item" data-page="runs"><svg viewBox="0 0 24 24"><path d="m7 4 13 8-13 8Z"/></svg>Runs</button>
       <button class="nav-item" data-page="preferences"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z"/><circle cx="12" cy="12" r="3"/></svg>Preferences</button>
     </nav>
-    <div class="sidebar-note"><span class="eyebrow">YOUR MACHINE. YOUR RESEARCH.</span><p>Numerical work stays on this computer.</p><span class="version">v0.1.0 · Windows x64</span></div>
+    <div class="sidebar-note"><span class="eyebrow">YOUR MACHINE. YOUR RESEARCH.</span><p>Numerical work stays on this computer.</p><span class="version">v0.2.0 · Windows x64</span></div>
     <div class="sidebar-status"><span id="status-dot" class="dot"></span><span id="sidebar-status">Engine paused</span></div>
   </aside>
   <main>
     <header class="topbar">
       <div><div class="eyebrow" id="page-kicker">ENGINE / OVERVIEW</div><h1 id="page-title">Research monitor</h1></div>
-      <div class="header-actions"><span class="local-badge"><span class="tiny-dot"></span>LOCAL ENGINE</span><button id="toggle-engine" class="primary"><span class="play-icon">▶</span>Start engine</button><button id="run-once" class="secondary">Run once</button></div>
+      <div class="header-actions"><button id="open-ask" class="secondary ask-button" aria-haspopup="dialog" aria-controls="ask-panel" title="Ask or command the engine (Ctrl+K)"><span aria-hidden="true">◎</span>Ask<kbd>Ctrl K</kbd></button><span class="local-badge"><span class="tiny-dot"></span>LOCAL ENGINE</span><button id="toggle-engine" class="primary"><span class="play-icon">▶</span>Start engine</button><button id="run-once" class="secondary">Run once</button></div>
     </header>
     <div id="error-banner" class="banner error hidden" role="alert"></div>
     <div id="refresh-banner" class="banner warning hidden" role="status"></div>
-    <div id="toast" class="toast hidden" role="status"></div>
+    <div id="ask-backdrop" class="ask-backdrop hidden"></div>
+  <section id="ask-panel" class="ask-panel hidden" role="dialog" aria-modal="true" aria-labelledby="ask-title">
+    <div class="ask-head"><div><div class="eyebrow">ASSISTANT · LOCAL</div><h2 id="ask-title">Ask QuantEngine</h2></div><button id="close-ask" class="text-button" aria-label="Close assistant">Esc ✕</button></div>
+    <form id="ask-form" class="ask-form" autocomplete="off"><label for="ask-input" class="visually-hidden">Request</label><input id="ask-input" type="text" maxlength="500" placeholder="Type or dictate: “what is my VaR”, “price a put strike 95 vol 25%”, “show the vol surface”" aria-describedby="ask-hint"><button class="primary" type="submit">Send</button></form>
+    <p id="ask-hint" class="ask-hint">Voice: hold your <strong>Handy</strong> shortcut (free, offline) or press <kbd>Win</kbd>+<kbd>H</kbd> and speak into this box. Changes to settings always ask first and can be undone; nothing here can trade.</p>
+    <div class="ask-suggestions" aria-label="Suggestions"><button type="button" class="chip" data-ask="what is my VaR">What is my VaR?</button><button type="button" class="chip" data-ask="show the vol surface">Show the vol surface</button><button type="button" class="chip" data-ask="price a put strike 95 spot 100 6 months vol 25%">Price a put</button><button type="button" class="chip" data-ask="run once">Run once</button><button type="button" class="chip" data-ask="help">Help</button></div>
+    <ol id="ask-log" class="ask-log" aria-live="polite"></ol>
+  </section>
+  <div id="toast" class="toast hidden" role="status"></div>
 
     <section id="page-monitor" class="page">
       <div class="metrics">
@@ -39,8 +49,8 @@
         <div class="monitor-left">
           <article class="panel chart-panel">
             <div class="panel-heading"><div><h2 id="chart-title">Costed strategy & baselines</h2><p id="chart-subtitle">Normalized equity · starting value 1.00</p></div><span id="report-badge" class="tag neutral">NO REPORT</span></div>
-            <div class="chart-tabs" role="tablist" aria-label="Research chart"><button class="chart-tab active" data-chart="equity" role="tab" aria-selected="true">Equity</button><button class="chart-tab" data-chart="risk" role="tab" aria-selected="false">Risk distribution</button><button class="chart-tab" data-chart="correlation" role="tab" aria-selected="false">Correlations</button><button class="chart-tab" data-chart="sensitivity" role="tab" aria-selected="false">Sensitivity</button></div>
-            <div class="chart-wrap"><canvas id="research-chart" aria-label="Research output chart"></canvas><div id="chart-empty"><span class="empty-symbol">↗</span><strong>Your research starts here</strong><p>Run an analysis to build the first equity curve.</p></div><div id="chart-hover" class="chart-hover hidden"></div></div>
+            <div class="chart-tabs" role="tablist" aria-label="Research chart"><button class="chart-tab active" data-chart="equity" role="tab" aria-selected="true">Equity</button><button class="chart-tab" data-chart="risk" role="tab" aria-selected="false">Risk distribution</button><button class="chart-tab" data-chart="correlation" role="tab" aria-selected="false">Correlations</button><button class="chart-tab" data-chart="sensitivity" role="tab" aria-selected="false">Sensitivity</button><button class="chart-tab" data-chart="surface" role="tab" aria-selected="false">Vol surface 3D</button></div>
+            <div id="chart-wrap" class="chart-wrap"><canvas id="research-chart" aria-label="Research output chart"></canvas><canvas id="surface-chart" tabindex="0" class="surface-canvas hidden" aria-label="3D realised volatility surface by lookback window and date; drag to rotate"></canvas><div id="chart-empty"><span class="empty-symbol">↗</span><strong>Your research starts here</strong><p>Run an analysis to build the first equity curve.</p></div><div id="chart-hover" class="chart-hover hidden"></div><div id="surface-toolbar" class="surface-toolbar hidden" role="toolbar" aria-label="3D view controls"><button type="button" data-surface="left" aria-label="Rotate left">⟲</button><button type="button" data-surface="right" aria-label="Rotate right">⟳</button><button type="button" data-surface="play" aria-pressed="false" aria-label="Pause animation">Ⅱ</button><button type="button" data-surface="reset" aria-label="Reset view">Reset</button></div></div>
             <div class="chart-legend" id="chart-legend"><span><i class="line mint"></i>Momentum, net</span><span><i class="line dashed"></i>Equal weight, net</span><span><i class="line cash"></i>Cash, zero yield</span></div>
           </article>
           <article class="panel queue-panel">
@@ -65,9 +75,10 @@
         </aside>
       </div>
       <div class="detail-grid">
-        <article class="panel"><div class="panel-heading"><h2>Risk comparison</h2><span class="subtle">95% tail loss</span></div><div id="risk-comparison" class="details-empty">Gaussian and historical block-bootstrap results appear after a run.</div></article>
+        <article class="panel"><div class="panel-heading"><h2>Risk comparison</h2><span class="subtle">95% / 99% tail loss</span></div><div id="risk-comparison" class="details-empty">Gaussian, historical block-bootstrap and Student-t results appear after a run.</div></article>
         <article class="panel"><div class="panel-heading"><h2>Minimum-variance allocation</h2><span class="subtle">Long only · fully invested</span></div><div id="allocation" class="details-empty">Constrained portfolio weights appear after a run.</div></article>
       </div>
+      <article class="panel maths-panel"><div class="panel-heading"><div><h2>The maths behind this report</h2><p>Formulas with this run's numbers, from the same values the engine used</p></div><div class="segmented" role="tablist" aria-label="Risk method"><button type="button" class="seg active" data-maths="report:gaussian_var" role="tab" aria-selected="true">Gaussian VaR</button><button type="button" class="seg" data-maths="report:empirical_tail_daily" role="tab" aria-selected="false">Empirical tail</button><button type="button" class="seg" data-maths="report:student_t" role="tab" aria-selected="false">Student-t</button><button type="button" class="seg" data-maths="report:minimum_variance" role="tab" aria-selected="false">Min-variance</button></div></div><ol id="maths-report" class="maths-steps"><li class="details-empty">Run an analysis to see its workings.</li></ol></article>
       <article class="panel methodology-panel"><div class="panel-heading"><h2>Report & methodology</h2><button id="toggle-methodology" class="text-button">Show details ↓</button></div><div id="report-provenance" class="report-provenance">Completed reports retain the exact snapshot, seed, parameters and numerical runtime.</div><div id="methodology" class="hidden"></div></article>
     </section>
 
@@ -80,6 +91,57 @@
 ...</pre><p class="subtle">Use consistent trading-day spacing and adjusted prices where appropriate. The engine does not infer dividends, splits, currencies or missing data.</p></article>
     </section>
 
+    <section id="page-options" class="page hidden">
+      <div class="page-intro"><p>Hypothetical European/American contracts priced locally: Black–Scholes–Merton, CRR trees and risk-neutral Monte Carlo. No live option chain or market surface is used, and stored research is never changed.</p></div>
+      <div class="preferences-grid">
+        <article class="panel preferences-card"><div class="panel-heading"><h2>Contract</h2><span class="tag neutral">HYPOTHETICAL</span></div><div class="preferences-content">
+          <div class="form-grid">
+            <div><label for="opt-kind">Type</label><select id="opt-kind" class="option-field"><option value="call">Call</option><option value="put">Put</option></select></div>
+            <div><label for="opt-spot">Spot</label><div class="input-wrap"><input id="opt-spot" class="option-field" type="number" min="0.000001" step="any" value="100"><span>PRICE</span></div></div>
+            <div><label for="opt-strike">Strike</label><div class="input-wrap"><input id="opt-strike" class="option-field" type="number" min="0.000001" step="any" value="100"><span>PRICE</span></div></div>
+            <div><label for="opt-time">Time to expiry</label><div class="input-wrap"><input id="opt-time" class="option-field" type="number" min="0" max="50" step="any" value="1"><span>YEARS</span></div></div>
+            <div><label for="opt-volatility">Volatility</label><div class="input-wrap"><input id="opt-volatility" class="option-field" type="number" min="0" max="500" step="any" value="20"><span>% / YEAR</span></div></div>
+            <div><label for="opt-rate">Risk-free rate</label><div class="input-wrap"><input id="opt-rate" class="option-field" type="number" min="-20" max="100" step="any" value="5"><span>% CONT.</span></div></div>
+            <div><label for="opt-dividend">Dividend yield</label><div class="input-wrap"><input id="opt-dividend" class="option-field" type="number" min="-20" max="100" step="any" value="0"><span>% CONT.</span></div></div>
+            <div><label for="opt-market">Market price (optional)</label><div class="input-wrap"><input id="opt-market" class="option-field" type="number" min="0" step="any" placeholder="Implied vol"><span>PRICE</span></div></div>
+            <div><label for="opt-steps">Tree steps</label><div class="input-wrap"><input id="opt-steps" class="option-field" type="number" min="1" max="5000" step="1" value="500"><span>STEPS</span></div></div>
+            <div><label for="opt-paths">Monte Carlo paths</label><div class="input-wrap"><input id="opt-paths" class="option-field" type="number" min="1000" max="2000000" step="2" value="200000"><span>EVEN</span></div></div>
+            <div><label for="opt-seed">Seed</label><div class="input-wrap"><input id="opt-seed" class="option-field" type="number" min="0" max="4294967295" step="1" value="17"><span>SEED</span></div></div>
+          </div>
+          <button id="calculate-options" class="primary full">Calculate option</button><p id="options-error" class="inline-error" role="alert"></p>
+          <p class="field-help">Uses the single numerical worker. A waiting research cycle resumes after the calculation; Pause cancels it.</p>
+        </div></article>
+        <article class="panel preferences-card"><div class="panel-heading"><h2>Prices & cross-checks</h2><span id="options-badge" class="subtle"></span></div><div id="options-prices" class="details-empty">Enter a contract and calculate.</div></article>
+      </div>
+        <article class="panel surface-panel"><div class="panel-heading"><div><h2>Implied volatility surface</h2><p id="options-surface-note">SSVI model surface around the contract's volatility · drag to rotate</p></div><div class="surface-controls"><label for="opt-surface-rho">Skew ρ</label><input id="opt-surface-rho" class="option-field" type="number" min="-0.99" max="0.99" step="0.05" value="-0.4"><label for="opt-surface-eta">Curvature η</label><input id="opt-surface-eta" class="option-field" type="number" min="0.05" max="4" step="0.05" value="1"></div></div>
+          <div class="surface-wrap"><canvas id="options-surface" tabindex="0" class="surface-canvas" aria-label="3D model implied volatility surface by moneyness and expiry; drag to rotate"></canvas><div id="options-surface-hover" class="chart-hover hidden"></div><div id="options-surface-toolbar" class="surface-toolbar" role="toolbar" aria-label="3D view controls"><button type="button" data-surface="left" aria-label="Rotate left">⟲</button><button type="button" data-surface="right" aria-label="Rotate right">⟳</button><button type="button" data-surface="play" aria-pressed="false" aria-label="Pause animation">Ⅱ</button><button type="button" data-surface="reset" aria-label="Reset view">Reset</button></div></div>
+          <div class="chart-legend"><span><i class="ramp"></i>Implied volatility · lower → higher</span><span id="options-surface-arbitrage"></span></div>
+        </article>
+      <div class="detail-grid">
+        <article class="panel"><div class="panel-heading"><h2>Greeks</h2><span class="subtle">Units shown per row</span></div><div id="options-greeks" class="details-empty">Greeks appear after a calculation.</div></article>
+        <article class="panel"><div class="panel-heading"><h2>Implied moves & assumptions</h2><span class="subtle">VIX/16 rule, made precise</span></div><div id="options-moves" class="details-empty">One-sigma moves implied by the volatility appear here.</div></article>
+      </div>
+      <article class="panel maths-panel"><div class="panel-heading"><div><h2>The maths, step by step</h2><p>Every formula with your numbers substituted, recomputed from the same inputs as the result above</p></div><div class="segmented" role="tablist" aria-label="Option method"><button type="button" class="seg active" data-maths="options:black_scholes" role="tab" aria-selected="true">Black–Scholes</button><button type="button" class="seg" data-maths="options:crr" role="tab" aria-selected="false">Binomial tree</button><button type="button" class="seg" data-maths="options:monte_carlo" role="tab" aria-selected="false">Monte Carlo</button><button type="button" class="seg" data-maths="options:implied_move" role="tab" aria-selected="false">VIX ÷ 16</button></div></div><ol id="maths-options" class="maths-steps"><li class="details-empty">Calculate an option to see its workings.</li></ol></article>
+    </section>
+
+    <section id="page-evolution" class="page hidden">
+      <div class="page-intro"><p>The engine breeds model configurations, freezes the best, and scores it only on data that came <em>after</em> the choice. Each node is a tested model, each line shows how it was bred, and the clusters are model families.</p><div class="inline-actions"><button id="learn-now" class="primary">Learn now</button></div></div>
+      <div class="evolution-layout">
+        <article class="panel graph-panel"><div class="panel-heading"><div><h2>Second mind · model lineage</h2><p id="evo-subtitle">Run “Learn now” or start the engine to grow the graph.</p></div><div class="segmented" role="radiogroup" aria-label="Learning task"><button type="button" class="seg active" data-task="risk" role="radio" aria-checked="true">Risk (VaR)</button><button type="button" class="seg" data-task="alpha" role="radio" aria-checked="false">Alpha (returns)</button></div></div>
+          <div class="graph-wrap"><canvas id="evo-graph" tabindex="0" class="surface-canvas" aria-label="3D lineage graph of evaluated models; drag or use arrow keys to rotate"></canvas><div id="evo-hover" class="chart-hover hidden"></div><div id="evo-toolbar" class="surface-toolbar" role="toolbar" aria-label="3D graph controls"><button type="button" data-surface="left" aria-label="Rotate left">⟲</button><button type="button" data-surface="right" aria-label="Rotate right">⟳</button><button type="button" data-surface="play" aria-pressed="false" aria-label="Pause animation">Ⅱ</button><button type="button" data-surface="reset" aria-label="Reset view">Reset</button></div></div>
+          <div id="evo-legend" class="chart-legend"></div>
+        </article>
+        <aside class="evolution-side">
+          <article class="panel"><div class="panel-heading"><h2>Champions</h2><span id="evo-memories" class="tag">0 MEMORIES</span></div><div id="evo-champions" class="details-empty">No learning run yet.</div></article>
+          <article class="panel"><div class="panel-heading"><h2>Continuous learning</h2></div><div class="preferences-content">
+            <label class="checkbox-row"><input class="config-field" data-key="learnContinuously" type="checkbox" checked><span>Learn after every research cycle<small>One time-boxed evolution step per cycle on the selected dataset. Champions must significantly beat the current model to replace it.</small></span></label>
+            <label for="learn-budget">Time budget per step</label><div class="input-wrap"><input id="learn-budget" class="config-field" data-key="learnBudgetSeconds" type="number" min="2" max="600" value="20"><span>SECONDS</span></div>
+            <p id="evo-error" class="inline-error" role="alert"></p>
+          </div></article>
+        </aside>
+      </div>
+      <article class="panel"><div class="panel-heading"><div><h2>Learning curve</h2><p>Each point is a frozen champion scored on the next unseen block, against the fixed baseline</p></div><span id="evo-curve-badge" class="subtle"></span></div><div class="chart-wrap curve-wrap"><canvas id="evo-curve" aria-label="Out-of-sample champion score versus baseline by block"></canvas></div><div id="evo-curve-legend" class="chart-legend"></div></article>
+    </section>
     <section id="page-runs" class="page hidden">
       <div class="page-intro"><p>Completed, failed and interrupted calculations. Open a saved report to inspect its output.</p><button id="runs-export" class="secondary">Export viewed report ↗</button></div>
       <article class="panel"><div class="panel-heading"><h2>Research history</h2><span class="subtle">Latest 200 runs</span></div><div class="table-scroll"><table class="runs-table"><thead><tr><th>Completed / started</th><th>Dataset</th><th>Parameters</th><th>Duration</th><th>Status</th><th></th></tr></thead><tbody id="runs-body"></tbody></table></div><div id="runs-empty" class="large-empty">No runs yet. Start with the synthetic example or import your own prices.</div></article>
@@ -92,6 +154,11 @@
           <div class="form-grid"><div><label for="seed-input">Base random seed</label><input id="seed-input" class="config-field" data-key="seed" type="number" min="0" max="4294967295" value="17"></div><div><label for="lookback-input">Momentum lookback</label><div class="input-wrap"><input id="lookback-input" class="config-field" data-key="lookback" type="number" min="5" max="2520" value="20"><span>observations</span></div></div><div><label for="rebalance-input">Rebalance interval</label><div class="input-wrap"><input id="rebalance-input" class="config-field" data-key="rebalance" type="number" min="1" max="63" value="5"><span>observations</span></div></div><div><label for="cost-input">Trading cost</label><div class="input-wrap"><input id="cost-input" class="config-field" data-key="costBps" type="number" min="0" max="500" step="0.5" value="10"><span>bps / notional</span></div></div><div><label for="shrinkage-input">Diagonal shrinkage</label><input id="shrinkage-input" class="config-field" data-key="shrinkage" type="number" min="0" max="1" step="0.01" value="0.1"></div></div>
           <label class="checkbox-row"><input class="config-field" data-key="rotateVariants" type="checkbox" checked><span>Rotate research lookbacks<small>Compare the chosen lookback with 20, 40 and 60 observations where the dataset permits. Each run records its parameter and seed.</small></span></label>
           <p class="field-help">Each successful run advances the seed by one. Risk uses static optimized weights; the separate backtest evaluates a chronological momentum strategy.</p>
+        </div></article>
+        <article class="panel preferences-card"><div class="panel-heading"><h2>Assistant & voice</h2><span class="tag">OFFLINE</span></div><div class="preferences-content">
+          <p class="field-help">Open the assistant with <kbd>Ctrl</kbd>+<kbd>K</kbd>. For voice, install <strong>Handy</strong> (free, offline speech-to-text: <code>winget install cjpais.Handy</code>), choose its CPU-friendly Parakeet model, then hold its shortcut and speak into the Ask box. Every request is logged to <code>assistant-log.jsonl</code> in the storage folder.</p>
+          <div class="form-grid"><div><label for="assistant-endpoint">Local model endpoint (optional)</label><input id="assistant-endpoint" class="config-field text-field" data-key="assistantEndpoint" type="text" placeholder="http://127.0.0.1:8080" spellcheck="false"></div><div><label for="assistant-model">Model name</label><input id="assistant-model" class="config-field text-field" data-key="assistantModel" type="text" placeholder="qwen2.5:3b" spellcheck="false"></div></div>
+          <p class="field-help">For free-form questions only, e.g. llama.cpp, Ollama or LM Studio running on this computer. Only localhost addresses are accepted. The model answers from a summary of your latest report and can never change settings or run work.</p>
         </div></article>
         <article class="panel preferences-card"><div class="panel-heading"><h2>Resource & background controls</h2></div><div class="preferences-content">
           <label class="checkbox-row"><input class="config-field" data-key="lowCpu" type="checkbox"><span>Low CPU mode<small>One numerical thread and lower worker priority. Standard mode caps numerical threads at two.</small></span></label>

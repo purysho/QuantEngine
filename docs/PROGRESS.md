@@ -16,3 +16,7 @@ Version 0.2 will retain the bounded offline numerical worker and add options res
 ## Evidence boundaries
 
 Host tests run on Linux; the target is the user's Windows 11 laptop with 16 GB RAM and integrated graphics. Historical 0.1 experiment files are retained with their original provenance. They do not establish that a later build ran on the target device. New Windows checks will be recorded separately.
+
+## 2026-10-11 — 0.2 research release built
+
+Implemented and pushed: exact empirical tails and next-close execution, Student-t/Hill risk, options engine and desktop page, purged chronological ridge, Engle–Granger pairs, and the Avellaneda–Stoikov market-making simulator, plus Linux/Windows CI. Per-task detail, including failures, is in `WORK_LOG.md`.
