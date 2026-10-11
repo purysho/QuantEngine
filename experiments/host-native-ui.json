@@ -1,0 +1,20 @@
+{
+  "nativeDesktop": true,
+  "preload": true,
+  "numericalComplete": 3,
+  "closeToTray": true,
+  "continuedWhileHidden": true,
+  "pauseStopsWork": true,
+  "savedReportReopens": true,
+  "exportedReport": true,
+  "renderedMetrics": "7.45%",
+  "rendererErrors": [],
+  "host": "Linux native Electron, QA-only singleton bypass",
+  "repeatedQuitCoalesced": true,
+  "activeWorkerGoneOnQuit": true,
+  "interruptedHistoryRetained": true,
+  "storedRunCounts": {
+    "completed": 3,
+    "interrupted": 1
+  }
+}

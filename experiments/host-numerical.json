@@ -1,0 +1,88 @@
+{
+  "host": "Linux Python3.12; Windows embed3.13 validation pending",
+  "exampleDataset": {
+    "id": "sample",
+    "name": "Synthetic example prices",
+    "kind": "synthetic",
+    "path": "/workspace/scratch/23f52b0ce79f/build-inputs/quant-experiment/实验数据/datasets/sample-8cdc53864090b9df.csv",
+    "sha256": "8cdc53864090b9df4ac9c5e768ae70477f39c35bc224f20ba128d16cbbb6e7af",
+    "source_url": null,
+    "retrieved_at": "2026-10-11T10:31:31.048+00:00",
+    "observation_end": "2025-12-05",
+    "rows": 504,
+    "assets": [
+      "Sample Growth",
+      "Sample Cyclical",
+      "Sample Defensive",
+      "Sample Reserve"
+    ],
+    "metadata": {
+      "generator": "Deterministic synthetic correlated returns with a stress segment",
+      "generator_seed": 2048,
+      "tradable": false
+    }
+  },
+  "analysisSeconds": [
+    0.435,
+    0.515
+  ],
+  "repeatNumerics": "equal with identical seed/settings/source",
+  "uniqueRunIDs": true,
+  "reopenedReport": "identical",
+  "runtime": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "blas_threads": 2,
+    "platform": "Linux"
+  },
+  "weights": {
+    "Sample Growth": 0.1460360073725707,
+    "Sample Cyclical": 0.04042191607891055,
+    "Sample Defensive": 0.18232150607391773,
+    "Sample Reserve": 0.6312205704746011
+  },
+  "risk": {
+    "paths": 50000,
+    "horizon": 20,
+    "seed": 17
+  },
+  "backtest": {
+    "total_return": -0.1260675899841196,
+    "sharpe": -0.40679577917157034,
+    "max_drawdown": -0.22356258191408263,
+    "observations": 483,
+    "cost_bps": 10
+  },
+  "ecb": {
+    "seconds": 5.886,
+    "source": {
+      "id": "ecb",
+      "name": "ECB foreign-exchange reference rates",
+      "kind": "ecb",
+      "path": "/workspace/scratch/23f52b0ce79f/build-inputs/quant-experiment/实验数据/datasets/ecb-2f37169b0e9e4740.csv",
+      "sha256": "2f37169b0e9e47401101083035e6fae99f0667a402e40559e750d1dff4fd2a2d",
+      "source_url": "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml",
+      "retrieved_at": "2026-10-11T10:31:38.248+00:00",
+      "observation_end": "2026-10-09",
+      "rows": 65,
+      "assets": [
+        "AUD per EUR",
+        "CAD per EUR",
+        "CHF per EUR",
+        "GBP per EUR",
+        "JPY per EUR",
+        "NZD per EUR",
+        "SEK per EUR",
+        "USD per EUR"
+      ],
+      "metadata": {
+        "raw_sha256": "9be8fea98155a0897b7f933e982d7b5129a35369173fdd580a6d09f3369e6f5f",
+        "raw_path": "/workspace/scratch/23f52b0ce79f/build-inputs/quant-experiment/实验数据/sources/ecb-9be8fea98155a0897b7f933e982d7b5129a35369173fdd580a6d09f3369e6f5f.xml",
+        "quote_basis": "Currency units per EUR",
+        "tradable": false,
+        "notice": "ECB reference rates are information-only, not executable quotes."
+      }
+    }
+  }
+}

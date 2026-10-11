@@ -1,0 +1,25 @@
+{
+  "name": "quant-engine",
+  "version": "0.1.0",
+  "description": "Continuous local quantitative research and numerical analysis",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node packaging/build.mjs",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:quant": "python3 -m unittest discover -s tests -p 'test_*.py'",
+    "typecheck": "tsc --noEmit",
+    "start": "electron .",
+    "package:win": "node packaging/package.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "@types/node": "24.10.1",
+    "electron": "44.7.0",
+    "esbuild": "0.28.2",
+    "resedit": "3.1.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  }
+}
