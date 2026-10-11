@@ -474,6 +474,9 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 - The README has a download button at the top linking to the permanent URL `https://github.com/purysho/QuantEngine/releases/latest/download/QuantEngine-win-x64.zip`, plus quick-start steps and a screenshot. The user guide links to it too.
 - The repository is public, so downloads need no GitHub login; CI artifacts by contrast expire after 14 days and require a login.
 - **Pending:** the homepage shows `main`'s README, and the release workflow publishes on pushes to `main`. Both take effect when this branch is merged into `main`. No release existed before this.
+- **Outcome (2026-10-11):** all 8 CI checks on PR #1's head `ef87aa8` passed (Linux/Windows checks, real-data job, and the Windows package job on both the push and pull_request runs). PR #1 was merged into `main` as `4a441f0`. Release run 1 passed every step, including the embedded-runtime tests and the packaged executable self-test, and published **`v0.2.0` "QuantEngine 0.2.0 for Windows"** with `QuantEngine-win-x64.zip` (220 MB, 3,503 files) and `SHA256SUMS.txt`.
+- **Verified from outside GitHub Actions:** the homepage link `releases/latest/download/QuantEngine-win-x64.zip` downloads the zip without a login; it matches `SHA256SUMS.txt`, passes a zip integrity check, and contains `QuantEngine/QuantEngine.exe` and the bundled `resources/quant-python/python.exe`. `main`'s README shows the download button.
+- **Next:** run the zip on the target Windows 11 laptop, extracted to `D:\`, and note any SmartScreen or antivirus prompts. Then decide whether code signing is worth paying for. A future version bump in `package.json` creates a new release; pushes with the same version replace the assets of `v0.2.0`.
 
 ---
 
