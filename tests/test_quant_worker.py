@@ -1,10 +1,13 @@
 import json
+import os
+import sys
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+PYTHON = os.environ.get("QUANT_PYTHON") or sys.executable
 
 
 class QuantWorkerTests(unittest.TestCase):
@@ -17,7 +20,7 @@ class QuantWorkerTests(unittest.TestCase):
 
     def command(self, command, **values):
         completed = subprocess.run(
-            ["python3", "workers/quant_worker.py"], cwd=ROOT,
+            [PYTHON, "workers/quant_worker.py"], cwd=ROOT,
             input=json.dumps({"command": command, "root": str(self.root), **values}) + "\n",
             text=True, capture_output=True, timeout=30,
         )
@@ -83,12 +86,31 @@ class QuantWorkerTests(unittest.TestCase):
         _, analysis = self.command("analyse", dataset_id=dataset["id"], parameters={"paths": 5000})
         self.assertTrue(analysis["ok"], analysis.get("error"))
 
+    def test_options_command_returns_report_without_history(self):
+        _, message = self.command("options", parameters={"spot": 100, "strike": 95, "time": .5, "rate": .03,
+                                                          "volatility": .25, "kind": "put", "paths": 10000})
+        self.assertTrue(message["ok"], message.get("error"))
+        self.assertEqual(message["result"]["report"]["kind"], "options")
+        _, history = self.command("history")
+        self.assertEqual(history["result"]["runs"], [])
+        _, bad = self.command("options", parameters={"spot": 100, "strike": 95, "time": .5, "rate": .03,
+                                                      "volatility": .25, "barrier": 90})
+        self.assertFalse(bad["ok"])
+        self.assertIn("Unknown option parameter", bad["error"])
+
+    def test_new_reports_are_schema_two_with_student_t(self):
+        _, message = self.command("analyse", dataset_id="sample", parameters={"paths": 2000, "horizon": 5})
+        report = message["result"]["report"]
+        self.assertEqual((report["schema_version"], report["engine_version"]), (2, "0.2.0"))
+        self.assertIn("student_t", report)
+        self.assertEqual(report["backtest"]["timing"]["execution_delay_closes"], 1)
+
     def test_unknown_report_id_cannot_escape_report_directory(self):
         _, result = self.command("report", run_id="../../other.json")
         self.assertFalse(result["ok"])
 
     def test_killed_worker_is_recovered_as_interrupted_without_complete_report(self):
-        process = subprocess.Popen(["python3", "workers/quant_worker.py"], cwd=ROOT,
+        process = subprocess.Popen([PYTHON, "workers/quant_worker.py"], cwd=ROOT,
                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         process.stdin.write(json.dumps({"command": "analyse", "root": str(self.root), "dataset_id": "sample",
                                        "parameters": {"paths": 1_000_000, "horizon": 252}}) + "\n")

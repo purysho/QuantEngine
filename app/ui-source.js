@@ -8,12 +8,13 @@ const number = (value, digits = 2) => Number.isFinite(value) ? value.toFixed(dig
 const integer = value => Number.isFinite(value) ? value.toLocaleString('en-US') : '—';
 const shortTime = value => value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
 const fullTime = value => value ? new Date(value).toLocaleString([], { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
-let current = { state: { phase: 'paused', busy: false, continuous: false, completed: 0 }, config: {}, datasets: [], runs: [], report: null, runtime: {} };
+let current = { state: { phase: 'paused', busy: false, continuous: false, completed: 0 }, config: {}, datasets: [], runs: [], report: null, options: null, runtime: {} };
 let chartMode = 'equity';
 let page = 'monitor';
 let operation = false;
 let previousReport;
 let previousRuns;
+let previousOptions;
 let datasetKey = '';
 let toastTimer;
 let chartGeometry;
@@ -45,8 +46,8 @@ function receive(value) {
 
 function navigate(name) {
   page = name;
-  const labels = { monitor: 'Research monitor', datasets: 'Datasets', runs: 'Research runs', preferences: 'Preferences' };
-  const kickers = { monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
+  const labels = { monitor: 'Research monitor', datasets: 'Datasets', options: 'Options calculator', runs: 'Research runs', preferences: 'Preferences' };
+  const kickers = { monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', options: 'DERIVATIVES / PRICING', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
   $('page-title').textContent = labels[name];
   $('page-kicker').textContent = kickers[name];
   document.querySelectorAll('.page').forEach(section => section.classList.toggle('hidden', section.id !== 'page-' + name));
@@ -69,6 +70,7 @@ function renderControls() {
   });
   ['import-csv', 'refresh-ecb', 'datasets-import', 'datasets-refresh', 'choose-root'].forEach(id => { $(id).disabled = locked || operation; });
   ['export-report', 'runs-export'].forEach(id => { $(id).disabled = !current.report; });
+  $('calculate-options').disabled = state.busy || operation || state.settingsPending;
 }
 
 function render() {
@@ -99,6 +101,7 @@ function render() {
     '<div class="runtime-row"><span>Maximum numerical threads</span><span>' + (current.config.lowCpu ? '1' : '2') + '</span></div><p class="field-help">The numerical worker owns its research database. It does not send orders or connect to a brokerage.</p>';
   if (previousReport !== report) { previousReport = report; renderReport(); drawChart(); }
   if (previousRuns !== current.runs) { previousRuns = current.runs; renderRuns(); }
+  if (previousOptions !== current.options) { previousOptions = current.options; renderOptions(); }
 }
 
 function renderDatasets() {
@@ -155,9 +158,16 @@ function renderReport() {
   const gaussian = report.monte_carlo;
   const bootstrap = report.bootstrap;
   $('risk-comparison').className = '';
-  $('risk-comparison').innerHTML = '<table class="risk-table"><thead><tr><th></th><th>Gaussian</th><th>Block bootstrap</th></tr></thead><tbody>' +
-    [['VaR 95%', gaussian.var95, bootstrap.var95], ['Expected shortfall', gaussian.es95, bootstrap.es95], ['Probability of loss', gaussian.loss_probability, bootstrap.loss_probability]].map(([name, a, b]) => '<tr><td>' + name + '</td><td>' + percent(a) + '</td><td>' + percent(b) + '</td></tr>').join('') +
-    '</tbody></table><div class="risk-note">' + integer(gaussian.paths) + ' paths each · ' + gaussian.horizon + ' observations · empirical blocks of ' + bootstrap.block_size + '<br>Cumulative arithmetic returns. Both estimates depend on historical inputs.</div>';
+  // Schema 1 reports have no Student-t model or 99% levels; show only what was computed.
+  const student = report.student_t;
+  const models = [gaussian, bootstrap, ...(student ? [student] : [])];
+  const rows = [['VaR 95%', 'var95'], ['Expected shortfall 95%', 'es95'], ['VaR 99%', 'var99'], ['Expected shortfall 99%', 'es99'], ['Probability of loss', 'loss_probability']]
+    .filter(([, key]) => models.some(model => Number.isFinite(model[key])));
+  $('risk-comparison').innerHTML = '<table class="risk-table"><thead><tr><th></th><th>Gaussian</th><th>Block bootstrap</th>' + (student ? '<th>Student-t</th>' : '') + '</tr></thead><tbody>' +
+    rows.map(([name, key]) => '<tr><td>' + name + '</td>' + models.map(model => '<td>' + percent(model[key]) + '</td>').join('') + '</tr>').join('') +
+    '</tbody></table><div class="risk-note">' + integer(gaussian.paths) + ' paths each · ' + gaussian.horizon + ' observations · empirical blocks of ' + bootstrap.block_size +
+    (student ? ' · t degrees of freedom ' + number(student.degrees_of_freedom, 1) + (student.hill && Number.isFinite(student.hill.alpha) ? ' · Hill tail index ' + number(student.hill.alpha, 2) : '') : '') +
+    '<br>Signed losses: exact empirical tail mass. Cumulative arithmetic returns; all estimates depend on historical inputs.</div>';
   $('allocation').className = 'allocation';
   $('allocation').innerHTML = Object.entries(report.weights).map(([asset, weight]) => '<div class="weight-row"><span class="weight-name" title="' + esc(asset) + '">' + esc(asset) + '</span><div class="weight-track"><div class="weight-fill" data-weight="' + weight + '"></div></div><span class="weight-value">' + percent(weight, 1) + '</span></div>').join('');
   document.querySelectorAll('.weight-fill').forEach(fill => { fill.style.width = Number(fill.dataset.weight) * 100 + '%'; });
@@ -166,7 +176,50 @@ function renderReport() {
     'SOURCE ' + esc(report.provenance.name) + ' · ' + report.observations + ' observations · ' + esc(report.date_range.start) + ' → ' + esc(report.date_range.end) + '<br>' +
     'SEED ' + parameters.seed + ' · LOOKBACK ' + parameters.lookback + ' · COST ' + parameters.cost_bps + ' bps · REBALANCE ' + parameters.rebalance + ' · SHRINKAGE ' + parameters.shrinkage + '<br>' +
     'SNAPSHOT SHA-256 ' + esc(report.provenance.sha256);
-  $('methodology').innerHTML = '<div class="methodology-copy"><div class="section-label">Numerical methods</div><ul>' + report.methodology.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul><div class="section-label">Gaussian assumptions</div><ul>' + gaussian.assumptions.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul><div class="section-label">Bootstrap assumptions</div><ul>' + bootstrap.assumptions.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul><div class="section-label">Historical and hypothetical stress</div><ul>' + report.stress.map(item => '<li>' + esc(item.name) + ': ' + percent(item.return) + ' · ' + esc(item.kind) + (item.date ? ' · ' + esc(item.date) : '') + '</li>').join('') + '</ul></div>';
+  $('methodology').innerHTML = '<div class="methodology-copy"><div class="section-label">Numerical methods</div><ul>' + report.methodology.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul><div class="section-label">Gaussian assumptions</div><ul>' + gaussian.assumptions.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul><div class="section-label">Bootstrap assumptions</div><ul>' + bootstrap.assumptions.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul>' + (report.student_t ? '<div class="section-label">Student-t assumptions</div><ul>' + report.student_t.assumptions.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul>' : '') + '<div class="section-label">Historical and hypothetical stress</div><ul>' + report.stress.map(item => '<li>' + esc(item.name) + ': ' + percent(item.return) + ' · ' + esc(item.kind) + (item.date ? ' · ' + esc(item.date) : '') + '</li>').join('') + '</ul></div>';
+}
+
+function renderOptions() {
+  const report = current.options;
+  if (!report) return;
+  const bs = report.black_scholes, trees = report.trees, mc = report.monte_carlo, p = report.parameters;
+  const price = value => Number.isFinite(value) ? value.toFixed(4) : '—';
+  $('options-badge').textContent = esc(p.kind.toUpperCase()) + ' · ' + number(report.runtime?.duration_ms || 0, 0) + ' ms';
+  $('options-prices').className = '';
+  $('options-prices').innerHTML = '<table class="risk-table"><thead><tr><th>Method</th><th>Price</th><th>Check</th></tr></thead><tbody>' +
+    [['Black–Scholes (European)', bs.price, bs.degenerate ? esc(bs.degenerate) : 'analytic'],
+     ['CRR tree, European · ' + integer(trees.steps) + ' steps', trees.european, 'error ' + price(trees.european_tree_error)],
+     ['CRR tree, American', trees.american, 'early exercise ' + price(trees.early_exercise_premium)],
+     ['Monte Carlo · ' + integer(mc.paths) + ' paths', mc.price, '± ' + price(mc.standard_error) + ' s.e. ' + (mc.within_three_standard_errors ? '✓' : '✗')],
+     [(p.kind === 'call' ? 'Put' : 'Call') + ' (same contract)', report.counterpart.price, 'parity gap ' + Number(report.put_call_parity_gap).toExponential(1)]]
+      .map(([name, value, check]) => '<tr><td>' + name + '</td><td>' + price(value) + '</td><td>' + check + '</td></tr>').join('') +
+    (report.implied ? '<tr><td>Implied volatility of ' + price(report.implied.market_price) + '</td><td>' + percent(report.implied.implied_volatility) + '</td><td>Brent root</td></tr>' : '') +
+    '</tbody></table><div class="risk-note">Seed ' + esc(p.seed) + ' · rate ' + percent(p.rate) + ' · dividend ' + percent(p.dividend) + ' · volatility ' + percent(p.volatility) + ' · ' + esc(p.time) + ' years</div>';
+  const units = report.units;
+  $('options-greeks').className = '';
+  $('options-greeks').innerHTML = '<table class="risk-table"><thead><tr><th>Greek</th><th>Value</th><th>Unit</th></tr></thead><tbody>' +
+    [['Delta', bs.delta, 'per 1 unit of spot'], ['Gamma', bs.gamma, 'per unit spot²'], ['Vega', bs.vega_per_point, units.vega_per_point],
+     ['Theta', bs.theta_per_day, units.theta_per_day], ['Rho', bs.rho_per_point, units.rho_per_point],
+     ['Vanna', bs.vanna, 'delta per 1.00 volatility'], ['Volga', bs.volga, 'vega per 1.00 volatility']]
+      .map(([name, value, unit]) => '<tr><td>' + name + '</td><td>' + (Number.isFinite(value) ? value.toFixed(6) : '—') + '</td><td>' + esc(unit) + '</td></tr>').join('') + '</tbody></table>';
+  const daily = report.implied_moves.daily, expiry = report.implied_moves.to_expiry;
+  $('options-moves').className = 'methodology-copy';
+  $('options-moves').innerHTML = '<div class="section-label">Implied moves</div><ul>' +
+    '<li>One-sigma daily move: ' + percent(daily.one_sigma) + ' (σ/√252). The trader rule σ/16 gives ' + percent(daily.rule_of_16) + '.</li>' +
+    '<li>Expected absolute daily move: ' + percent(daily.expected_absolute_move) + ' (≈ 0.80σ). A move stays within ±1σ only ' + percent(daily.probability_within_one_sigma, 0) + ' of the time under normality.</li>' +
+    (expiry ? '<li>One-sigma move to expiry: ' + percent(expiry.one_sigma) + '.</li>' : '') + '</ul><div class="section-label">Assumptions</div><ul>' +
+    report.assumptions.map(line => '<li>' + esc(line) + '</li>').join('') + '</ul>';
+}
+
+function optionInputs() {
+  const read = id => { const value = $(id).value.trim(); return value === '' ? null : Number(value); };
+  const values = { kind: $('opt-kind').value, spot: read('opt-spot'), strike: read('opt-strike'), time: read('opt-time'),
+    volatility: read('opt-volatility') / 100, rate: read('opt-rate') / 100, dividend: read('opt-dividend') / 100,
+    steps: read('opt-steps'), paths: read('opt-paths'), seed: read('opt-seed') };
+  const market = read('opt-market');
+  if (market !== null) values.market_price = market;
+  for (const [key, value] of Object.entries(values)) if (key !== 'kind' && !Number.isFinite(value)) throw new Error('Enter a number for ' + key.replace('_', ' ') + '.');
+  return values;
 }
 
 function renderRuns() {
@@ -336,6 +389,7 @@ document.querySelectorAll('.config-field').forEach(input => input.addEventListen
 }));
 $('toggle-engine').addEventListener('click', () => { void action(() => current.state.busy || current.state.continuous ? window.quant.pause() : window.quant.start()); });
 $('run-once').addEventListener('click', () => { void action(() => window.quant.runOnce()); });
+$('calculate-options').addEventListener('click', () => { void action(async () => window.quant.calculateOptions(optionInputs()), 'Option calculated locally.'); });
 ['import-csv', 'datasets-import'].forEach(id => $(id).addEventListener('click', () => { void action(() => window.quant.importCSV(), 'Validated prices copied into an immutable local snapshot.'); }));
 ['refresh-ecb', 'datasets-refresh'].forEach(id => $(id).addEventListener('click', () => { void action(() => window.quant.refreshECB(), 'Official ECB reference-rate snapshot saved.'); }));
 ['export-report', 'runs-export'].forEach(id => $(id).addEventListener('click', () => { void action(() => window.quant.exportReport(), result => 'Exported ' + result.path); }));

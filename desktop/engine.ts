@@ -19,6 +19,7 @@ export class Engine {
   runs: JsonRecord[] = [];
   lastReport: JsonRecord | null = null;
   lastReportPath: string | null = null;
+  optionsReport: JsonRecord | null = null;
   runtime: JsonRecord = {};
   onChange: () => void = () => {};
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -28,6 +29,7 @@ export class Engine {
   private pausePromise: Promise<void> | null = null;
   private configQueue: Promise<unknown> = Promise.resolve();
   private dataActive: Promise<Dataset> | null = null;
+  private optionsActive: Promise<JsonRecord> | null = null;
   private initializationActive: Promise<void> | null = null;
   private shuttingDown = false;
   constructor(public config: EngineConfig, readonly transport: Transport,
@@ -38,7 +40,7 @@ export class Engine {
 
   snapshot() {
     return { state: { ...this.state }, config: { ...this.config }, datasets: this.datasets,
-      runs: this.runs, report: this.lastReport, runtime: this.runtime };
+      runs: this.runs, report: this.lastReport, options: this.optionsReport, runtime: this.runtime };
   }
   private publish() { this.onChange(); }
 
@@ -220,7 +222,8 @@ export class Engine {
 
   private async pauseWork(): Promise<void> {
     const wasBusy = this.state.busy;
-    const active = this.active, dataActive = this.dataActive, initializationActive = this.initializationActive;
+    const active = this.active, dataActive = this.dataActive, initializationActive = this.initializationActive,
+      optionsActive = this.optionsActive;
     this.pausing = true;
     this.state.continuous = false;
     this.cancelled = true;
@@ -229,7 +232,7 @@ export class Engine {
       this.state.stage = 'Stopping worker and recovering history';
       this.publish();
       await this.transport.cancel();
-      await Promise.allSettled([active, dataActive, initializationActive, this.configQueue]);
+      await Promise.allSettled([active, dataActive, initializationActive, optionsActive, this.configQueue]);
       // Keep the scheduler lock until the owned child has closed and SQLite history is recovered.
       this.state.busy = true;
       if (this.datasets.length) {
@@ -251,7 +254,37 @@ export class Engine {
   async shutdown(): Promise<void> {
     this.shuttingDown = true;
     await this.pause();
-    await Promise.allSettled([this.configQueue, this.dataActive, this.initializationActive]);
+    await Promise.allSettled([this.configQueue, this.dataActive, this.initializationActive, this.optionsActive]);
+  }
+
+  /** Price a hypothetical option contract in the shared worker slot; never alters research history. */
+  calculateOptions(parameters: JsonRecord): Promise<JsonRecord> {
+    if (this.shuttingDown) return Promise.reject(new Error('Quant Engine is shutting down.'));
+    if (this.pausing) return Promise.reject(new Error('Pause is still recovering research history.'));
+    if (this.state.settingsPending) return Promise.reject(new Error('Settings are still being saved. Wait before calculating options.'));
+    if (this.state.busy) return Promise.reject(new Error('A numerical worker is already active. Wait or pause before calculating options.'));
+    // A waiting continuous cycle is postponed until the option calculation releases the worker.
+    this.clearTimer();
+    this.cancelled = false;
+    this.state.busy = true;
+    this.state.stage = 'Calculating option prices';
+    this.state.fraction = 0;
+    this.publish();
+    const pending = this.transport.request('options', { parameters }, event => this.workerEvent(event)).then(result => {
+      if (this.cancelled) throw new Error('Option calculation cancelled.');
+      this.optionsReport = result.report as JsonRecord;
+      return this.optionsReport;
+    }, error => {
+      throw this.cancelled ? new Error('Option calculation cancelled.') : error;
+    }).finally(() => {
+      if (this.optionsActive === pending) this.optionsActive = null;
+      this.state.busy = this.pausing;
+      if (this.pausing) return;
+      if (this.state.continuous && !this.cancelled) this.schedule();
+      else { this.state.stage = 'Ready to run'; this.publish(); }
+    });
+    this.optionsActive = pending;
+    return pending;
   }
 
   dataCommand(command: 'import' | 'refresh', values: JsonRecord = {}): Promise<Dataset> {

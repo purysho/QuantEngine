@@ -24,6 +24,7 @@ let engine: Engine;
 let configStore: ConfigStore;
 let lastSentReport: unknown;
 let lastSentRuns: unknown;
+let lastSentOptions: unknown;
 let settingsQueue: Promise<unknown> = Promise.resolve();
 let settingsPending = 0;
 
@@ -43,6 +44,8 @@ function pushState() {
     else lastSentReport = snapshot.report;
     if (lastSentRuns === snapshot.runs) delete snapshot.runs;
     else lastSentRuns = snapshot.runs;
+    if (lastSentOptions === snapshot.options) delete snapshot.options;
+    else lastSentOptions = snapshot.options;
     window.webContents.send('quant:state', snapshot);
   }
   if (tray) {
@@ -83,6 +86,7 @@ function createWindow(hidden = false) {
   window.on('closed', () => { window = null; });
   lastSentReport = undefined;
   lastSentRuns = undefined;
+  lastSentOptions = undefined;
   void window.loadFile(path.join(app.getAppPath(), 'app/index.html'));
   return window;
 }
@@ -106,6 +110,22 @@ function quit(): Promise<void> {
   return quitPromise;
 }
 
+const OPTION_FIELDS = new Set(['spot', 'strike', 'time', 'rate', 'volatility', 'dividend', 'kind', 'steps', 'paths', 'seed', 'market_price']);
+
+/** Shape check only; the numerical worker performs the authoritative range validation. */
+function validateOptions(values: unknown): JsonRecord {
+  if (!values || typeof values !== 'object' || Array.isArray(values)) throw new Error('Option inputs must be an object.');
+  const result: JsonRecord = {};
+  for (const [key, value] of Object.entries(values as JsonRecord)) {
+    if (!OPTION_FIELDS.has(key)) throw new Error(`Unknown option input: ${key}`);
+    if (key === 'kind') { if (value !== 'call' && value !== 'put') throw new Error('Option type must be call or put.'); }
+    else if (key === 'market_price' && value === null) continue;
+    else if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`Option input ${key} must be a finite number.`);
+    result[key] = value;
+  }
+  return result;
+}
+
 function checkedRun(id: unknown) {
   if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error('Invalid run identifier.');
   const run = engine.runs.find(value => value.id === id && value.status === 'completed');
@@ -121,6 +141,7 @@ async function command(method: string, values?: unknown): Promise<unknown> {
   if (method === 'start') { await engine.start(); return engine.snapshot(); }
   if (method === 'pause') { await engine.pause(); return engine.snapshot(); }
   if (method === 'run-once') { await engine.runOnce(); return engine.snapshot(); }
+  if (method === 'calculate-options') { await engine.calculateOptions(validateOptions(values)); return engine.snapshot(); }
   if (method === 'configure') {
     const patch = validatePatch(values);
     for (const key of Object.keys(patch)) if (!USER_SETTINGS.has(key)) throw new Error(`This setting is managed by the desktop: ${key}`);
@@ -192,7 +213,7 @@ function dispatchCommand(method: string, values?: unknown): Promise<unknown> {
     settingsQueue = pending;
     return pending;
   }
-  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb'].includes(method)) {
+  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'calculate-options'].includes(method)) {
     return Promise.reject(new Error('Settings or storage are still being saved. Wait before starting another operation.'));
   }
   return command(method, values);
@@ -207,7 +228,11 @@ async function nativeSelfTest() {
   if (!ready.bridge || ready.rows < 40 || !ready.nodeUnavailable || ready.title !== 'Quant Engine') throw new Error('Renderer/preload health check failed.');
   await engine.runOnce();
   if (!engine.lastReport || engine.state.lastError) throw new Error(engine.state.lastError || 'Self-test numerical report is missing.');
-  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, completed: engine.state.completed,
+  // Exercise the sandboxed bridge end to end with a published reference contract (Hull: 4.7594).
+  const option = await window!.webContents.executeJavaScript(`window.quant.calculateOptions({ spot: 42, strike: 40, time: 0.5,
+    rate: 0.1, volatility: 0.2, paths: 20000 }).then(state => state.options.black_scholes.price)`);
+  if (Math.abs(option - 4.7594) > 1e-4) throw new Error(`Self-test option price ${option} differs from the reference.`);
+  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, completed: engine.state.completed,
     runtime: engine.runtime, report: engine.lastReportPath }));
   await quit();
 }

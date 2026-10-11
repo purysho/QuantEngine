@@ -338,7 +338,7 @@ def options_report(parameters: dict, progress: Callable[[str, float], None] | No
     european_tree = crr_price(*contract, kind, steps=p["steps"])
     american_tree = crr_price(*contract, kind, steps=p["steps"], american=True)
     monte_carlo = monte_carlo_price(*contract, kind, paths=p["paths"], seed=p["seed"],
-                                    progress=(lambda s, f: progress(s, .3 + .65 * f)) if progress else None)
+                                    progress=(lambda stage, f: progress(stage, .3 + .65 * f)) if progress else None)
     implied = None
     if p.get("market_price") is not None:
         implied = {"market_price": float(p["market_price"]),

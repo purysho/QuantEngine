@@ -147,3 +147,28 @@ Friction ablation (γ = 0.1, inventory strategy, mean profit / fills): clean 54.
 - This is a reduced-form book with no historical order-book data, no hidden liquidity and no venue rules.
 
 **Next:** Desktop integration (Options page, worker command), CI, and a research index.
+
+---
+
+## Task 6 — Desktop integration (Options page, Student-t risk, version 0.2.0)
+
+Scope note from the user: focus only on the **Quant** half (not the AI desktop or OS work). Target is the Windows 11 Home laptop (Core 5 210H, 16 GB RAM, integrated Intel graphics, data on `D:`). CPU-only, at most two BLAS threads, one queued worker.
+
+**Did**
+- Worker command `options` returns an options report without writing price snapshots or research history.
+- `Engine.calculateOptions` uses the same single worker slot. It rejects while busy, while settings are saving, or during pause. A waiting continuous cycle is postponed and then rescheduled. Pause kills the worker and reports "Option calculation cancelled". Shutdown drains it.
+- Main process: a `calculate-options` IPC command with a shape check; Python does the authoritative range validation. Option state is sent only when it changes.
+- Preload: `window.quant.calculateOptions`.
+- Renderer: a new **Options** page with contract inputs (percent inputs converted to decimals) and cross-checked prices (analytic / CRR European / CRR American / Monte Carlo ± SE / counterpart and parity gap / implied volatility). It shows Greeks with explicit units, and implied moves with the precise "VIX/16" explanation. All text is HTML-escaped.
+- The risk comparison now shows Gaussian / block bootstrap / Student-t at 95% and 99%, plus t degrees of freedom and the Hill index. Schema 1 reports still render (missing columns are hidden).
+- The native `--self-test` now also prices Hull's reference contract through the sandboxed preload bridge.
+- Tests use `QUANT_PYTHON`, otherwise `python` on Windows and `python3` elsewhere (Python tests use `sys.executable`).
+- Version bumped to 0.2.0 (package, sidebar, ECB User-Agent).
+
+**Tests added:** 4 desktop (no overlap with research, pause cancels and releases the slot, waiting cycle resumes, real worker prices without history); 1 renderer (real worker reports render the Options page, Student-t and 99% rows; provenance HTML is escaped); 2 Python worker (options command leaves no history and rejects unknown fields; schema-2 reports include Student-t and one-close timing).
+
+**Results (Linux host, Python 3.13.16 / NumPy 2.3.5 / SciPy 1.17.0):** 67/67 Python, 17/17 TypeScript, `tsc` clean, build clean. The native Electron self-test under Xvfb printed `QUANT_SELF_TEST_OK` with `option: 4.759422392871532` and a completed 5,000-path report.
+
+**Did not work / caveats:** A visual review of the new page in a real window has not been done. The Electron self-test ran on Linux under Xvfb, **not on Windows**. Pairs, market-making and alpha experiments are available as Python modules and scripts but do not have desktop pages yet.
+
+**Next:** CI (Linux and Windows), a research index, and a screenshot review.
