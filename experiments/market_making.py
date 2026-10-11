@@ -21,6 +21,21 @@ for gamma, rows in PAPER.items():
                                       "profit_std": r["profit_std"], "q_mean": r["final_inventory_mean"], "q_std": r["final_inventory_std"]},
                              "profit_relative_gap": r["profit_mean"] / paper[1] - 1})
 
+# Localise the gamma = 0.5 discrepancy: which spread time-term coefficient c reproduces each row?
+# The symmetric benchmark is quoted with the constant spread (c = 0), as the paper states.
+sweep = []
+for c in (0.0, .25, .5, .75, 1.0):
+    row = {"coefficient": c}
+    for gamma in PAPER:
+        r = lob.simulate({"gamma": gamma, "paths": 20_000, "seed": 11, "strategy": "inventory",
+                          "spread_time_term": c > 0, "spread_time_coefficient": c or 1.0})
+        row[str(gamma)] = r["profit_mean"]
+    sweep.append(row)
+target = PAPER[.5]["inventory"][1]
+xs, ys = [r["coefficient"] for r in sweep], [r["0.5"] for r in sweep]
+implied = next((xs[i] + (target - ys[i]) * (xs[i + 1] - xs[i]) / (ys[i + 1] - ys[i])
+                for i in range(len(xs) - 1) if min(ys[i], ys[i + 1]) <= target <= max(ys[i], ys[i + 1])), None)
+
 base = {"mode": "realistic", "paths": 5000, "seed": 21, "gamma": .1, "spread_time_term": True}
 steps = [("clean realistic mode", {}),
          ("+ queue ahead (mean 3 units)", {"queue_depth": 3.0}),
@@ -46,12 +61,22 @@ payload = {
                        "note": "Published table spreads equal (2/gamma) ln(1 + gamma/k); the time term is omitted to match them."},
     "reproduction": reproduction,
     "friction_ablation": {"base": base, "rows": ablation},
+    "gamma_0.5_diagnosis": {
+        "spread_time_coefficient_sweep_inventory_profit": sweep,
+        "implied_coefficient_for_published_33.92": implied,
+        "finding": "Rows gamma=0.1 and 0.01 are insensitive to the spread convention; only gamma=0.5 discriminates. "
+                   "The published 33.92 implies an effective time-term coefficient near the value above, matching neither the "
+                   "paper's stated formula (c=1) nor its printed constant spread (c=0). The table is not reproducible from the "
+                   "stated method; it is reported, not fitted.",
+        "paper_procedure_source": "Avellaneda & Stoikov, section 3.3, people.orie.cornell.edu/sfs33/LimitOrderBook.pdf"},
     "acceptance": {
         "inventory_strategy_lowers_profit_std_every_gamma": all(
             next(r for r in reproduction if r["gamma"] == g and r["strategy"] == "inventory")["ours"]["profit_std"] <
             next(r for r in reproduction if r["gamma"] == g and r["strategy"] == "symmetric")["ours"]["profit_std"] for g in PAPER),
         "gamma_0.1_and_0.01_profits_within_3pct": all(abs(v) < .03 for k, v in gaps.items() if not k.startswith("0.5/")),
-        "gamma_0.5_inventory_reproduced": abs(gaps["0.5/inventory"]) < .03,
+        "gamma_0.5_inventory_reproduced_by_stated_method": abs(gaps["0.5/inventory"]) < .03,
+        "gamma_0.5_discrepancy_localised": implied is not None and all(
+            abs(sweep[-1][g] - sweep[0][g]) < 2 for g in ("0.1", "0.01")),
         "frictions_reduce_inventory_strategy_profit": ablation[-1]["inventory"]["profit_mean"] < ablation[0]["inventory"]["profit_mean"],
     },
     "interpretation": "Stylised Poisson-fill model; useful for comparing quoting rules under stated frictions, not for forecasting venue P&L.",

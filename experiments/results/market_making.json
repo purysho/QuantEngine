@@ -1,7 +1,7 @@
 {
   "experiment": "market_making",
-  "recorded_at": "2026-10-11T13:29:32+00:00",
-  "duration_seconds": 6.206,
+  "recorded_at": "2026-10-11T14:17:46+00:00",
+  "duration_seconds": 8.992,
   "runtime": {
     "python": "3.13.16",
     "numpy": "2.3.5",
@@ -306,10 +306,48 @@
       }
     ]
   },
+  "gamma_0.5_diagnosis": {
+    "spread_time_coefficient_sweep_inventory_profit": [
+      {
+        "coefficient": 0.0,
+        "0.1": 62.145337286778414,
+        "0.01": 66.8831769720397,
+        "0.5": 20.776376756476285
+      },
+      {
+        "coefficient": 0.25,
+        "0.1": 62.66034403741343,
+        "0.01": 66.89410892273436,
+        "0.5": 31.71175362037672
+      },
+      {
+        "coefficient": 0.5,
+        "0.1": 63.04590215518535,
+        "0.01": 66.90430566000056,
+        "0.5": 39.55049050308378
+      },
+      {
+        "coefficient": 0.75,
+        "0.1": 63.28004734571078,
+        "0.01": 66.91468070072494,
+        "0.5": 44.43813252419649
+      },
+      {
+        "coefficient": 1.0,
+        "0.1": 63.404943042240596,
+        "0.01": 66.93156513943029,
+        "0.5": 46.764406138263226
+      }
+    ],
+    "implied_coefficient_for_published_33.92": 0.320427366445188,
+    "finding": "Rows gamma=0.1 and 0.01 are insensitive to the spread convention; only gamma=0.5 discriminates. The published 33.92 implies an effective time-term coefficient near the value above, matching neither the paper's stated formula (c=1) nor its printed constant spread (c=0). The table is not reproducible from the stated method; it is reported, not fitted.",
+    "paper_procedure_source": "Avellaneda & Stoikov, section 3.3, people.orie.cornell.edu/sfs33/LimitOrderBook.pdf"
+  },
   "acceptance": {
     "inventory_strategy_lowers_profit_std_every_gamma": true,
     "gamma_0.1_and_0.01_profits_within_3pct": true,
-    "gamma_0.5_inventory_reproduced": false,
+    "gamma_0.5_inventory_reproduced_by_stated_method": false,
+    "gamma_0.5_discrepancy_localised": true,
     "frictions_reduce_inventory_strategy_profit": true
   },
   "interpretation": "Stylised Poisson-fill model; useful for comparing quoting rules under stated frictions, not for forecasting venue P&L."

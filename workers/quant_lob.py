@@ -24,7 +24,8 @@ STRATEGIES = ("inventory", "symmetric")
 DEFAULTS = {"mid": 100.0, "horizon": 1.0, "sigma": 2.0, "dt": .005, "gamma": .1, "k": 1.5, "intensity": 140.0,
             "paths": 1000, "seed": 17, "mode": "paper", "quote_size": 1, "mean_order_size": 1.0,
             "queue_depth": 0.0, "latency_steps": 0, "tick": 0.0, "maker_fee_bps": 0.0, "taker_fee_bps": 0.0,
-            "adverse_move": 0.0, "inventory_limit": 0, "spread_time_term": True}
+            "adverse_move": 0.0, "inventory_limit": 0, "spread_time_term": True,
+            "spread_time_coefficient": 1.0}
 
 
 def _validate(p):
@@ -49,6 +50,9 @@ def _validate(p):
         raise ValueError("horizon / dt must be a whole number of steps between 1 and 100,000.")
     if q["paths"] * round(steps) > 20_000_000:
         raise ValueError("paths x steps is limited to 20 million.")
+    c = q["spread_time_coefficient"]
+    if isinstance(c, bool) or not isinstance(c, (int, float)) or not 0 <= c <= 2:
+        raise ValueError("spread_time_coefficient must be in [0, 2] (sensitivity analysis only).")
     if not isinstance(q["spread_time_term"], bool):
         raise ValueError("spread_time_term must be true or false.")
     if q["mode"] not in ("paper", "realistic"):
@@ -92,7 +96,9 @@ def simulate(parameters: dict) -> dict:
         time_left = p["horizon"] - step * dt
         observed = history[max(0, len(history) - 1 - p["latency_steps"])]  # Stale mid under latency.
         reservation = observed - (inventory * gamma * sigma ** 2 * time_left if strategy == "inventory" else 0.0)
-        spread = (gamma * sigma ** 2 * time_left if p["spread_time_term"] else 0.0) + 2 / gamma * math.log(1 + gamma / k)
+        # spread_time_coefficient scales the time term for sensitivity analysis; 1.0 is the paper's formula.
+        time_term = p["spread_time_coefficient"] * gamma * sigma ** 2 * time_left if p["spread_time_term"] else 0.0
+        spread = time_term + 2 / gamma * math.log(1 + gamma / k)
         spreads.append(spread)
         quotes = {"bid": reservation - spread / 2, "ask": reservation + spread / 2}
         if p["tick"] > 0:

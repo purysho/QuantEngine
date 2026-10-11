@@ -284,3 +284,20 @@ On iid data, GARCH-t is as good as the static models (1.01 / 1.04), so it costs 
 3. **Warm-start trap:** warm-starting GARCH from the previous refit was 6.5× faster but landed at a worse optimum in **29%** of refits (log-likelihood gap up to 43.5), which visibly worsened the backtest (independence rejections 5% → 15%). Fix: warm start **plus** one cold start, keeping the better likelihood. The gap to the full multi-start became 2e-5.
 4. **The opposite case:** for the Student-t fit, a warm start was never worse and beat SciPy's default start by up to 15.7 log-likelihood in 4.8% of refits, so it stays. Speed-ups must be checked against fit quality, not just runtime.
 5. **CI:** superseded runs queued behind each other for about 8 minutes, so the workflow now has a `concurrency` group that cancels in-progress runs on the same branch. The experiment went from 411 s to 110 s.
+
+---
+
+## Task 11 — Diagnose the unreproduced Avellaneda–Stoikov γ = 0.5 row
+
+**Method:** I read the paper's own procedure (§3.3, Cornell-hosted PDF): quotes are set at *t*, the state updates at *t + dt*, a fill happens with probability λ(δ)·dt, and the mid moves ±σ√dt. The symmetric strategy "uses the same spread … centered around the mid-price", described as "$1.29 (corresponding to the optimal agent with γ = 0.1)", which is the constant term (2/γ)·ln(1 + γ/k) only.
+
+**Hypotheses tested** (all with 4,000–20,000 paths):
+1. *Clipping negative quote distances* (a quote across the mid): the paper uses raw λ(δ)·dt. Effect < 1 profit unit. **Rejected.**
+2. *Event order* (mid moves before or after fills): ±1.5. **Not the cause.**
+3. *Spread time-term coefficient c* in c·γσ²(T−t): the γ = 0.1 and γ = 0.01 inventory rows change by less than 1.3 across c ∈ [0, 1], so **they cannot tell conventions apart**. Only γ = 0.5 is sensitive: 20.8 (c = 0) → 46.8 (c = 1). The published 33.92 implies **c ≈ 0.32**.
+
+**Finding:** the paper's γ = 0.5 inventory row matches neither its stated formula (c = 1) nor its printed spread column (c = 0). The table is internally inconsistent with the stated method. The symmetric γ = 0.5 row reproduces (66.0 vs 66.2) once the symmetric benchmark uses the constant spread, which confirms the rest of the set-up.
+
+**Change:** `market_making.json` now carries the full coefficient sweep and the implied c. The gate `gamma_0.5_inventory_reproduced_by_stated_method` stays **false** (honest), and a new gate `gamma_0.5_discrepancy_localised` is **true**. `spread_time_coefficient` exists for sensitivity analysis only; I did **not** fit c = 0.32, because tuning a model to one published number is curve-fitting.
+
+**Lesson for the system:** before declaring a reproduction failure, sweep each ambiguous convention and check which published rows can discriminate between them. Two of the three rows were never evidence for the formula.
