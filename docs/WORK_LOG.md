@@ -474,3 +474,12 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 - The README has a download button at the top linking to the permanent URL `https://github.com/purysho/QuantEngine/releases/latest/download/QuantEngine-win-x64.zip`, plus quick-start steps and a screenshot. The user guide links to it too.
 - The repository is public, so downloads need no GitHub login; CI artifacts by contrast expire after 14 days and require a login.
 - **Pending:** the homepage shows `main`'s README, and the release workflow publishes on pushes to `main`. Both take effect when this branch is merged into `main`. No release existed before this.
+
+---
+
+## CI repair: Windows embedded-runtime test (PR #1)
+
+**Failure:** `test_same_seed_same_result_under_different_hash_seeds` failed only in the Windows package job. Its child process ran `python -c "from workers import …"`, relying on the working directory being on `sys.path`. The embedded runtime's `._pth` file never adds it, so the import failed and the child printed nothing.
+**Reproduced locally** with `python3 -I -c "from workers import quant_evolve"` → `ModuleNotFoundError`.
+**Fix:** the child inserts the project root (passed as an argument) into `sys.path` and runs with `-P`, so every platform tests the strict embedded-runtime condition. `-P` was chosen over `-I` because `-I` implies `-E`, which would silently ignore the `PYTHONHASHSEED` the test sets. On failure the assertion now shows the child's stderr.
+**Lesson:** subprocess tests must not depend on implicit `sys.path` entries; the shipped runtime is stricter than a developer's Python.

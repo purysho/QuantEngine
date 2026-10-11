@@ -80,12 +80,14 @@ if __name__ == "__main__":
 class ReproducibilityTests(unittest.TestCase):
     def test_same_seed_same_result_under_different_hash_seeds(self):
         import json, os, subprocess, sys
-        code = ("import json,numpy as np; from workers import quant_evolve as ev; "
+        # The project root is passed explicitly: embedded (._pth) runtimes and -P never add the cwd to sys.path.
+        code = ("import json,sys; sys.path.insert(0, sys.argv[1]); import numpy as np; from workers import quant_evolve as ev; "
                 "r=np.random.default_rng(5).standard_t(4,3000)*.01; "
                 "out=ev.prequential(ev.risk_task(r),len(r),first=2000,block=500,validation=500,generations=2,population=8,seed=3); "
                 "print(json.dumps([c['genome'] for c in out['curve']]+[c['out_of_sample_score'] for c in out['curve']]))")
         root = Path(__file__).resolve().parents[1]
-        outputs = [subprocess.run([sys.executable, "-c", code], cwd=root, capture_output=True, text=True, timeout=300,
-                                  env={**os.environ, "PYTHONHASHSEED": h}).stdout for h in ("1", "98765")]
-        self.assertTrue(outputs[0].strip())
+        runs = [subprocess.run([sys.executable, "-P", "-c", code, str(root)], cwd=root, capture_output=True, text=True, timeout=300,
+                               env={**os.environ, "PYTHONHASHSEED": h}) for h in ("1", "98765")]
+        outputs = [run.stdout for run in runs]
+        self.assertTrue(outputs[0].strip(), runs[0].stderr[-2000:])
         self.assertEqual(outputs[0], outputs[1])
