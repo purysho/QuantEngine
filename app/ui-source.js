@@ -53,6 +53,7 @@ function navigate(name) {
   document.querySelectorAll('.page').forEach(section => section.classList.toggle('hidden', section.id !== 'page-' + name));
   document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === name));
   if (name === 'monitor') requestAnimationFrame(drawChart);
+  syncSurfaceAnimation();
 }
 
 function renderControls() {
@@ -99,9 +100,9 @@ function render() {
   const runtime = current.runtime || {};
   $('runtime-details').innerHTML = ['Python', 'NumPy', 'SciPy'].map(name => '<div class="runtime-row"><span>' + name + '</span><span>' + esc(runtime[name.toLowerCase()] || 'Unavailable') + '</span></div>').join('') +
     '<div class="runtime-row"><span>Maximum numerical threads</span><span>' + (current.config.lowCpu ? '1' : '2') + '</span></div><p class="field-help">The numerical worker owns its research database. It does not send orders or connect to a brokerage.</p>';
-  if (previousReport !== report) { previousReport = report; renderReport(); drawChart(); }
+  if (previousReport !== report) { previousReport = report; renderReport(); drawChart(); updateSurfaces(); }
   if (previousRuns !== current.runs) { previousRuns = current.runs; renderRuns(); }
-  if (previousOptions !== current.options) { previousOptions = current.options; renderOptions(); }
+  if (previousOptions !== current.options) { previousOptions = current.options; renderOptions(); updateSurfaces(); }
 }
 
 function renderDatasets() {
@@ -195,6 +196,8 @@ function renderOptions() {
       .map(([name, value, check]) => '<tr><td>' + name + '</td><td>' + price(value) + '</td><td>' + check + '</td></tr>').join('') +
     (report.implied ? '<tr><td>Implied volatility of ' + price(report.implied.market_price) + '</td><td>' + percent(report.implied.implied_volatility) + '</td><td>Brent root</td></tr>' : '') +
     '</tbody></table><div class="risk-note">Seed ' + esc(p.seed) + ' · rate ' + percent(p.rate) + ' · dividend ' + percent(p.dividend) + ' · volatility ' + percent(p.volatility) + ' · ' + esc(p.time) + ' years</div>';
+  if (report.surface) $('options-surface-arbitrage').textContent = report.surface.sufficient_no_arbitrage ?
+    'Gatheral–Jacquier sufficient no-arbitrage conditions hold' : 'Warning: η(1+|ρ|) > 2, so static no-arbitrage is not guaranteed';
   const units = report.units;
   $('options-greeks').className = '';
   $('options-greeks').innerHTML = '<table class="risk-table"><thead><tr><th>Greek</th><th>Value</th><th>Unit</th></tr></thead><tbody>' +
@@ -215,7 +218,8 @@ function optionInputs() {
   const read = id => { const value = $(id).value.trim(); return value === '' ? null : Number(value); };
   const values = { kind: $('opt-kind').value, spot: read('opt-spot'), strike: read('opt-strike'), time: read('opt-time'),
     volatility: read('opt-volatility') / 100, rate: read('opt-rate') / 100, dividend: read('opt-dividend') / 100,
-    steps: read('opt-steps'), paths: read('opt-paths'), seed: read('opt-seed') };
+    steps: read('opt-steps'), paths: read('opt-paths'), seed: read('opt-seed'),
+    surface_rho: read('opt-surface-rho'), surface_eta: read('opt-surface-eta') };
   const market = read('opt-market');
   if (market !== null) values.market_price = market;
   for (const [key, value] of Object.entries(values)) if (key !== 'kind' && !Number.isFinite(value)) throw new Error('Enter a number for ' + key.replace('_', ' ') + '.');
@@ -232,6 +236,263 @@ function renderRuns() {
   }).join('');
   document.querySelectorAll('.run-open').forEach(button => button.addEventListener('click', async () => { const result = await action(() => window.quant.openRun(button.dataset.run)); if (result) navigate('monitor'); }));
 }
+
+// ---- 3D surface renderer (canvas 2D; no WebGL needed on integrated graphics) ----
+// Sequential ramp, lightness increasing with value; height also encodes value, so colour is never alone.
+const SURFACE_RAMP = [[0, [17, 42, 74]], [.3, [27, 104, 128]], [.58, [76, 182, 184]], [.8, [156, 211, 128]], [1, [236, 196, 120]]];
+const reducedMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function surfaceColor(t, shade) {
+  t = Math.max(0, Math.min(1, t));
+  let i = 1;
+  while (i < SURFACE_RAMP.length - 1 && t > SURFACE_RAMP[i][0]) i++;
+  const [t0, c0] = SURFACE_RAMP[i - 1], [t1, c1] = SURFACE_RAMP[i];
+  const f = (t - t0) / (t1 - t0 || 1);
+  return c0.map((c, k) => Math.round(Math.min(255, (c + (c1[k] - c) * f) * shade)));
+}
+
+function createSurface(canvas, hover, options = {}) {
+  const view = { azimuth: options.azimuth ?? -0.75, elevation: options.elevation ?? 0.55, drag: null, manual: false };
+  let data = null, previous = null, morphStart = 0, frame = 0, running = false, last = 0, offset = 0, projected = [], hoverPoint = null;
+  const windowColumns = options.windowColumns || 0;
+
+  function size() {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const ratio = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(rect.width * ratio) || canvas.height !== Math.round(rect.height * ratio)) {
+      canvas.width = Math.round(rect.width * ratio); canvas.height = Math.round(rect.height * ratio);
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return { ctx, width: rect.width, height: rect.height };
+  }
+
+  function draw(now) {
+    const setup = size();
+    if (!setup || !data) return;
+    const { ctx, width, height } = setup;
+    ctx.clearRect(0, 0, width, height);
+    const rows = data.z.length, totalCols = data.z[0].length;
+    const span = windowColumns ? Math.min(windowColumns, totalCols) : totalCols;
+    const maxOffset = Math.max(0, totalCols - span);
+    const start = Math.min(Math.floor(offset), maxOffset), frac = start < maxOffset ? offset - start : 0;
+    const cols = Math.min(span + (frac > 0 ? 1 : 0), totalCols - start);
+    const morph = previous && previous.length === rows && previous[0].length === totalCols ? Math.min(1, (now - morphStart) / 700) : 1;
+    const ease = morph < 1 ? 1 - Math.pow(1 - morph, 3) : 1;
+    const value = (i, j) => previous && ease < 1 ? previous[i][j] + (data.z[i][j] - previous[i][j]) * ease : data.z[i][j];
+    const zLow = data.zMin, zHigh = data.zMax, zSpan = zHigh - zLow || 1;
+    const ca = Math.cos(view.azimuth), sa = Math.sin(view.azimuth), ce = Math.cos(view.elevation), se = Math.sin(view.elevation);
+    const raw = (X, Y, Z, cos, sin) => {
+      const xr = X * cos - Y * sin, yr = X * sin + Y * cos;
+      const depth = yr * ce - Z * se, perspective = 1 / (1 + depth * .12);
+      return [xr * perspective, -(Z * ce + yr * se) * perspective, depth];
+    };
+    let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+    // Fit over the azimuths in use (auto-rotation range, or around a dragged view) to avoid empty space.
+    const centre = view.manual ? view.azimuth : (options.azimuth ?? -0.75);
+    for (let k = 0; k <= 12; k++) {
+      const a = centre - .6 + k / 12 * 1.2, cos = Math.cos(a), sin = Math.sin(a);
+      for (const cx0 of [-1, 1]) for (const cy0 of [-1, 1]) for (const cz0 of [-.55, .62]) {
+        const [px, py] = raw(cx0, cy0, cz0, cos, sin);
+        left = Math.min(left, px); right = Math.max(right, px); top = Math.min(top, py); bottom = Math.max(bottom, py);
+      }
+    }
+    const marginX = 64, marginTop = 22, marginBottom = 40;
+    const scale = Math.min((width - 2 * marginX) / (right - left), (height - marginTop - marginBottom) / (bottom - top));
+    const cx = width / 2 - (left + right) / 2 * scale, cy = marginTop + (height - marginTop - marginBottom) / 2 - (top + bottom) / 2 * scale;
+    const project = (X, Y, Z) => {
+      const [px, py, depth] = raw(X, Y, Z, ca, sa);
+      return [cx + px * scale, cy + py * scale, depth];
+    };
+    const X = j => ((j - frac) / Math.max(span - 1, 1)) * 2 - 1;
+    const Y = i => (i / Math.max(rows - 1, 1)) * 2 - 1;
+    const Z = v => ((v - zLow) / zSpan) * 1.1 - .55;
+    // Back walls and floor grid, drawn first, recessive.
+    const walls = [[-1, -1, -1, 1], [-1, 1, 1, 1]];
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(132,160,186,.18)';
+    ctx.setLineDash([2, 4]);
+    for (let t = 0; t <= 4; t++) {
+      const z = -.55 + t / 4 * 1.1;
+      for (const [x0, y0, x1, y1] of walls) {
+        const a = project(x0, y0, z), b = project(x1, y1, z);
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      }
+    }
+    for (let t = 0; t <= 4; t++) {
+      const g = -1 + t / 2;
+      if (g > 1) break;
+      let a = project(g, -1, -.55), b = project(g, 1, -.55);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      a = project(-1, g, -.55); b = project(1, g, -.55);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    // Surface quads, far to near (painter's algorithm), lit by a fixed light.
+    const quads = [];
+    projected = [];
+    for (let i = 0; i < rows; i++) for (let jj = 0; jj < cols; jj++) {
+      const j = start + jj, x = X(jj);
+      if (x < -1.0001 && jj + 1 < cols && X(jj + 1) <= -1) continue;
+      const p = project(Math.max(-1, x), Y(i), Z(value(i, j)));
+      projected.push({ x: p[0], y: p[1], i, j });
+    }
+    for (let i = 0; i < rows - 1; i++) for (let jj = 0; jj < cols - 1; jj++) {
+      const j = start + jj;
+      const xa = Math.max(-1, X(jj)), xb = Math.min(1, X(jj + 1));
+      if (xb <= xa) continue;
+      const v00 = value(i, j), v01 = value(i, j + 1), v10 = value(i + 1, j), v11 = value(i + 1, j + 1);
+      const corners = [[xa, Y(i), Z(v00)], [xb, Y(i), Z(v01)], [xb, Y(i + 1), Z(v11)], [xa, Y(i + 1), Z(v10)]];
+      const pts = corners.map(c => project(...c));
+      const ux = xb - xa, vy = Y(i + 1) - Y(i), dzx = Z(v01) - Z(v00), dzy = Z(v10) - Z(v00);
+      const nx = -dzx * vy, ny = -dzy * ux, nz = ux * vy, len = Math.hypot(nx, ny, nz) || 1;
+      const light = (nx * -.35 + ny * -.45 + nz * .82) / len;
+      quads.push({ pts, depth: (pts[0][2] + pts[1][2] + pts[2][2] + pts[3][2]) / 4,
+        t: ((v00 + v01 + v10 + v11) / 4 - data.cMin) / (data.cMax - data.cMin || 1), shade: .62 + .45 * Math.max(0, light) });
+    }
+    quads.sort((a, b) => b.depth - a.depth);
+    for (const q of quads) {
+      const [r, g, b] = surfaceColor(q.t, q.shade);
+      ctx.beginPath();
+      ctx.moveTo(q.pts[0][0], q.pts[0][1]);
+      for (let k = 1; k < 4; k++) ctx.lineTo(q.pts[k][0], q.pts[k][1]);
+      ctx.closePath();
+      ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(' + Math.min(255, r + 40) + ',' + Math.min(255, g + 40) + ',' + Math.min(255, b + 40) + ',.35)';
+      ctx.lineWidth = .6;
+      ctx.stroke();
+    }
+    // Axes: z ticks on the back-left edge, x/y ticks along the floor.
+    ctx.fillStyle = '#8fa6bb';
+    ctx.font = '9px Consolas, monospace';
+    const corner = [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([x, y]) => ({ x, y, p: project(x, y, -.55) }))
+      .sort((a, b) => a.p[0] - b.p[0])[0];
+    ctx.strokeStyle = 'rgba(132,160,186,.35)';
+    let a0 = project(corner.x, corner.y, -.55), a1 = project(corner.x, corner.y, .55);
+    ctx.beginPath(); ctx.moveTo(a0[0], a0[1]); ctx.lineTo(a1[0], a1[1]); ctx.stroke();
+    for (let t = 0; t <= 4; t++) {
+      const v = zLow + t / 4 * zSpan, p = project(corner.x, corner.y, -.55 + t / 4 * 1.1);
+      ctx.textAlign = 'right'; ctx.fillText(data.zFormat(v), p[0] - 6, p[1] + 3);
+    }
+    const xTicks = options.xTicks || 4;
+    for (let t = 0; t <= xTicks; t++) {
+      const jj = Math.round(t / xTicks * (span - 1)), j = Math.min(start + jj, totalCols - 1), p = project(X(jj + frac), -1, -.55);
+      if (X(jj + frac) < -1.0001 || X(jj + frac) > 1.0001) continue;
+      ctx.textAlign = 'center'; ctx.fillText(data.xFormat(data.x[j]), p[0], p[1] + 14);
+    }
+    for (let t = 0; t <= 3; t++) {
+      const i = Math.round(t / 3 * (rows - 1)), p = project(1, Y(i), -.55);
+      ctx.textAlign = 'left'; ctx.fillText(data.yFormat(data.y[i]), p[0] + 8, p[1] + 3);
+    }
+    ctx.fillStyle = '#b4c8da';
+    ctx.font = '10px Segoe UI, Arial, sans-serif';
+    let p = project(0, -1, -.55); ctx.textAlign = 'center'; ctx.fillText(data.xLabel, p[0], p[1] + 30);
+    p = project(1, 0, -.55); ctx.textAlign = 'left'; ctx.fillText(data.yLabel, p[0] + 34, p[1] + 16);
+    p = project(corner.x, corner.y, .62); ctx.textAlign = 'center'; ctx.fillText(data.zLabel, p[0], p[1] - 8);
+    if (options.caption) options.caption(data.x[Math.min(start + span - 1, totalCols - 1)], start, maxOffset);
+    if (hoverPoint) showHover(hoverPoint.mx, hoverPoint.my);
+  }
+
+  function tick(now) {
+    if (!running) return;
+    frame = requestAnimationFrame(tick);
+    if (now - last < 33) return;  // About 30 frames per second at most.
+    const dt = last ? Math.min(100, now - last) : 0;
+    last = now;
+    if (!view.drag && !view.manual) view.azimuth = (options.azimuth ?? -0.75) + Math.sin(now / 9000) * .32;
+    if (windowColumns && data) {
+      const maxOffset = Math.max(0, data.z[0].length - windowColumns);
+      offset += dt / 1000 * (options.columnsPerSecond || 3);
+      if (offset > maxOffset + 6) offset = 0;  // Short hold on the latest data, then replay.
+    }
+    draw(now);
+  }
+
+  function showHover(mx, my) {
+    if (!hover) return;
+    let best = null, distance = 16;
+    for (const point of projected) {
+      const d = Math.hypot(point.x - mx, point.y - my);
+      if (d < distance) { distance = d; best = point; }
+    }
+    if (!best) { hover.classList.add('hidden'); return; }
+    hover.innerHTML = esc(data.xLabel) + ' ' + esc(data.xFormat(data.x[best.j])) + '<br>' + esc(data.yLabel) + ' ' + esc(data.yFormat(data.y[best.i])) + '<br>' + esc(data.zLabel) + ' ' + esc(data.zFormat(data.z[best.i][best.j]));
+    hover.style.left = Math.max(8, best.x + 12) + 'px';
+    hover.style.top = Math.max(8, best.y - 50) + 'px';
+    hover.classList.remove('hidden');
+  }
+
+  canvas.addEventListener('pointerdown', event => { view.drag = { x: event.clientX, y: event.clientY, a: view.azimuth, e: view.elevation }; view.manual = true; });
+  window.addEventListener('pointerup', () => { view.drag = null; });
+  canvas.addEventListener('pointermove', event => {
+    const rect = canvas.getBoundingClientRect();
+    if (view.drag) {
+      view.azimuth = view.drag.a + (event.clientX - view.drag.x) / 160;
+      view.elevation = Math.max(.12, Math.min(1.2, view.drag.e + (event.clientY - view.drag.y) / 220));
+      if (!running) draw(performance.now());
+    }
+    hoverPoint = { mx: event.clientX - rect.left, my: event.clientY - rect.top };
+    showHover(hoverPoint.mx, hoverPoint.my);
+  });
+  canvas.addEventListener('pointerleave', () => { hoverPoint = null; hover?.classList.add('hidden'); });
+  canvas.addEventListener('dblclick', () => { view.manual = false; });
+
+  return {
+    setData(next) {
+      previous = data && data.z.length === next.z.length && data.z[0].length === next.z[0].length ? data.z.map(row => row.slice()) : null;
+      morphStart = performance.now();
+      if (!data && windowColumns) offset = Math.max(0, next.z[0].length - windowColumns);  // Open on the latest data.
+      data = next;
+      if (!running) draw(performance.now());
+    },
+    start() { if (running || reducedMotion) { draw(performance.now()); return; } running = true; last = 0; frame = requestAnimationFrame(tick); },
+    stop() { running = false; cancelAnimationFrame(frame); },
+    draw() { draw(performance.now()); },
+  };
+}
+
+function surfaceRange(rows) {
+  const values = rows.flat().filter(Number.isFinite).sort((a, b) => a - b);
+  const low = values[0], high = values[values.length - 1];
+  const pad = (high - low) * .04 || Math.abs(high) * .05 || .01;
+  // Colour uses the 2nd–98th percentile so a few spikes cannot flatten the ramp; height keeps the full range.
+  const at = q => values[Math.min(values.length - 1, Math.max(0, Math.round(q * (values.length - 1))))];
+  return [low - pad, high + pad, at(.02), at(.98)];
+}
+
+const monitorSurface = createSurface($('surface-chart'), $('chart-hover'), { windowColumns: 72, columnsPerSecond: 4, azimuth: -0.8, xTicks: 2,
+  caption: (date, start, maxOffset) => {
+    if (chartMode !== 'surface') return;
+    $('chart-subtitle').textContent = (maxOffset && start < maxOffset ? 'Replaying history · through ' : 'Latest · through ') + date + ' · drag to rotate, double-click to resume';
+  } });
+const optionsSurface = createSurface($('options-surface'), $('options-surface-hover'), { azimuth: -0.65 });
+
+function updateSurfaces() {
+  const surface = current.report?.volatility_surface;
+  if (surface) {
+    const [zMin, zMax, cMin, cMax] = surfaceRange(surface.values);
+    monitorSurface.setData({ x: surface.dates, y: surface.windows, z: surface.values, zMin, zMax, cMin, cMax,
+      xLabel: 'Date', yLabel: 'Lookback (days)', zLabel: 'Realised vol',
+      xFormat: value => String(value), yFormat: value => String(value), zFormat: value => percent(value, 1) });
+  }
+  const model = current.options?.surface;
+  if (model) {
+    const [zMin, zMax, cMin, cMax] = surfaceRange(model.implied_volatility);
+    optionsSurface.setData({ x: model.log_moneyness, y: model.expiries, z: model.implied_volatility, zMin, zMax, cMin, cMax,
+      xLabel: 'Moneyness K/F', yLabel: 'Expiry (years)', zLabel: 'Implied vol',
+      xFormat: value => Math.exp(value).toFixed(2), yFormat: value => Number(value).toFixed(2), zFormat: value => percent(value, 1) });
+  }
+  syncSurfaceAnimation();
+}
+
+function syncSurfaceAnimation() {
+  const visible = !document.hidden;
+  if (visible && page === 'monitor' && chartMode === 'surface' && current.report?.volatility_surface) monitorSurface.start(); else monitorSurface.stop();
+  if (visible && page === 'options' && current.options?.surface) optionsSurface.start(); else optionsSurface.stop();
+}
+document.addEventListener('visibilitychange', syncSurfaceAnimation);
 
 function chartContext() {
   const canvas = $('research-chart');
@@ -278,8 +539,20 @@ function drawChart() {
   const report = current.report;
   chartGeometry = null;
   $('chart-hover').classList.add('hidden');
-  const chartTitles = { equity: 'Costed strategy & baselines', risk: 'Gaussian horizon-return distribution', correlation: 'Historical return correlations', sensitivity: 'Momentum lookback sensitivity' };
+  const chartTitles = { equity: 'Costed strategy & baselines', risk: 'Gaussian horizon-return distribution', correlation: 'Historical return correlations', sensitivity: 'Momentum lookback sensitivity', surface: 'Realised volatility surface' };
   $('chart-title').textContent = chartTitles[chartMode];
+  const surfaceMode = chartMode === 'surface';
+  $('research-chart').classList.toggle('hidden', surfaceMode);
+  $('chart-wrap').classList.toggle('surface-mode', surfaceMode);
+  $('surface-chart').classList.toggle('hidden', !surfaceMode);
+  if (surfaceMode) {
+    if (!report?.volatility_surface) $('chart-subtitle').textContent = 'Run an analysis with this version to build the surface';
+    $('chart-legend').innerHTML = '<span><i class="ramp"></i>Annualised realised volatility of the optimised portfolio · lower → higher</span><span>Trailing windows only · no future returns</span>';
+    monitorSurface.draw();
+    syncSurfaceAnimation();
+    return;
+  }
+  syncSurfaceAnimation();
   if (!report) { $('chart-subtitle').textContent = 'Real numerical outputs appear after an analysis'; grid(ctx, width, height, 0, 1, () => ''); return; }
   if (chartMode === 'equity') {
     const curve = report.curve;

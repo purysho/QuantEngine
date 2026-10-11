@@ -110,7 +110,7 @@ function quit(): Promise<void> {
   return quitPromise;
 }
 
-const OPTION_FIELDS = new Set(['spot', 'strike', 'time', 'rate', 'volatility', 'dividend', 'kind', 'steps', 'paths', 'seed', 'market_price']);
+const OPTION_FIELDS = new Set(['spot', 'strike', 'time', 'rate', 'volatility', 'dividend', 'kind', 'steps', 'paths', 'seed', 'market_price', 'surface_rho', 'surface_eta']);
 
 /** Shape check only; the numerical worker performs the authoritative range validation. */
 function validateOptions(values: unknown): JsonRecord {

@@ -170,3 +170,36 @@ class ReportTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SsviTests(unittest.TestCase):
+    def test_atm_level_and_static_arbitrage(self):
+        surface = opt.ssvi_surface(.25, rho=-.5, eta=1.2)
+        self.assertTrue(surface["sufficient_no_arbitrage"])
+        k = np.asarray(surface["log_moneyness"])
+        atm = int(np.argmin(np.abs(k)))
+        np.testing.assert_allclose(np.asarray(surface["implied_volatility"])[:, atm], .25, rtol=1e-12)
+        # Re-price the model surface and run the independent arbitrage checks on it.
+        spot, quotes = 100.0, []
+        for i, T in enumerate(surface["expiries"][::6]):
+            for j, kk in enumerate(surface["log_moneyness"][::5]):
+                sigma = surface["implied_volatility"][i * 6][j * 5]
+                strike = spot * math.exp(kk)
+                quotes.append({"strike": strike, "expiry": T, "kind": "call",
+                               "price": opt.black_scholes(spot, strike, T, 0, sigma)["price"]})
+        checked = opt.volatility_surface(quotes, spot, 0)
+        self.assertEqual(checked["rejected"], [])
+        self.assertTrue(checked["arbitrage_free"], checked["arbitrage_violations"])
+
+    def test_negative_rho_is_put_skew_and_bounds_are_flagged(self):
+        surface = opt.ssvi_surface(.2, rho=-.6, eta=1.0)
+        row = surface["implied_volatility"][5]
+        self.assertGreater(row[0], row[-1])
+        self.assertFalse(opt.ssvi_surface(.2, rho=.9, eta=1.5)["sufficient_no_arbitrage"])
+        with self.assertRaises(ValueError):
+            opt.ssvi_surface(0)
+
+    def test_report_includes_surface(self):
+        report = opt.options_report({"spot": 100, "strike": 100, "time": 1, "rate": .02, "volatility": .3,
+                                     "paths": 2000, "surface_rho": -.3})
+        self.assertEqual(report["surface"]["parameters"]["rho"], -.3)

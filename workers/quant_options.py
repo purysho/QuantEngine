@@ -307,10 +307,37 @@ def volatility_surface(quotes, spot, rate, dividend=0.0) -> dict:
                             "Raw SVI slices are fitted independently; slice fits are not jointly arbitrage-free by construction."]}
 
 
+def ssvi_surface(atm_volatility, *, rho=-.4, eta=1.0, gamma=.5, expiries=None, log_moneyness=None) -> dict:
+    """Model implied-volatility surface from SSVI (Gatheral & Jacquier 2014).
+
+    w(k, T) = theta/2 * (1 + rho phi k + sqrt((phi k + rho)^2 + 1 - rho^2)), with
+    ATM total variance theta = sigma_atm^2 T and power-law phi = eta / (theta^gamma (1 + theta)^(1 - gamma)).
+    Sufficient no-arbitrage conditions: 0 < gamma <= 1/2 and eta (1 + |rho|) <= 2.
+    It is a parametric model surface, not a fit to market quotes.
+    """
+    sigma = _finite("ATM volatility", atm_volatility, 0, 5, low_open=True)
+    rho = _finite("Surface skew rho", rho, -.99, .99)
+    eta = _finite("Surface curvature eta", eta, 0, 4, low_open=True)
+    gamma = _finite("Surface gamma", gamma, 0, 1, low_open=True)
+    T = np.asarray(expiries if expiries is not None else np.linspace(.1, 2, 24), dtype=np.float64)
+    k = np.asarray(log_moneyness if log_moneyness is not None else np.linspace(-.5, .5, 41), dtype=np.float64)
+    if T.ndim != 1 or k.ndim != 1 or len(T) < 2 or len(k) < 3 or (T <= 0).any() or not np.isfinite(k).all():
+        raise ValueError("Surface needs positive expiries and finite log-moneyness grids.")
+    theta = sigma * sigma * T
+    phi = eta / (theta ** gamma * (1 + theta) ** (1 - gamma))
+    pk = phi[:, None] * k[None, :]
+    w = theta[:, None] / 2 * (1 + rho * pk + np.sqrt((pk + rho) ** 2 + 1 - rho * rho))
+    iv = np.sqrt(w / T[:, None])
+    return {"model": "SSVI power-law", "parameters": {"atm_volatility": sigma, "rho": rho, "eta": eta, "gamma": gamma},
+            "expiries": T.tolist(), "log_moneyness": k.tolist(), "implied_volatility": iv.tolist(),
+            "sufficient_no_arbitrage": bool(gamma <= .5 and eta * (1 + abs(rho)) <= 2),
+            "note": "Model surface from the contract's volatility and the chosen skew/curvature; not market quotes."}
+
+
 # --- Desktop report ---------------------------------------------------------
 
 OPTION_PARAMETERS = {"spot", "strike", "time", "rate", "volatility", "dividend", "kind",
-                     "steps", "paths", "seed", "market_price"}
+                     "steps", "paths", "seed", "market_price", "surface_rho", "surface_eta"}
 
 
 def options_report(parameters: dict, progress: Callable[[str, float], None] | None = None) -> dict:
@@ -319,7 +346,8 @@ def options_report(parameters: dict, progress: Callable[[str, float], None] | No
     unknown = set(parameters) - OPTION_PARAMETERS
     if unknown:
         raise ValueError("Unknown option parameter: " + ", ".join(sorted(unknown)))
-    p = {"dividend": 0.0, "kind": "call", "steps": 500, "paths": 100_000, "seed": 17, **parameters}
+    p = {"dividend": 0.0, "kind": "call", "steps": 500, "paths": 100_000, "seed": 17,
+         "surface_rho": -.4, "surface_eta": 1.0, **parameters}
     missing = [name for name in ("spot", "strike", "time", "rate", "volatility") if name not in p]
     if missing:
         raise ValueError("Missing option parameter: " + ", ".join(missing))
@@ -344,6 +372,7 @@ def options_report(parameters: dict, progress: Callable[[str, float], None] | No
         implied = {"market_price": float(p["market_price"]),
                    "implied_volatility": implied_volatility(p["market_price"], spot, strike, time, rate, dividend, kind)}
     move = implied_move(p["volatility"], 1)
+    surface = ssvi_surface(p["volatility"], rho=p["surface_rho"], eta=p["surface_eta"]) if p["volatility"] > 0 else None
     horizon_days = max(time * TRADING_DAYS, 1e-9)
     report = {
         "kind": "options", "engine_version": "0.2.0",
@@ -356,6 +385,7 @@ def options_report(parameters: dict, progress: Callable[[str, float], None] | No
         "monte_carlo": {**monte_carlo, "error_vs_analytic": monte_carlo["price"] - analytic["price"],
                         "within_three_standard_errors": abs(monte_carlo["price"] - analytic["price"]) <= 3 * monte_carlo["standard_error"] + 1e-12},
         "implied": implied,
+        "surface": surface,
         "implied_moves": {"daily": move, "to_expiry": implied_move(p["volatility"], min(horizon_days, 3650)) if time > 0 else None},
         "units": {"time": "years", "rate": "continuously compounded annual decimal",
                   "volatility": "annual decimal", "vega": "price per 1.00 volatility", "vega_per_point": "price per 1 volatility point",

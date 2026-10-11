@@ -219,3 +219,33 @@ Scope note from the user: focus only on the **Quant** half (not the AI desktop o
 - The runtime is long because of Student-t refits; it is acceptable for CI but not for an interactive page.
 
 **Next:** Live 3D volatility-surface visual (user request), then GARCH-t.
+
+---
+
+## Task 9 — Live 3D volatility surfaces (user request: "look like 3D volatility surfaces, moving because it's live")
+
+**Did**
+- `realised_vol_surface` (Python): annualised trailing realised volatility of the optimised portfolio by lookback (5–250 days) × date. It uses cumulative sums, is subsampled to at most 240 dates, and is causal: value *(w, t)* uses only the *w* returns ending at close *t*. It is added to every new report as `volatility_surface`.
+- `ssvi_surface` (Python): an SSVI power-law implied-volatility surface (Gatheral & Jacquier 2014) around the contract's volatility, with user skew ρ and curvature η. It reports whether the sufficient no-arbitrage conditions `γ ≤ ½, η(1+|ρ|) ≤ 2` hold. It is labelled as a **model** surface; no market quotes are implied.
+- Renderer: a self-contained 3D surface engine on canvas 2D (no WebGL, suitable for integrated graphics) with:
+  - depth-sorted lit quads, a wireframe and dotted back walls;
+  - axes auto-placed on the leftmost corner, with camera auto-fit over the rotation range in use;
+  - slow auto-rotation, drag to rotate (double-click resumes) and hover readouts of exact values;
+  - an animation throttled to about 30 fps that stops when the page or tab is hidden or not selected, and is static under `prefers-reduced-motion`.
+- **Monitor → "Vol surface 3D" tab:** the surface scrolls through the dataset's history ("Replaying history · through <date>"), holds on the latest data, then replays. Each new research cycle swaps in the new data.
+- **Options page:** an implied-volatility surface panel with ρ/η inputs. It morphs smoothly (700 ms ease) whenever a new calculation arrives.
+- Colour: the dataviz guidance rules out rainbow (jet) maps, so the surface uses a sequential navy → teal → mint → amber ramp with lightness increasing with value. Height also encodes value, and colour is normalised to the 2nd–98th percentile so a few spikes don't flatten it.
+
+**Tests:** realised surface equals direct `std(ddof=1)·√252` to 1e-10 and is unchanged by future shocks; report surface is bounded. SSVI ATM equals the contract vol exactly; re-pricing the SSVI surface through Black–Scholes passes the independent butterfly/calendar checks; negative ρ gives put skew; out-of-bound parameters are flagged. Renderer: options surface, arbitrage note and 3D tab render without errors.
+
+**Results:** 67+ Python tests, 17/17 TypeScript, Linux native self-test OK. Headless Chromium screenshots (`docs/screenshots/surface-*.png`) show no page errors.
+
+**What didn't work at first:**
+- The first render clipped the surface and put the z-axis in mid-air; a camera auto-fit over the active azimuth range fixed it.
+- Short-dated SSVI wings dominated the colour range at T = 1/12; the default grid is now 0.1–2 years and ±0.5 log-moneyness.
+- Monthly date ticks repeated; full dates with fewer ticks fixed it.
+- The renderer unit-test stubs needed `parentElement`, so the chart wrapper now has its own id.
+
+**Not done / caveats:** No market-quote import for a *market* implied surface yet; `volatility_surface()` already supports quotes, but there is no CSV/UI path. The surface visual has not been checked on the Windows laptop's integrated GPU; the canvas draw is about 1,000 quads per frame.
+
+**Voice AI request (logged for the AI track, not built here):** `zachlatta/freeflow` (`20674709`, MIT) is a **macOS-only** Swift dictation app that sends audio to Groq's cloud API by default, so it does not run on the Windows 11 laptop. A Windows-local equivalent would combine CPU speech-to-text (e.g. whisper.cpp base/small), a small local LLM, and a permission-controlled action service with logs and undo, as discussed earlier. QuantEngine could expose read-only "ask the engine" endpoints (latest report, run options) for that assistant to call.

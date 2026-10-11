@@ -423,6 +423,36 @@ def example_prices():
     return dates, ["Sample Growth", "Sample Cyclical", "Sample Defensive", "Sample Reserve"], prices
 
 
+def realised_vol_surface(dates, daily_returns, *, max_dates: int = 240) -> dict:
+    """Annualised trailing realised volatility by lookback window and date.
+
+    Value [i][j] uses only returns that ended on or before ``dates[j]``: the
+    window ``windows[i]`` returns immediately before that close. Dates are
+    subsampled evenly to at most ``max_dates`` columns for display.
+    """
+    r = np.asarray(daily_returns, dtype=np.float64)
+    if r.ndim != 1 or len(r) < 12 or len(dates) != len(r) + 1:
+        raise ValueError("Realised-volatility surface needs one date per price and at least 12 returns.")
+    windows = [w for w in (5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 120, 160, 200, 250) if w <= len(r) // 2]
+    if len(windows) < 2:
+        raise ValueError("Too few returns for a volatility surface.")
+    c1 = np.r_[0.0, np.cumsum(r)]
+    c2 = np.r_[0.0, np.cumsum(r * r)]
+    first = windows[-1]
+    ends = np.arange(first, len(r) + 1)  # Number of returns observed; price index of that close.
+    if len(ends) > max_dates:
+        ends = np.unique(np.linspace(first, len(r), max_dates).round().astype(int))
+    values = []
+    for w in windows:
+        total = c1[ends] - c1[ends - w]
+        squares = c2[ends] - c2[ends - w]
+        variance = np.maximum((squares - total * total / w) / (w - 1), 0.0)
+        values.append((np.sqrt(variance * TRADING_DAYS)).tolist())
+    return {"windows": windows, "dates": [dates[int(e)] for e in ends], "values": values,
+            "units": "annualised volatility (decimal)", "basis": "optimised portfolio daily returns",
+            "construction": "Trailing sample standard deviation over each lookback, sqrt(252) annualisation; no future returns."}
+
+
 def analyse(dates, assets, prices, *, paths: int = 50_000, horizon: int = 20,
             seed: int = 17, lookback: int = 20, rebalance: int = 5,
             cost_bps: float = 10, shrinkage: float = .10,
@@ -481,6 +511,7 @@ def analyse(dates, assets, prices, *, paths: int = 50_000, horizon: int = 20,
         "covariance": (cov * TRADING_DAYS).tolist(), "shrunk_covariance": (shrunk * TRADING_DAYS).tolist(),
         "correlation": correlation.tolist(), "shrinkage": shrinkage,
         "monte_carlo": risk, "bootstrap": bootstrap, "student_t": student, "sensitivity": sensitivity,
+        "volatility_surface": realised_vol_surface(dates, weighted_returns),
         "backtest": backtest, "curve": curve,
         "stress": [{"name": "Worst observed portfolio day", "date": dates[worst + 1],
                     "return": float(weighted_returns[worst]), "kind": "historical"},

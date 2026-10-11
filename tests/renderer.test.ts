@@ -9,11 +9,7 @@ const PYTHON = process.env.QUANT_PYTHON || (process.platform === 'win32' ? 'pyth
 test('accepted 60,000-observation histories render without argument overflow', async () => {
   const source = await readFile('app/ui-source.js', 'utf8');
   const elements = new Map<string, Record<string, unknown>>();
-  const context2d = {
-    scale() {}, clearRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
-    fillText() {}, fillRect() {}, closePath() {}, fill() {}, setLineDash() {}, arc() {},
-    createLinearGradient() { return { addColorStop() {} }; },
-  };
+  const context2d = new Proxy({}, { get: (_t, key) => key === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {} });
   function element(id: string): Record<string, unknown> {
     if (!elements.has(id)) elements.set(id, {
       id, style: {}, dataset: {}, textContent: '', innerHTML: '', value: '', type: '',
@@ -25,10 +21,10 @@ test('accepted 60,000-observation histories render without argument overflow', a
     return elements.get(id)!;
   }
   const sandbox = vm.createContext({
-    document: { getElementById: element, querySelectorAll: () => [], body: element('body'), activeElement: null },
-    window: { devicePixelRatio: 1, quant: { onState() {}, getState: () => new Promise(() => {}) } },
+    document: { getElementById: element, querySelectorAll: () => [], body: element('body'), activeElement: null, addEventListener() {}, hidden: false },
+    window: { devicePixelRatio: 1, addEventListener() {}, quant: { onState() {}, getState: () => new Promise(() => {}) } },
     ResizeObserver: class { observe() {} }, requestAnimationFrame: (callback: () => void) => callback(),
-    setTimeout: () => 1, clearTimeout() {}, console,
+    cancelAnimationFrame() {}, performance: { now: () => 0 }, setTimeout: () => 1, clearTimeout() {}, console,
   });
   vm.runInContext(source, sandbox);
   const curve = Array.from({ length: 60_000 }, (_, i) => ({ date: '2025-01-01', strategy: 1 + i / 100000, equal_weight: 1 + i / 150000, cash: 1 }));
@@ -58,10 +54,10 @@ test('options page and Student-t risk render from real worker reports', async ()
     return elements.get(id)!;
   };
   const sandbox = vm.createContext({
-    document: { getElementById: element, querySelectorAll: () => [], body: element('body'), activeElement: null },
-    window: { devicePixelRatio: 1, quant: { onState() {}, getState: () => new Promise(() => {}) } },
-    ResizeObserver: class { observe() {} }, requestAnimationFrame: (callback: () => void) => callback(),
-    setTimeout: () => 1, clearTimeout() {}, console,
+    document: { getElementById: element, querySelectorAll: () => [], body: element('body'), activeElement: null, addEventListener() {}, hidden: false },
+    window: { devicePixelRatio: 1, addEventListener() {}, quant: { onState() {}, getState: () => new Promise(() => {}) } },
+    ResizeObserver: class { observe() {} }, requestAnimationFrame: () => 1,
+    cancelAnimationFrame() {}, performance: { now: () => 0 }, setTimeout: () => 1, clearTimeout() {}, console,
   });
   vm.runInContext(source, sandbox);
   const script = 'import json,sys; sys.path.insert(0,"workers"); from quant_options import options_report; from quant_core import analyse, example_prices; ' +
@@ -76,6 +72,10 @@ test('options page and Student-t risk render from real worker reports', async ()
   assert.match(prices, /Implied volatility/);
   assert.match(String(elements.get('options-greeks')!.innerHTML), /Delta/);
   assert.match(String(elements.get('options-moves')!.innerHTML), /σ\/16/);
+  assert.match(String(elements.get('options-surface-arbitrage')!.textContent), /no-arbitrage/);
+  // Switching to the 3D tab renders the realised-volatility surface without throwing.
+  assert.doesNotThrow(() => vm.runInContext("chartMode = 'surface'; drawChart(); page = 'options'; syncSurfaceAnimation()", sandbox));
+  assert.match(String(elements.get('chart-title')!.textContent), /volatility surface/i);
   const risk = String(elements.get('risk-comparison')!.innerHTML);
   assert.match(risk, /Student-t/);
   assert.match(risk, /VaR 99%/);

@@ -169,3 +169,25 @@ class QuantCoreTests(unittest.TestCase):
 
 if __name__ == "__main__": unittest.main()
 
+
+
+class VolatilitySurfaceTests(unittest.TestCase):
+    def test_surface_is_causal_and_matches_direct_std(self):
+        dates, assets, prices = core.example_prices()
+        r = core.price_returns(prices)[:, 0]
+        surface = core.realised_vol_surface(dates, r, max_dates=10_000)
+        j = len(surface["dates"]) // 2
+        end = dates.index(surface["dates"][j])  # Returns 0..end-1 are observed by that close.
+        for i, w in enumerate(surface["windows"]):
+            expected = r[end - w:end].std(ddof=1) * np.sqrt(252)
+            self.assertAlmostEqual(surface["values"][i][j], expected, places=10)
+        shocked = r.copy(); shocked[end:] *= 10
+        again = core.realised_vol_surface(dates, shocked, max_dates=10_000)
+        self.assertEqual([row[:j + 1] for row in again["values"]], [row[:j + 1] for row in surface["values"]])
+
+    def test_report_surface_is_bounded(self):
+        dates, assets, prices = core.example_prices()
+        report = core.analyse(dates, assets, prices, paths=1000, horizon=5)
+        surface = report["volatility_surface"]
+        self.assertLessEqual(len(surface["dates"]), 240)
+        self.assertEqual(len(surface["values"]), len(surface["windows"]))
