@@ -53,9 +53,21 @@ Open **Options** to price a hypothetical call or put. Enter spot, strike, years 
 
 The calculation uses the same single worker as research. If a continuous cycle is waiting, it resumes afterwards; **Pause** cancels it. Option results never change stored datasets or research history.
 
+## Ask (Ctrl+K) and voice
+
+Press **Ctrl+K** and type or dictate: "what is my VaR", "explain Black–Scholes", "price a put strike 95 spot 100 6 months vol 25%", "show the vol surface", "learn now", "set paths to 100000". For voice on Windows, install **Handy** (`winget install cjpais.Handy`; free and offline; choose the Parakeet model on a laptop without a GPU), hold its shortcut and speak into the Ask box. Changes to settings always ask you to confirm and can be undone ("undo"). Requests to buy, sell or trade are refused: QuantEngine has no brokerage connection. Every request is logged in `assistant-log.jsonl` in your storage folder. Optionally, point Preferences → Assistant at a model server on this computer (llama.cpp, Ollama, LM Studio) for free-form questions; only localhost addresses are accepted.
+
+## Evolution: the engine keeps learning
+
+When the engine runs continuously, each cycle ends with a short, time-boxed learning step. Model configurations are bred and tested, and the best is frozen and judged only on data that came after the choice. A challenger must significantly beat the current model before it is replaced. The **Evolution** page shows this as a 3D graph: each glowing node is a tested model, lines show how it was bred, and clusters are model families. The learning curve shows the frozen champion against a fixed baseline. Memories are kept in `learning/` in your storage folder, so learning continues across restarts.
+
+## The maths, step by step
+
+Under the option results and the risk report, **The maths** shows each formula with your numbers substituted (d₁, d₂, N(d), tree probabilities, the Monte Carlo error, VaR and expected shortfall, the Student-t tail, the minimum-variance portfolio). The workings are recomputed from the same inputs as the results, and tests check they agree.
+
 ## Research modules outside the desktop (Python)
 
-`workers/quant_pairs.py` (cointegration pairs), `workers/quant_lob.py` (market-making simulator) and `workers/quant_validation.py` (leak-proof chronological ridge) run from the scripts in `experiments/`, for example `python experiments/pairs_cointegration.py`. Each writes measured JSON evidence to `experiments/results/`. They do not have desktop pages yet.
+`workers/quant_pairs.py` (cointegration pairs), `workers/quant_lob.py` (market-making simulator), `workers/quant_validation.py` (leak-proof chronological ridge) and the real-data backtests (`experiments/real_world_backtest.py`, `experiments/evolution_real.py`) run from the scripts in `experiments/`, for example `python experiments/pairs_cointegration.py`. Each writes measured JSON evidence to `experiments/results/`. They do not have desktop pages yet.
 
 ## Interpretation and next release
 
