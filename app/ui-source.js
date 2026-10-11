@@ -176,7 +176,10 @@ function renderReport() {
     rows.map(([name, key]) => '<tr><td>' + name + '</td>' + models.map(model => '<td>' + percent(model[key]) + '</td>').join('') + '</tr>').join('') +
     '</tbody></table><div class="risk-note">' + integer(gaussian.paths) + ' paths each · ' + gaussian.horizon + ' observations · empirical blocks of ' + bootstrap.block_size +
     (student ? ' · t degrees of freedom ' + number(student.degrees_of_freedom, 1) + (student.hill && Number.isFinite(student.hill.alpha) ? ' · Hill tail index ' + number(student.hill.alpha, 2) : '') : '') +
-    '<br>Signed losses: exact empirical tail mass. Cumulative arithmetic returns; all estimates depend on historical inputs.</div>';
+    '<br>Signed losses: exact empirical tail mass. Cumulative arithmetic returns; all estimates depend on historical inputs.</div>' +
+    (report.conditional_risk ? '<div class="risk-note conditional"><strong>Tomorrow, conditional (GJR-GARCH FHS):</strong> VaR 95% ' + percent(report.conditional_risk.var95) +
+      ' · VaR 99% ' + percent(report.conditional_risk.var99) + ' · ES 99% ' + percent(report.conditional_risk.es99) + ' · current vol ' + percent(report.conditional_risk.sigma_annualized, 1) +
+      ' vs long-run ' + percent(report.conditional_risk.long_run_sigma_annualized, 1) + ' a year.<br>' + esc(report.conditional_risk.evidence) + '</div>' : '');
   $('allocation').className = 'allocation';
   $('allocation').innerHTML = Object.entries(report.weights).map(([asset, weight]) => '<div class="weight-row"><span class="weight-name" title="' + esc(asset) + '">' + esc(asset) + '</span><div class="weight-track"><div class="weight-fill" data-weight="' + weight + '"></div></div><span class="weight-value">' + percent(weight, 1) + '</span></div>').join('');
   document.querySelectorAll('.weight-fill').forEach(fill => { fill.style.width = Number(fill.dataset.weight) * 100 + '%'; });

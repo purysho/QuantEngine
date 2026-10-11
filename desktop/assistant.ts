@@ -206,7 +206,9 @@ export function answer(topic: string, snapshot: Snapshot): string {
     const g = report.monte_carlo, b = report.bootstrap, t = report.student_t;
     return `${g.horizon}-observation 95% VaR: Gaussian ${pct(g.var95)}, block bootstrap ${pct(b.var95)}` + (t ? `, Student-t ${pct(t.var95)}` : '') +
       `. 95% expected shortfall: ${pct(g.es95)} / ${pct(b.es95)}` + (t ? ` / ${pct(t.es95)}` : '') +
-      (t ? `. Fitted t degrees of freedom ${fixed(t.degrees_of_freedom, 1)}.` : '.') + source;
+      (t ? `. Fitted t degrees of freedom ${fixed(t.degrees_of_freedom, 1)}.` : '.') +
+      (report.conditional_risk ? ` Tomorrow (GJR-GARCH FHS, best on 100 years of real data): 99% VaR ${pct(report.conditional_risk.var99)}, ` +
+        `current volatility ${pct(report.conditional_risk.sigma_annualized, 1)} a year vs long-run ${pct(report.conditional_risk.long_run_sigma_annualized, 1)}.` : '') + source;
   }
   if (topic === 'volatility' || topic === 'surface') {
     const surface = report.volatility_surface;

@@ -459,3 +459,9 @@ All four gates pass. The warm start (US-market memories applied to the "Other" i
 **Fix:** the real-world backtest now has explicit acceptance gates (GJR-FHS passes Kupiec at 99% and has the lowest quantile loss; the Gaussian window fails; VIX exceeds realised volatility most days; negative-price oil windows are refused); all five are true. The summary step uses `.get` and can no longer fail on a missing block.
 
 **Lesson:** report-only steps must never be able to fail a build. Gates belong in tests or explicit assertions.
+
+---
+
+## Task 19 — Real-data winner in the desktop report: one-day conditional VaR
+
+Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered historical simulation on the trailing 1,000 returns (minimum 300). It gives one-day VaR/ES at 95% and 99%, current vs long-run annualised volatility, and the fitted parameters, with the real-data evidence quoted. The Monitor's risk panel shows it as "Tomorrow, conditional", and the assistant's VaR answer includes it. Tests: VaR rises more than 2× after a volatility burst; ES ≥ VaR; returns `None` on too little history.

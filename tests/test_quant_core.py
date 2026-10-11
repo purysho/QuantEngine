@@ -191,3 +191,20 @@ class VolatilitySurfaceTests(unittest.TestCase):
         surface = report["volatility_surface"]
         self.assertLessEqual(len(surface["dates"]), 240)
         self.assertEqual(len(surface["values"]), len(surface["windows"]))
+
+
+class ConditionalRiskTests(unittest.TestCase):
+    def test_conditional_var_reacts_to_recent_volatility(self):
+        rng = np.random.default_rng(3)
+        calm = np.r_[rng.normal(0, .005, 900), rng.normal(0, .005, 100)]
+        stormy = np.r_[rng.normal(0, .005, 900), rng.normal(0, .03, 100)]
+        a, b = core.conditional_var(calm), core.conditional_var(stormy)
+        self.assertGreater(b["var99"], 2 * a["var99"])
+        self.assertGreaterEqual(b["es99"], b["var99"])
+        self.assertIsNone(core.conditional_var(rng.normal(0, .01, 200)))
+
+    def test_report_includes_conditional_risk(self):
+        dates, assets, prices = core.example_prices()
+        report = core.analyse(dates, assets, prices, paths=1000, horizon=5)
+        self.assertIn("conditional_risk", report)
+        self.assertGreater(report["conditional_risk"]["var99"], 0)
