@@ -98,6 +98,17 @@ class ResearchIntegrityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "differ from sealed commitment"):
                 evaluate(prediction, seal, labels, ledger)
 
+    def test_legacy_import_path_is_redacted_on_read(self):
+        from workers.quant_store import Store
+
+        row = {"assets_json": '["Asset"]',
+               "metadata_json": json.dumps({"original_path": "/private/user/data.csv",
+                                            "raw_sha256": "abc"})}
+        result = Store.dataset_row(row)
+        self.assertEqual(result["metadata"]["original_filename"], "data.csv")
+        self.assertNotIn("original_path", result["metadata"])
+        self.assertEqual(result["metadata"]["raw_sha256"], "abc")
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
