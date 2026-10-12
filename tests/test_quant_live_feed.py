@@ -36,6 +36,24 @@ class PublicFeedTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "backwards"):
             check_next(first, second)
 
+    def test_kraken_ticker_quote_consistency_and_snapshot_exclusion(self):
+        from workers.quant_live_feed import parse_kraken_ticker
+
+        row = {"channel": "ticker", "type": "update",
+               "data": [{"symbol": "BTC/USD", "timestamp": "2026-10-12T10:01:00Z",
+                         "last": 100.0, "bid": 99.0, "ask": 101.0}]}
+        valid = parse_kraken_ticker(row, symbol="BTC/USD",
+                                    received_at="2026-10-12T10:01:01Z")
+        self.assertEqual(valid["price"], 100.0)
+        self.assertFalse(valid["prediction_eligible"])
+        self.assertEqual(valid["source"], "kraken_spot_ticker_v2")
+        self.assertIsNone(parse_kraken_ticker({**row, "type": "snapshot"},
+                                              symbol="BTC/USD", received_at="2026-10-12T10:01:01Z"))
+        invalid = {**row, "data": [{**row["data"][0], "bid": 105.0}]}
+        with self.assertRaises(ValueError):
+            parse_kraken_ticker(invalid, symbol="BTC/USD",
+                                received_at="2026-10-12T10:01:01Z")
+
     def test_nonfinite_stale_clock_and_negative_prices_fail_closed(self):
         for invalid in ("nan", "-5", "inf", "0"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
