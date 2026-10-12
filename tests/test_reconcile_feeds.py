@@ -15,7 +15,7 @@ class ReconciliationTests(unittest.TestCase):
 
     def test_never_uses_reference_received_after_coinbase_trade(self):
         c = [self.cb("2026-10-12T01:00:02Z"), self.cb("2026-10-12T01:00:04Z"),
-             self.cb("2026-10-12T01:00:16Z")]
+             self.cb("2026-10-12T01:00:26Z")]
         k = [self.kr("2026-10-12T01:00:03Z"), self.kr("2026-10-12T01:00:15Z")]
         result = reconcile(c, k, max_age_seconds=5)
         self.assertEqual(result["reconciled"], 1)
