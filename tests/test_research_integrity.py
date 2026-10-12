@@ -150,6 +150,26 @@ class ResearchIntegrityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             asof_snapshot([rows[0], {**rows[0], "value": 5.0}], "2020-03-02T00:00:00Z")
 
+    def test_hac_loss_comparison_captures_serial_dependence(self):
+        from workers.quant_model_selection import newey_west_mean, paired_loss_comparison
+
+        x = np.array([0.4, 0.5, 0.6, 0.4, 0.5, 0.6])
+        iid = newey_west_mean(x, lags=0)
+        self.assertAlmostEqual(iid["mean"], 0.5)
+        self.assertAlmostEqual(iid["long_run_variance"], float(np.var(x)))
+        self.assertAlmostEqual(iid["standard_error"], float(np.std(x))/np.sqrt(len(x)))
+        dependent = newey_west_mean(x, lags=1)
+        self.assertTrue(np.isfinite(dependent["standard_error"]))
+        better = paired_loss_comparison(np.full(40, 0.8) + np.linspace(-0.01, 0.01, 40),
+                                        np.full(40, 1.0), lags=3)
+        self.assertTrue(better["candidate_better_at_nominal_95"])
+        tied = paired_loss_comparison(np.ones(40), np.ones(40), lags=3)
+        self.assertFalse(tied["candidate_better_at_nominal_95"])
+        with self.assertRaises(ValueError):
+            paired_loss_comparison(np.ones(10), np.ones(9), lags=1)
+        with self.assertRaises(ValueError):
+            newey_west_mean(np.ones(5), lags=5)
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
