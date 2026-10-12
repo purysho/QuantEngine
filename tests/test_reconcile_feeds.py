@@ -27,6 +27,14 @@ class ReconciliationTests(unittest.TestCase):
                            [self.kr("2026-10-12T01:00:03Z")], tolerance_bps=20)
         self.assertEqual(result["disagreements"], 1)
 
+    def test_rejects_unsorted_reference_before_alignment(self):
+        with self.assertRaisesRegex(ValueError, "strictly increasing"):
+            reconcile(
+                [self.cb("2026-10-12T01:00:04Z")],
+                [self.kr("2026-10-12T01:00:03Z"),
+                 self.kr("2026-10-12T01:00:02Z")]
+            )
+
     def test_rejects_crossed_quotes(self):
         with self.assertRaisesRegex(ValueError, "Crossed"):
             reconcile([self.cb("2026-10-12T01:00:04Z")],
