@@ -494,8 +494,12 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 1. **MLP preprocessing** — `workers/quant_evolve.py`: perform chronological training/validation split before estimating feature and target scaling parameters. Added tail-perturbation invariance regression test in `tests/test_research_integrity.py`. **Status:** code committed; CI verification pending.
 2. **Local assistant endpoint** — `desktop/assistant.ts`: set `redirect: 'error'` on model POST so an otherwise permitted local URL cannot redirect its payload. **Status:** code committed; CI verification pending; explicit redirect integration test remains.
 3. **Fail-closed experiment gate** — `experiments/verify_acceptance.py`: nonempty acceptance map and strict JSON boolean `true` required for every check. CI now executes verifier on five numerical experiments and two real-data experiments. **Status:** code committed; CI verification pending.
-4. **Temporal experience filter** — `Experience.load(..., as_of=...)` excludes records without a valid historical block fully ending by the observation clock. **Status:** safety primitive committed; historical replay callers and exposure ledger still need explicit integration and regression tests.
+4. **Temporal experience filter** — `Experience.load(..., as_of=...)` excludes records without a valid historical block fully ending by the observation clock. **Status:** safety primitive committed; regression test added for future and legacy rows; historical replay callers and exposure ledger still need explicit integration.
 
 **Safety:** main not changed. No model performance improvement, new blind evidence, or full-suite pass claimed.
 
 **Next:** add experience time-scope tests, wire the as-of clock into historical simulator without treating previously exposed data as fresh, implement reveal/exposure ledger and unbiased adoption evaluation; verify CI before merge. Record actual failing/passing checks and any corrections here.
+
+5. **Temporal-memory test** — `tests/test_research_integrity.py`: create past/future/legacy JSONL records; require `as_of=10` to load only past and `as_of=20` to include both past and eligible future records. **Status:** committed; pending CI.
+
+**Verification tracking:** GitHub Actions workflow run [38203113710](https://github.com/purysho/QuantEngine/actions/runs/38203113710) was in progress at the time of this update. Earlier runs were cancelled by the workflow's concurrency policy after newer pushes. Do not merge until the latest full check suite is green, including real-data and Windows package jobs.
