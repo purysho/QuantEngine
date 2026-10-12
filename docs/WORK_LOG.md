@@ -584,3 +584,5 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 33. **Limitations and follow-through** — The collector is not yet wired to prospective predictor commitment and independently timestamped settlement. Requires external custody, clock sync, gap recovery or interval invalidation, channel completeness handling and a truly new future observation pilot. Documentation: `docs/LIVE_DATA_FEEDS.md`. A successful mocked parser regression alone does NOT prove production transport is reliable.
 
 **Release gate:** keep on PR #2 until complete current-head GitHub checks; do not merge just on passing isolated unit tests.
+
+34. **Collector build protection** — Added `node --check experiments/collect_coinbase.mjs` to Linux/Windows CI so invalid syntax in the opt-in feed collector fails before packaging. This is a source sanity check, **not** a real WebSocket connectivity or data-continuity test. **Status:** branch committed; full CI pending.
