@@ -476,7 +476,7 @@ def conditional_var(daily_returns, *, window: int = 1000) -> dict | None:
            "sigma_next_day": sigma, "sigma_annualized": sigma * math.sqrt(TRADING_DAYS),
            "long_run_sigma_annualized": math.sqrt(fit["omega"] / max(1 - fit["persistence"], 1e-6) * TRADING_DAYS),
            "parameters": {k: fit[k] for k in ("omega", "alpha", "gamma", "beta", "nu", "persistence")},
-           "evidence": "On 1928-2026 CRSP market data: 99% breach ratio 1.10 (Kupiec p 0.13), lowest pinball loss of five models."}
+           "evidence": "Model parameters estimated on the current trailing input only; historical benchmark performance is not a forecast guarantee."}
     for p in (.05, .01):
         tail = empirical_tail(fit["mu"] + sigma * z, p)
         out[f"var{int(round((1 - p) * 100))}"] = tail["var"]
