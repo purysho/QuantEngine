@@ -21,6 +21,15 @@ def verify(paths: list[str]) -> list[str]:
         if not isinstance(checks, dict) or not checks:
             failures.append(f"{name}: missing/nonempty acceptance object required")
             continue
+        unresolved = data.get("unresolved_reference_discrepancies", {})
+        if not isinstance(unresolved, dict):
+            failures.append(f"{name}: unresolved_reference_discrepancies must be a map")
+        else:
+            for key, finding in unresolved.items():
+                if not isinstance(finding, dict) or type(finding.get("observed_pass")) is not bool or finding.get("investigation_required") is not True or not isinstance(finding.get("reason"), str) or not finding["reason"]:
+                    failures.append(f"{name}: malformed unresolved discrepancy {key}")
+                else:
+                    print(f"UNRESOLVED: {name}: {key}: observed_pass={finding['observed_pass']} — {finding['reason']}")
         for key, value in checks.items():
             if type(value) is not bool:
                 failures.append(f"{name}: {key} must be a JSON boolean, got {value!r}")
