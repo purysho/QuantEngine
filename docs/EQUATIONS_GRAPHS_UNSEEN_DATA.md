@@ -75,3 +75,7 @@ Hansen SPA, Model Confidence Set, PBO / CSCV, Deflated Sharpe, dynamic quantile 
 ## Audited additions
 
 Stationary bootstrap, a White-style reality-check diagnostic and Bartlett HAC for a mean are now implemented in `quant_model_selection.py` (not Hansen SPA or a general covariance estimator). Fixed daily rules and exact next-close cost equations are documented in `STRATEGY_VALIDATION.md`; historical outputs are development evidence.
+
+## Competitive-accounting additions
+
+`workers/quant_competitive.py` computes causal situation-dependent targets, a realized-RF cash account and exact self-financing transaction fees: W_post=W_pre-c sum|w_target W_post-V_prior|. Risk sizing is min(1,0.15/sigma20) without leverage; sigma20 is trailing sample SD of log returns times sqrt252. Regime efficiency is absolute 20-close displacement divided by summed absolute price changes. New research tables report matched calendar CAGR, volatility, realized-cash Sharpe, full drawdowns and state-conditioned excess-return uncertainty. State inference uses the original daily-grid ratio-mean influence function and Bonferroni correction across 54 model/state/benchmark comparisons. The paired Sharpe diagnostic uses stationary bootstrap blocks5/20/60 with1000 replicates and seed17. No new UI graph or forward-alpha claim is implied; exact protocols and limitations are in `COMPETITIVE_TEST.md`.

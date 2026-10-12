@@ -27,6 +27,8 @@ Python research modules, each with tests and a measured experiment in `experimen
 
 Desktop highlights: a Cyberpunk-styled workbench with live 3D volatility surfaces, a 3D "second mind" lineage graph of everything the engine has learned, an **Ask** panel (Ctrl+K; dictate with Handy) with permissioned actions and undo, and "The maths" panels for options and risk.
 
+Matched-period Nasdaq, broad-market and published AI-fund comparison: [competitive test](docs/COMPETITIVE_TEST.md). Context-dependent shadow strategies did not qualify for adoption; all failed horizons remain recorded.
+
 Failure attribution, tested remedies and the separate selection/adoption gate: [strategy learning](docs/STRATEGY_LEARNING.md). No remedy qualified for adoption in the US/European checks.
 
 Frozen daily trading-rule tests and five-year historical results: [strategy validation](docs/STRATEGY_VALIDATION.md). These are exposed-history research proxies, not live trading or unseen-data performance.

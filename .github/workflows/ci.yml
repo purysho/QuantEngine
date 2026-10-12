@@ -98,6 +98,20 @@ jobs:
           OPENBLAS_NUM_THREADS: 2
           OMP_NUM_THREADS: 2
         run: python -m experiments.strategy_learning --output-dir .cache/strategy-learning-ci
+      - name: Matched competitive test with causal situation-dependent decisions
+        env:
+          OPENBLAS_NUM_THREADS: 2
+          OMP_NUM_THREADS: 2
+        run: |
+          python -m experiments.competitive_test --output-dir .cache/competitive-ci
+          python -m experiments.competitive_sharpe --output .cache/competitive-ci/sharpe_sensitivity.json
+      - name: Archive competitive evidence including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: competitive-evidence
+          path: .cache/competitive-ci/
+          if-no-files-found: error
       - name: Archive strategy learning including rejected remedies
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -1,0 +1,55 @@
+{
+  "protocol": {
+    "selection": [
+      "2000-01-01",
+      "2010-01-01"
+    ],
+    "adoption": [
+      "2010-01-01",
+      "2015-01-01"
+    ],
+    "evaluation_start": "2015-01-01",
+    "assets": [
+      "CRSP_US_total_market",
+      "NASDAQ100_total_return"
+    ],
+    "candidates": [
+      "situation_router",
+      "router_vol15",
+      "momentum_rotation"
+    ],
+    "parameters": {
+      "trend_sma": 200,
+      "efficiency_window": 20,
+      "efficiency_cutoff": 0.25,
+      "stress_volatility": 0.25,
+      "rsi_period": 14,
+      "range_entry": 40,
+      "range_exit": 60,
+      "momentum_window": 126,
+      "router_dispatch_closes": 5,
+      "rotation_closes": 21,
+      "risk_target": 0.15,
+      "risk_weight_band": 0.05
+    },
+    "cost_sensitivity_bps": [
+      0,
+      10,
+      25
+    ],
+    "fee_sensitivity": 0.0075,
+    "hac_lags": 5,
+    "bootstrap_repetitions": 500,
+    "bootstrap_expected_block": 5,
+    "seed": 17,
+    "cash": "French realized RF, compounded across any missing common dates",
+    "restriction": "Long/cash, no leverage/shorts; source data adjusted total-return research indices, not actual executable quotes.",
+    "added_control": "After the initial replay, add strong passive rolling-volatility controls without changing candidate rules; later replay is exposed development.",
+    "notice": "Rules selected by author before this replay, but prior broad-market history is exposed. No independently sealed future period."
+  },
+  "source_sha256": {
+    "workers/quant_competitive.py": "d734e01ae5bfd337a1b2992f2b1ebc67f749792de7b938a0e026cd6003203c1b",
+    "experiments/competitive_test.py": "f52bf0c5625d27d8272d85cab8e4ab59f5ad582e69f6445341e2576692921b5a"
+  },
+  "custody": "Local source freeze; no trusted external timestamp or future-label isolation."
+}
