@@ -586,3 +586,13 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 **Release gate:** keep on PR #2 until complete current-head GitHub checks; do not merge just on passing isolated unit tests.
 
 34. **Collector build protection** — Added `node --check experiments/collect_coinbase.mjs` to Linux/Windows CI so invalid syntax in the opt-in feed collector fails before packaging. This is a source sanity check, **not** a real WebSocket connectivity or data-continuity test. **Status:** branch committed; full CI pending.
+
+
+## 2026-10-12 — Connected streaming pilot + focused bloat review
+
+35. **Live ticker to forecast/settlement bridge** — Added `experiments/live_pilot.py`, which reads live normalized ticker observations from a process pipe; after warmup it commits a next-observation return forecast before revealing a later ticker, and settles only if the later ticker's receipt timestamp is strictly after the forecast's durable commit. Uses the existing `experiments/prospective.py` commit/settle functions instead of duplicating hashing, baseline, or settlement logic. Stores candidate, zero-return and past-mean forecast losses. **Status:** committed; live network feed not yet independently verified.
+36. **Collector integration** — `experiments/collect_coinbase.mjs` now accepts an optional fourth `pilotDir` argument; it spawns one long-lived Python process and pipes each journaled exchange sample to it. Backpressure, child failures, out-of-order events and early clock observations fail closed. Removed an unused import (`fs`) as part of a focused dead-code/bloat review. No new npm or pip dependencies were required. **Status:** committed; CI pending.
+37. **Regression coverage** — Added `tests/test_live_pilot.py` to check that a forecast file is written before an eligible later tick settles it, that settlement produces baseline scores, duplicate events are rejected, and a tick received before commitment cannot qualify as prospective. **Status:** committed; CI pending.
+38. **Residual limitations / technical debt** — Collector and Python ingestion use separate validation because they run in separate runtimes; replacing them with a shared schema would be a further refactor, not a proven safety improvement. This pilot predicts the *next received ticker*, not fixed elapsed-time return or complete trade market state. It lacks resumable state, external custody/clock signing, reconnect and gap recovery, transaction-cost accounting and end-to-end proof of an independent live provider. Replaying historical ticks over stdin must never be advertised as a genuine live holdout.
+
+**Merge gate:** no changes to main until the complete current-head CI suite passes; review runtime output and absence of backward-compatible API breakage.
