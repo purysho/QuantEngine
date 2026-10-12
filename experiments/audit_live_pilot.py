@@ -47,6 +47,10 @@ def audit(root: str | Path, *, hac_lags: int = 0, min_settled: int = 3) -> dict:
             if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
                 raise ValueError(f"Invalid loss {name}/{key}")
             losses[key].append(value)
+    expected_settlements = {p.name.replace(".forecast.json", ".settled.json") for p in forecasts}
+    for orphan in root.glob("*.settled.json"):
+        if orphan.name not in expected_settlements:
+            raise ValueError(f"Orphan settlement without matching forecast: {orphan.name}")
     n = len(losses["candidate"])
     report = {
         "total_forecasts": len(forecasts), "settled": n,
