@@ -619,3 +619,13 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 49. **Live pilot restart integrity** — Refuse to start a pilot if prior forecast or settled evidence already exists, and reject zero warmup; added regression. Prospective reporting rejects orphan settlements and tests that rejection.
 
 **Status:** all items committed on PR #2. Fresh CI results pending. Live network connectivity, third-party data custody, truly secret synthetic streams, independent signing, and prospective alpha significance remain *not verified/not complete*. Do not merge automatically or claim all five phases completed.
+
+
+## 2026-10-12 — Phase 1 end-to-end transport, Phase 5 dependency audit
+
+50. **Protocol ACK before next tick** — The Python pilot now emits a flushed JSON acknowledgement after processing each ticker (including durable forecast creation/settlement). The collector permits at most one unacknowledged ticker, failing closed if another arrives first or the consumer crashes. This intentionally sacrifices coverage on busy feeds rather than falsely pretending an already-received tick was prospectively predicted. **CI integration test pending.**
+51. **Synthetic WebSocket integration** — Added `tests/mock_coinbase_ws.mjs` and `tests/live_pipeline_smoke.mjs` (no network or new npm dependencies). The test drives 6 synthetic ticker events through the real Node collector + Python process; verifies six journaled events, three frozen forecast commitments, two later settlements, and preserved frozen model ID. It runs under both Linux and Windows CI.
+52. **Locally timestamped receipts** — `experiments/prospective.py` records the local receipt issuance time only **after** the forecast was fsynced. This is an audit trail, not an externally trusted timestamp. Local file owners can modify or delete evidence.
+53. **Python dependency gate** — Added pinned PyPA `pip-audit==2.10.1` to the security CI job, auditing both runtime and dev requirements alongside the npm high-severity gate and CycloneDX SBOM. Product is not assumed secure merely because any one scanner passes. **CI verification pending.**
+
+**Explicit release blockers:** A reproducible independent locked holdout, true market live-connection smoke, external timestamp custody, signed Windows code (requires owner-managed cert), provider outage/restart recovery, full UI report integration and statistically significant prospective value remain open. Do not mark all five phases fully complete or merge without latest-head green checks.
