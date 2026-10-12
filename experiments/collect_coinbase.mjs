@@ -35,8 +35,9 @@ ws.addEventListener('message', event => {
       || !Number.isFinite(Date.parse(msg.time))) return end('Invalid ticker payload.', 2);
     if (previous && (msg.sequence <= previous.sequence || msg.trade_id <= previous.trade_id
       || Date.parse(msg.time) < Date.parse(previous.time))) return end('Non-monotonic feed; manual restart required.', 2);
-    previous = msg;
     const observed = new Date().toISOString();
+    if (Date.parse(msg.time) > Date.parse(observed) + 5000) return end('Exchange event time is ahead of receipt clock.', 2);
+    previous = msg;
     const sample = { source: 'coinbase_exchange_ticker', product_id: product,
       event_at: msg.time, received_at: observed, sequence: msg.sequence,
       trade_id: msg.trade_id, price: Number(msg.price),
