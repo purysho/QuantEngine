@@ -503,3 +503,10 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 5. **Temporal-memory test** — `tests/test_research_integrity.py`: create past/future/legacy JSONL records; require `as_of=10` to load only past and `as_of=20` to include both past and eligible future records. **Status:** committed; pending CI.
 
 **Verification tracking:** GitHub Actions workflow run [38203113710](https://github.com/purysho/QuantEngine/actions/runs/38203113710) was in progress at the time of this update. Earlier runs were cancelled by the workflow's concurrency policy after newer pushes. Do not merge until the latest full check suite is green, including real-data and Windows package jobs.
+
+
+## 2026-10-12 — Phase 2, release integrity (QE-005)
+
+6. **Tag-only release workflow** — Removed releases triggered by ordinary `main` pushes. Require a pushed `v*` tag matching `package.json` version, and reject attempts to publish over an existing GitHub release instead of using `--clobber`. **Status:** committed to PR #2 branch. **Verification needed:** GitHub Actions tagged dry-run / test-repository release procedure; no actual public release triggered. Existing releases remain mutable through GitHub's server-side release settings until repository owner enables immutability.
+
+**Caveat:** the entire ASTRA protocol contains a research programme and optional additions, not a single deterministic patch. Final sealed holdout cannot be honestly reported until an independent data custodian provides and seals unrevealed outcomes. Do not claim numerical wins on committed development evidence.
