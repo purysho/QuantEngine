@@ -40,7 +40,14 @@ if (pilot) {
     }
   });
   pilot.on('error', () => { pilotFailed = true; end('Pilot process unavailable.', 2); });
-  pilot.on('exit', code => { if (code !== 0) { pilotFailed = true; end('Pilot process failed.', 2); } });
+  pilot.on('close', code => {
+    if (code !== 0 || awaitingAck !== 0) {
+      pilotFailed = true;
+      process.exitCode = 2;
+      if (!done) end('Pilot failed or final forecast acknowledgement missing.', 2);
+      else console.error('Pilot failed or final acknowledgement missing.');
+    }
+  });
 }
 
 const end = (why, code) => {
