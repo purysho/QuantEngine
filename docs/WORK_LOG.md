@@ -526,3 +526,5 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 12. **Historical memory cross-dataset isolation** — `Experience.load(..., as_of=...)` now also requires an identical data fingerprint: row indices in different data sets cannot establish point-in-time eligibility. Added regression test. Ordinary unscoped transfers remain possible and MUST NOT be represented as strictly chronological evidence. **Status:** committed, retest pending.
 
 **Merge policy:** Await a successful complete CI run for current HEAD; previous failed and cancelled runs do not justify merging.
+
+13. **Explicit public-data snapshot freshness (QE-008)** — Added optional `refresh=True` to `quant_data.fetch`. Cached datasets remain pinned by default for reproducibility; refreshing re-downloads and updates recorded digest/retrieval time. `offline=True` and `refresh=True` are incompatible. Added mocked-network tests for pinned and refreshed modes. **Status:** committed; new CI required. Callers must explicitly select a fresh acquisition mode; the existing real-world experiment remains reproducible rather than automatically current.
