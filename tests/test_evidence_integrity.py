@@ -39,13 +39,14 @@ class EvidenceIntegrityTests(unittest.TestCase):
             path = Path(tmp, 'exposures.jsonl')
             code = """
 import sys
+sys.path.insert(0, sys.argv[2])
 from experiments.exposure_ledger import ExposureLedger, fingerprint
 try:
     ExposureLedger(sys.argv[1]).reveal(fingerprint('data'),0,10,prediction_sha256=fingerprint('model'))
 except ValueError:
     sys.exit(2)
 """
-            children = [subprocess.Popen([sys.executable, '-c', code, str(path)]) for _ in range(6)]
+            children = [subprocess.Popen([sys.executable, '-I', '-c', code, str(path), str(Path(__file__).resolve().parents[1])]) for _ in range(6)]
             statuses = [child.wait(timeout=20) for child in children]
             self.assertEqual(statuses.count(0), 1)
             self.assertTrue(all(status in (0, 2) for status in statuses))
