@@ -65,3 +65,29 @@ python -m experiments.audit_live_pilot ./pilot-run --hac-lags 1
 The tool verifies every forecast against its recorded SHA-256 receipt and matches any settlement. It reports **all** missing settlements, the mean squared errors for candidate and both predeclared baselines, and a nominal HAC comparison if at least three paired forecasts exist. No positive performance claims are justified from a few trades or from an archive replay. The file scanner is local and does not prove timestamps were independently sealed.
 
 **Model policy:** the pilot's candidate is a fixed momentum reference, deliberately not a deployed quant optimizer. It is not selected or tuned on these outcomes. To change the predictor for a genuine unseen test, freeze a new model identifier, start an entirely new custodied run, and include transaction costs / bid-ask in any tradability claim.
+
+
+## Second provider and local integration verification
+
+Kraken Spot WebSocket v2 is independently ingested (research archive only), using the official ticker update format with best bid, best ask and the last traded price. Snapshot messages do **not** enter the prospective forecast pilot. Use a separate JSONL output file and run both collectors independently:
+
+```bash
+node experiments/collect_kraken.mjs BTC/USD ./kraken-ticks.jsonl 25
+node experiments/collect_coinbase.mjs BTC-USD ./coinbase-ticks.jsonl 25 ./pilot-run
+python -m experiments.reconcile_feeds ./coinbase-ticks.jsonl ./kraken-ticks.jsonl
+python -m experiments.audit_live_pilot ./pilot-run --hac-lags 1
+```
+
+Reconciliation chooses the most recent *previously received* Kraken quote for each Coinbase ticker, applies an explicit age limit, and reports stale observations and basis-price deviations. It **does not** represent a synchronous tradable spread or benchmark expected returns across exchanges.
+
+The synthetic, network-free multi-process integration test is run in Linux and Windows CI:
+
+```bash
+node tests/live_pipeline_smoke.mjs
+```
+
+It creates six artificial exchange ticks at controlled intervals, asserts that the live collector journals them, and checks that the Python process committed three future forecasts with two later settlements. Acknowledgements are required before the collector accepts another tick, so an overwhelmed pilot fails closed. Because this test uses a known synthetic stream and the same local machine, it proves only transport/software ordering, **not** real-market predictive accuracy or independent custody.
+
+## Software and release quality gates
+
+CI now verifies Node and Python numerical tests, the mock live pipeline, Windows packaging, a pinned Python dependency vulnerability audit, npm high-severity vulnerability audit, and a CycloneDX npm dependency manifest. Code signing still requires an externally managed trusted signing identity. These checks must pass on the most recent head commit before merge.
