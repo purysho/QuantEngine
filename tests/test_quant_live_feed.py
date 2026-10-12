@@ -27,6 +27,15 @@ class PublicFeedTests(unittest.TestCase):
             parse_ticker(self.ticker(product_id="ETH-USD"), product="BTC-USD",
                          received_at="2026-10-12T10:01:01Z")
 
+    def test_event_time_order_with_mixed_fractional_precision(self):
+        first = parse_ticker(self.ticker(time="2026-10-12T10:01:00.900Z"),
+                             product="BTC-USD", received_at="2026-10-12T10:01:01Z")
+        second = parse_ticker(self.ticker(sequence=101, trade_id=21,
+                                          time="2026-10-12T10:01:00Z"),
+                              product="BTC-USD", received_at="2026-10-12T10:01:02Z")
+        with self.assertRaisesRegex(ValueError, "backwards"):
+            check_next(first, second)
+
     def test_nonfinite_stale_clock_and_negative_prices_fail_closed(self):
         for invalid in ("nan", "-5", "inf", "0"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
