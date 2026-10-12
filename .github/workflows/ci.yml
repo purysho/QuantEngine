@@ -49,6 +49,7 @@ jobs:
         shell: bash
         run: |
           for script in options_reference first_alpha pairs_cointegration market_making var_backtest; do
+            rm -f "experiments/results/$script.json"  # Reject committed/stale evidence.
             python experiments/$script.py > /dev/null
           done
           python experiments/verify_acceptance.py experiments/results/options_reference.json experiments/results/first_alpha.json experiments/results/pairs_cointegration.json experiments/results/market_making.json experiments/results/var_backtest.json
@@ -76,6 +77,8 @@ jobs:
           path: .cache/data
           key: public-data-${{ github.run_id }}
           restore-keys: public-data-
+      - name: Remove committed research results before re-running
+        run: python -c "from pathlib import Path; [Path('experiments/results', n + '.json').unlink(missing_ok=True) for n in ('real_world_backtest', 'evolution_real')]"
       - name: 100-year backtest of the maths against what happened
         run: python experiments/real_world_backtest.py
       - name: Prequential evolutionary learning on real data
