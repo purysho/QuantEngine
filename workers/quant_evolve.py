@@ -321,11 +321,18 @@ class Experience:
     def __init__(self, path: str | Path):
         self.path = Path(path)
 
-    def load(self, task: str, fingerprint: str, limit: int = 6) -> list:
+    def load(self, task: str, fingerprint: str, limit: int = 6, *, as_of: int | None = None) -> list:
         if not self.path.exists():
             return []
         rows = [json.loads(line) for line in self.path.read_text(encoding="utf-8").splitlines() if line.strip()]
         rows = [r for r in rows if r.get("task") == task]
+        if as_of is not None:
+            # Fail closed: legacy rows without a complete observation interval cannot
+            # prove they were available at this replay clock.
+            rows = [r for r in rows if isinstance(r.get("block"), list)
+                    and len(r["block"]) == 2
+                    and all(type(v) is int for v in r["block"])
+                    and 0 <= r["block"][0] < r["block"][1] <= as_of]
         # Prefer memories from the same data, then from any data (transfer), best first.
         rows.sort(key=lambda r: (r.get("fingerprint") != fingerprint, -(r.get("score") or -1e18)))
         seen, out = set(), []
