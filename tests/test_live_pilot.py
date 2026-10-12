@@ -60,6 +60,14 @@ class LivePilotTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Tampered"):
                 audit(folder)
 
+    def test_refuses_unsafe_restart_or_zero_warmup(self):
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaises(ValueError):
+                LivePilot(root, product="BTC-USD", model_commit="m", minimum_history=0)
+            Path(root, "0000000001.forecast.json").write_text("{}")
+            with self.assertRaisesRegex(ValueError, "Existing pilot run"):
+                LivePilot(root, product="BTC-USD", model_commit="m")
+
     def test_rejects_tick_that_was_received_before_commit(self):
         now = dt.datetime.now(dt.timezone.utc)
         with tempfile.TemporaryDirectory() as root:
