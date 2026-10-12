@@ -518,3 +518,11 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 9. **Independent guarded model adoption (QE-004)** — `prequential(..., guard=True)` now reserves the three most recent past disjoint windows *only* for adoption, while evolution searches older validation windows. Requires `validation <= block`; fewer than three adoption observations or missing search history keep the incumbent. This prevents the guard scoring on its own candidate-selection evidence. Added test altering adoption-window scores without changing the searched champion. **Status:** committed; numerical results/acceptance may differ; verify and report rather than tune on the already revealed test. This remains a heuristic 2-SE adoption rule, not a formal multiple-testing-adjusted p-value.
 
 10. **Privacy-preserving dataset provenance (QE-011)** — CSV dataset metadata now stores `original_filename` rather than disclosing `original_path` with a user's absolute filesystem location in downstream exports. Source hash preserved. **Status:** committed; full regression suite pending. Existing stored reports still contain the old key and must be migrated or redacted at export before claiming historic exports safe.
+
+
+## 2026-10-12 — CI repair and chronological-memory isolation (follow-up)
+
+11. **Privacy regression repair** — CI run [38203716287](https://github.com/purysho/QuantEngine/actions/runs/38203716287) failed on both Linux and Windows because `tests/test_quant_worker.py` still asserted `metadata.original_path` existed. Replaced with assertions for `original_filename` and absence of `original_path`. This is a deliberate privacy-contract change; not a model improvement. **Status:** committed, retest pending.
+12. **Historical memory cross-dataset isolation** — `Experience.load(..., as_of=...)` now also requires an identical data fingerprint: row indices in different data sets cannot establish point-in-time eligibility. Added regression test. Ordinary unscoped transfers remain possible and MUST NOT be represented as strictly chronological evidence. **Status:** committed, retest pending.
+
+**Merge policy:** Await a successful complete CI run for current HEAD; previous failed and cancelled runs do not justify merging.
