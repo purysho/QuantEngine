@@ -43,7 +43,9 @@ jobs:
         env:
           QUANT_PYTHON: python
       - name: Synthetic end-to-end WebSocket to prospective settlement
-        run: node tests/live_pipeline_smoke.mjs
+        run: |
+          node tests/live_pipeline_smoke.mjs
+          node tests/collector_integrity.mjs
         env:
           QUANT_PYTHON: python
       - name: Desktop tests
@@ -124,7 +126,7 @@ jobs:
             -RedirectStandardOutput self-test.log -RedirectStandardError self-test.err
           Get-Content self-test.log, self-test.err
           if ($process.ExitCode -ne 0) { throw "Self-test exited with $($process.ExitCode)" }
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: QuantEngine-win-x64
           path: release/

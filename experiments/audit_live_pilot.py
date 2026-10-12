@@ -39,6 +39,14 @@ def audit(root: str | Path, *, hac_lags: int = 0, min_settled: int = 3) -> dict:
             missing.append(name)
             continue
         result = _read(settlement)
+        envelope = _read(forecast)
+        if int(name) != envelope.get("index"):
+            raise ValueError(f"Forecast filename/index mismatch: {name}")
+        if (result.get("dataset_sha256"), result.get("model_commit")) != (envelope.get("dataset_sha256"), envelope.get("model_commit")):
+            raise ValueError(f"Unmatched settlement identity: {name}")
+        outcome = result.get("outcome")
+        if type(outcome) not in (int, float) or not math.isfinite(outcome):
+            raise ValueError(f"Missing/invalid outcome; legacy loss-only evidence cannot be verified: {name}")
         if result.get("forecast_sha256") != digest or result.get("index") != _read(forecast).get("index"):
             raise ValueError(f"Unmatched settlement: {name}")
         squared = result.get("squared_losses", {})
@@ -46,6 +54,9 @@ def audit(root: str | Path, *, hac_lags: int = 0, min_settled: int = 3) -> dict:
             value = squared.get(key)
             if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
                 raise ValueError(f"Invalid loss {name}/{key}")
+            expected = (envelope[key] - outcome) ** 2
+            if not math.isfinite(expected) or value != expected:
+                raise ValueError(f"Inconsistent squared loss {name}/{key}")
             losses[key].append(value)
     expected_settlements = {p.name.replace(".forecast.json", ".settled.json") for p in forecasts}
     for orphan in root.glob("*.settled.json"):

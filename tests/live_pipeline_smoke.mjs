@@ -21,6 +21,14 @@ try {
   assert.equal(run.status, 0, 'Collector+pilot failed:\n' + run.stdout + '\n' + run.stderr);
   const ticks = readFileSync(samples, 'utf8').trim().split('\n').map(JSON.parse);
   assert.equal(ticks.length, 6);
+  const status = readFileSync(samples + '.status.jsonl', 'utf8').trim().split('\n').map(JSON.parse);
+  assert.equal(status.at(-1).state, 'complete');
+  assert.equal(status.filter(s => s.state === 'received').length, 6);
+  assert.equal(status.filter(s => s.state === 'processed').length, 6);
+  for (const received of status.filter(s => s.state === 'received')) {
+    const ack = status.find(s => s.state === 'processed' && s.index === received.index);
+    assert.equal(ack.sample_sha256, received.sample_sha256);
+  }
   const files = readdirSync(pilot);
   const committed = files.filter(file => file.endsWith('.forecast.json'));
   const settled = files.filter(file => file.endsWith('.settled.json'));

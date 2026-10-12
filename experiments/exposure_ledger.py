@@ -43,12 +43,16 @@ class ExposureLedger:
         if len(dataset_sha256) != 64 or len(prediction_sha256) != 64:
             raise ValueError("Require SHA-256 fingerprints.")
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        # Exclusive creation of initial ledger avoids silently reading an uninitialized path.
-        with self.path.open("a+", encoding="utf-8") as target:
-            if os.name == "posix":
-                import fcntl
-                fcntl.flock(target, fcntl.LOCK_EX)
-            try:
+        # Atomic exclusive sidecar works on Windows and POSIX. Never auto-break a
+        # stale lock: a crash requires custodian inspection, not an unsafe retry.
+        lock = Path(str(self.path) + ".lock")
+        try:
+            fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError as exc:
+            raise ValueError("Exposure ledger is locked/busy; inspect a stale lock before retry.") from exc
+        try:
+            os.close(fd)
+            with self.path.open("a+", encoding="utf-8") as target:
                 target.seek(0)
                 for line in target:
                     if line.strip():
@@ -62,6 +66,5 @@ class ExposureLedger:
                 target.flush()
                 os.fsync(target.fileno())
                 return record
-            finally:
-                if os.name == "posix":
-                    fcntl.flock(target, fcntl.LOCK_UN)
+        finally:
+            lock.unlink()

@@ -81,6 +81,7 @@ def settle_forecast(forecast_file, receipt_file, *, outcome: float, settlement_f
     result = {"dataset_sha256": forecast["dataset_sha256"],
               "index": forecast["index"], "model_commit": forecast["model_commit"],
               "forecast_sha256": receipt["forecast_sha256"],
+              "outcome": float(outcome),
               "squared_losses": {k: (forecast[k] - outcome)**2
                                  for k in ("candidate", "baseline_zero", "baseline_past_mean")}}
     with Path(settlement_file).open("xb") as dest:

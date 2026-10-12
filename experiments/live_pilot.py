@@ -27,7 +27,7 @@ class LivePilot:
         self.root.mkdir(parents=True, exist_ok=True)
         if type(minimum_history) is not int or minimum_history < 1:
             raise ValueError("minimum_history must be positive.")
-        if any(self.root.glob("*.forecast.json")) or any(self.root.glob("*.settled.json")):
+        if any(self.root.iterdir()):
             raise ValueError("Existing pilot run detected; restart must use a new directory.")
         self.product = product
         self.model_commit = model_commit
