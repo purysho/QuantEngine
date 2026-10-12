@@ -59,3 +59,44 @@ def check_next(previous: dict | None, current: dict) -> None:
     new = dt.datetime.fromisoformat(current["event_at"].replace("Z", "+00:00"))
     if new < old:
         raise ValueError("Event timestamp moved backwards.")
+
+
+def parse_kraken_ticker(message: dict, *, symbol: str, received_at: str) -> dict | None:
+    """Normalize public Kraken Spot WS v2 *trade-triggered* ticker updates.
+
+    Snapshots are observations, not proof of a new trade; an event's 'last'
+    may refer to a trade up to 24 hours old. Do not feed snapshots into the
+    prospective next-trade-return pilot.
+    """
+    if not isinstance(message, dict):
+        raise ValueError("Expected JSON object.")
+    if message.get("channel") != "ticker":
+        return None
+    if message.get("type") != "update":
+        return None
+    rows = message.get("data")
+    if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+        raise ValueError("Kraken ticker must have exactly one update.")
+    row = rows[0]
+    if row.get("symbol") != symbol:
+        raise ValueError("Unexpected Kraken symbol.")
+    def aware(value):
+        if not isinstance(value, str) or not value.endswith("Z"):
+            raise ValueError("UTC timestamp required.")
+        try:
+            return dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError("Invalid Kraken timestamp.") from exc
+    event, receipt = aware(row.get("timestamp")), aware(received_at)
+    if receipt < event - dt.timedelta(seconds=5):
+        raise ValueError("Kraken event is after receipt clock.")
+    try:
+        bid, ask, last = (float(row[key]) for key in ("bid", "ask", "last"))
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ValueError("Incomplete Kraken ticker prices.") from exc
+    if not all(math.isfinite(v) and v > 0 for v in (bid, ask, last)) or bid > ask:
+        raise ValueError("Invalid or crossed Kraken market prices.")
+    return {"source": "kraken_spot_ticker_v2", "product_id": symbol,
+            "event_at": row["timestamp"], "received_at": received_at,
+            "price": last, "bid": bid, "ask": ask,
+            "feed_is_complete": False, "prediction_eligible": False}
