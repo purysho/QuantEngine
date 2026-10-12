@@ -51,7 +51,7 @@ jobs:
           for script in options_reference first_alpha pairs_cointegration market_making var_backtest; do
             python experiments/$script.py > /dev/null
           done
-          python -c "import json,glob; [print(p, json.load(open(p)).get('acceptance', 'no acceptance block')) for p in sorted(glob.glob('experiments/results/*.json'))]"
+          python experiments/verify_acceptance.py experiments/results/options_reference.json experiments/results/first_alpha.json experiments/results/pairs_cointegration.json experiments/results/market_making.json experiments/results/var_backtest.json
       - name: Native self-test (Linux, Xvfb)
         if: runner.os == 'Linux'
         run: xvfb-run -a npx electron . --self-test --no-sandbox | tee self-test.log && grep -q QUANT_SELF_TEST_OK self-test.log
@@ -80,9 +80,8 @@ jobs:
         run: python experiments/real_world_backtest.py
       - name: Prequential evolutionary learning on real data
         run: python experiments/evolution_real.py --offline
-      - name: Acceptance summary
-        run: |
-          python -c "import json; [print(p, json.load(open('experiments/results/'+p+'.json')).get('acceptance')) for p in ('real_world_backtest','evolution_real')]"
+      - name: Research acceptance gate
+        run: python experiments/verify_acceptance.py experiments/results/real_world_backtest.json experiments/results/evolution_real.json
 
   windows-package:
     name: Windows portable package with embedded runtime
