@@ -32,7 +32,7 @@ class ResearchIntegrityTests(unittest.TestCase):
                 {"task": "risk", "fingerprint": "data", "genome": {"id": "future"}, "score": 99.0, "block": [10, 20]},
                 {"task": "risk", "fingerprint": "data", "genome": {"id": "legacy"}, "score": 100.0},
             ]
-            memory.path.write_text("\\n".join(json.dumps(r) for r in rows) + "\\n")
+            memory.path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
             self.assertEqual(memory.load("risk", "data", as_of=10), [{"id": "past"}])
             self.assertEqual({g["id"] for g in memory.load("risk", "data", as_of=20)}, {"past", "future"})
 
