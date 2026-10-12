@@ -30,12 +30,18 @@ def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
 
-def fetch(url: str, cache: str | Path, name: str, *, offline: bool = False, max_bytes: int = 64 * 1024 * 1024) -> tuple[bytes, dict]:
-    """Return cached bytes for ``name`` or download them once; provenance is stored alongside."""
+def fetch(url: str, cache: str | Path, name: str, *, offline: bool = False, refresh: bool = False, max_bytes: int = 64 * 1024 * 1024) -> tuple[bytes, dict]:
+    """Read a pinned snapshot or explicitly refresh it; provenance is stored alongside.
+
+    Historical reproducibility defaults to pinned cache. For new research use
+    refresh=True (never simultaneously with offline=True), and record retrieved_at.
+    """
+    if offline and refresh:
+        raise ValueError("Cannot refresh data while offline.")
     folder = Path(cache)
     folder.mkdir(parents=True, exist_ok=True)
     meta_path = folder / f"{name}.json"
-    if meta_path.exists():
+    if meta_path.exists() and not refresh:
         meta = json.loads(meta_path.read_text())
         data = (folder / meta["file"]).read_bytes()
         if hashlib.sha256(data).hexdigest() != meta["sha256"]:
