@@ -41,3 +41,17 @@ It connects to the vendor's public WebSocket, subscribes to heartbeat and ticker
 ## Status and next work
 
 This is **data-collection groundwork**, not a complete secure prospective pipeline or proven live-forecast advantage. Next steps are a mockable collector acceptance test, provider gap/recovery mechanisms, external immutable timestamp receipts, and an isolated service linking collection to `experiments/prospective.py`, with asynchronous settlement after actual future observations. Then run a live pilot with a frozen model and report all misses.
+
+## Connected live forecast pilot (opt-in)
+
+The collector can now stream each accepted observation to a **long-running** Python pilot process:
+
+```bash
+QUANT_MODEL_COMMIT=momentum-v1 node experiments/collect_coinbase.mjs BTC-USD ./btc-ticks.jsonl 25 ./pilot-run
+```
+
+The additional fourth argument is the pilot output directory. The producer journals the exchange message and passes it to `python -m experiments.live_pilot` on standard input. Once the required historical ticks have arrived, the pilot commits a *next-tick return* forecast (last observed return) along with **zero** and **past-only mean** baselines. For a *later* tick whose receipt time is strictly after the forecast's durable commitment, the pilot settles squared losses. If a tick was already received before commitment, the pilot **raises an error instead of pretending the forecast was prospective**.
+
+Files `000000000N.forecast.json`, `.receipt.json` and `.settled.json` record each numbered evaluation. The final forecast is deliberately left unsettled if no further ticker arrives. Existing forecast or settlement paths are never overwritten. A restart into the same directory is deliberately rejected rather than resuming with a missing prior history. No trading orders or simulated fees are involved.
+
+This is a limited research **next-received-ticker** experiment. Batched ticker updates, unequal tick intervals, connectivity gaps and feed latency mean it is not a fixed-horizon forecast, complete trade sample, or tradable P&L series. The same local user can still modify both receipt and labels, so a third-party immutable timestamp and genuinely isolated evaluator remain mandatory for externally credible unseen-data claims. Never present a run of archived JSONL rows as a new live prospective run.
