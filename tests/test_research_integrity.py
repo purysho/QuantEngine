@@ -71,6 +71,33 @@ class ResearchIntegrityTests(unittest.TestCase):
         self.assertEqual(a["curve"][0]["validation_score"], b["curve"][0]["validation_score"])
         self.assertEqual(a["curve"][0]["genome"], b["curve"][0]["genome"])
 
+    def test_sealed_judge_rejects_tampering_and_repeated_disclosure(self):
+        from experiments.blind_judge import commit, evaluate
+        from experiments.exposure_ledger import AlreadyExposedError, fingerprint
+
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root)
+            digest = fingerprint({"dataset": "anonymous"})
+            prediction = path / "predictions.json"
+            labels = path / "hidden.json"
+            seal = path / "commitment.json"
+            ledger = path / "exposures.jsonl"
+            forecast = {"dataset_sha256": digest, "start": 0, "end": 3,
+                        "predictions": [0.0, 0.01, -0.01]}
+            prediction.write_text(json.dumps(forecast))
+            labels.write_text(json.dumps({"dataset_sha256": digest, "start": 0, "end": 3,
+                                          "outcomes": [0.01, 0.0, -0.01]}))
+            seal.write_text(json.dumps(commit(prediction)))
+            result = evaluate(prediction, seal, labels, ledger)
+            self.assertEqual(result["count"], 3)
+            self.assertGreaterEqual(result["mse"], 0)
+            with self.assertRaises(AlreadyExposedError):
+                evaluate(prediction, seal, labels, ledger)
+            forecast["predictions"][1] = 1.0
+            prediction.write_text(json.dumps(forecast))
+            with self.assertRaisesRegex(ValueError, "differ from sealed commitment"):
+                evaluate(prediction, seal, labels, ledger)
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
