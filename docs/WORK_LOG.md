@@ -483,3 +483,19 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 **Reproduced locally** with `python3 -I -c "from workers import quant_evolve"` → `ModuleNotFoundError`.
 **Fix:** the child inserts the project root (passed as an argument) into `sys.path` and runs with `-P`, so every platform tests the strict embedded-runtime condition. `-P` was chosen over `-I` because `-I` implies `-E`, which would silently ignore the `PYTHONHASHSEED` the test sets. On failure the assertion now shows the child's stderr.
 **Lesson:** subprocess tests must not depend on implicit `sys.path` entries; the shipped runtime is stricter than a developer's Python.
+
+
+---
+
+## 2026-10-12 — Research integrity hardening, Phase 1 (PR #2)
+
+**Baseline:** main `4a441f074efff06e3c7bd22ffd6c3021945d853a`. **Branch:** `fix/phase1-research-integrity`.
+
+1. **MLP preprocessing** — `workers/quant_evolve.py`: perform chronological training/validation split before estimating feature and target scaling parameters. Added tail-perturbation invariance regression test in `tests/test_research_integrity.py`. **Status:** code committed; CI verification pending.
+2. **Local assistant endpoint** — `desktop/assistant.ts`: set `redirect: 'error'` on model POST so an otherwise permitted local URL cannot redirect its payload. **Status:** code committed; CI verification pending; explicit redirect integration test remains.
+3. **Fail-closed experiment gate** — `experiments/verify_acceptance.py`: nonempty acceptance map and strict JSON boolean `true` required for every check. CI now executes verifier on five numerical experiments and two real-data experiments. **Status:** code committed; CI verification pending.
+4. **Temporal experience filter** — `Experience.load(..., as_of=...)` excludes records without a valid historical block fully ending by the observation clock. **Status:** safety primitive committed; historical replay callers and exposure ledger still need explicit integration and regression tests.
+
+**Safety:** main not changed. No model performance improvement, new blind evidence, or full-suite pass claimed.
+
+**Next:** add experience time-scope tests, wire the as-of clock into historical simulator without treating previously exposed data as fresh, implement reveal/exposure ledger and unbiased adoption evaluation; verify CI before merge. Record actual failing/passing checks and any corrections here.
