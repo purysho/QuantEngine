@@ -253,8 +253,10 @@ def prequential(task: Task, n: int, *, first: int, block: int, validation: int, 
     """Evolve on data before t, freeze the champion, score it on [t, t + block). Repeat as time advances.
 
     ``evidence_windows`` > 1 scores genomes on the last K validation windows (decay-weighted) instead of
-    one, which reduces winner's-curse selection. ``guard`` keeps the baseline unless the champion's
-    advantage over it across those windows is significant (mean - 2 SE > 0): learning must earn a change.
+    one, which reduces winner's-curse selection. When ``guard`` is enabled,
+    the newest three disjoint windows are reserved *solely* for adoption testing;
+    model search uses the older windows. This is an independent acceptance gate,
+    not a multiple-testing-corrected significance claim.
     """
     evo = Evolution(task, population=population, seed=seed, experience=experience)
     started = time.perf_counter()
@@ -262,24 +264,36 @@ def prequential(task: Task, n: int, *, first: int, block: int, validation: int, 
     incumbent = dict(task.baseline)  # The adopted model; a challenger must significantly beat it to replace it.
     for t in range(first, n - block + 1, block):
         windows = [(t - validation - j * block, t - j * block) for j in range(evidence_windows) if t - validation - j * block >= 0]
-        weights = np.array([decay ** j for j in range(len(windows))])
+        # Keep the three most recent windows untouched by model search.
+        # Both sides must be non-overlapping for a standard-error gate to mean anything.
+        if guard:
+            if validation > block:
+                raise ValueError("Guard needs non-overlapping evaluation windows (validation <= block).")
+            selection_windows = windows[3:]
+            adoption_windows = windows[:3]
+        else:
+            selection_windows = windows
+            adoption_windows = []
+        weights = np.array([decay ** j for j in range(len(selection_windows))])
 
         def fitness(genome):
-            scores = np.array([task.score(genome, a, b) for a, b in windows])
+            if not selection_windows:
+                return -math.inf
+            scores = np.array([task.score(genome, a, b) for a, b in selection_windows])
             if not np.isfinite(scores).all():
                 return -math.inf
             return float(weights @ scores / weights.sum())
 
         champion = None
         for _ in range(generations):
-            champion = evo.step(windows[0][0], windows[0][1], fitness)
+            champion = evo.step((selection_windows or windows)[0][0], (selection_windows or windows)[0][1], fitness)
         genome = evo.nodes[champion]["genome"]
         guarded = False
         if guard:
             if genome != incumbent:
-                diffs = np.array([task.score(genome, a, b) - task.score(incumbent, a, b) for a, b in windows])
-                standard_error = diffs.std(ddof=1) / math.sqrt(len(diffs)) if len(diffs) > 1 else math.inf
-                if not np.isfinite(diffs).all() or diffs.mean() - 2 * standard_error <= 0:
+                diffs = np.array([task.score(genome, a, b) - task.score(incumbent, a, b) for a, b in adoption_windows])
+                standard_error = diffs.std(ddof=1) / math.sqrt(len(diffs)) if len(diffs) >= 3 and selection_windows else math.inf
+                if not np.isfinite(diffs).all() or not len(selection_windows) or diffs.mean() - 2 * standard_error <= 0:
                     genome, guarded = dict(incumbent), True
             incumbent = dict(genome)
         out_of_sample = task.score(genome, t, t + block)
