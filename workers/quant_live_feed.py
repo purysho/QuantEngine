@@ -55,5 +55,7 @@ def check_next(previous: dict | None, current: dict) -> None:
         raise ValueError("Different feed identity.")
     if current["trade_id"] <= previous["trade_id"] or current["sequence"] <= previous["sequence"]:
         raise ValueError("Duplicate or out-of-order ticker event.")
-    if current["event_at"] < previous["event_at"]:
+    old = dt.datetime.fromisoformat(previous["event_at"].replace("Z", "+00:00"))
+    new = dt.datetime.fromisoformat(current["event_at"].replace("Z", "+00:00"))
+    if new < old:
         raise ValueError("Event timestamp moved backwards.")
