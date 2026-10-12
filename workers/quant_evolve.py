@@ -343,7 +343,7 @@ class Experience:
         if as_of is not None:
             # Fail closed: legacy rows without a complete observation interval cannot
             # prove they were available at this replay clock.
-            rows = [r for r in rows if isinstance(r.get("block"), list)
+            rows = [r for r in rows if r.get("fingerprint") == fingerprint and isinstance(r.get("block"), list)
                     and len(r["block"]) == 2
                     and all(type(v) is int for v in r["block"])
                     and 0 <= r["block"][0] < r["block"][1] <= as_of]
