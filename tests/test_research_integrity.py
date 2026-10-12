@@ -213,6 +213,31 @@ class ResearchIntegrityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "does not match"):
                 settle_forecast(p, r, outcome=0.02, settlement_file=base / "another.json")
 
+    def test_stationary_bootstrap_reality_check_accounts_for_model_search(self):
+        from workers.quant_model_selection import (
+            stationary_bootstrap_indices, white_reality_check
+        )
+        rng = np.random.default_rng(7)
+        indices = stationary_bootstrap_indices(100, expected_block=5, rng=rng)
+        self.assertEqual(len(indices), 100)
+        self.assertTrue(((indices >= 0) & (indices < 100)).all())
+        baseline = np.ones(80)
+        tied = np.column_stack([baseline, baseline, baseline])
+        result = white_reality_check(tied, baseline, expected_block=5,
+                                     repetitions=200, seed=21)
+        self.assertEqual(result["one_sided_p_value"], 1.)
+        superior = np.column_stack([np.full(80, .5), baseline, baseline])
+        win = white_reality_check(superior, baseline, expected_block=5,
+                                  repetitions=200, seed=21)
+        self.assertEqual(win["best_candidate_index"], 0)
+        self.assertLess(win["one_sided_p_value"], .05)
+        self.assertEqual(win["one_sided_p_value"],
+                         white_reality_check(superior, baseline, expected_block=5,
+                                             repetitions=200, seed=21)["one_sided_p_value"])
+        with self.assertRaises(ValueError):
+            white_reality_check(superior, baseline[:-1],
+                                expected_block=5, repetitions=200)
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
