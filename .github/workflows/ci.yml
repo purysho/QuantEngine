@@ -42,6 +42,10 @@ jobs:
         run: npm run test:quant
         env:
           QUANT_PYTHON: python
+      - name: Synthetic end-to-end WebSocket to prospective settlement
+        run: node tests/live_pipeline_smoke.mjs
+        env:
+          QUANT_PYTHON: python
       - name: Desktop tests
         run: npm test
         env:
