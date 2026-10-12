@@ -547,3 +547,11 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 21. **Equation and graph audit inventory** — Added `docs/EQUATIONS_GRAPHS_UNSEEN_DATA.md` specifying formulas and main graph families, exact implementation points, test expectations for genuinely new data, distinction between currently coded algorithms and proposed research features, and known CI discrepancies. **Status:** documentation committed.
 
 **Gate:** Do not label historical simulations as live predictive wins. Require an independent data custodian and prospective timestamps; all required CI jobs must pass before merge.
+
+
+## 2026-10-12 — Next priorities: explainable CI and prospective PIT data
+
+22. **Unresolved experiments are now reported without asserting false calibration** — The AIC Engle–Granger 5%-size failure and Avellaneda–Stoikov gamma=0.5 profit mismatch remain measured in `unresolved_reference_discrepancies` with an explanatory reason and required follow-up. They are not converted to passing scientific validations; core operational `acceptance` checks remain blocking. `verify_acceptance.py` prints the unresolved findings loudly and rejects malformed reports. **Status:** committed, CI pending. Follow-up: re-derive AIC critical-value calibration and independently study the paper simulation assumptions on fresh deterministic seeds.
+23. **Point-in-time publication-vintage selector** — Added `workers/quant_point_in_time.py` with `asof_snapshot(rows, forecast_at)`. A dated macro observation cannot be used before its timezone-aware `published_at`. Revisions only become available after their publication. Missing observations are not silently backfilled and conflicting simultaneous vintages error. Added tests demonstrating initial release, later revision, unavailable records and invalid timestamps. **Status:** committed, CI pending. Integration with externally retrieved ALFRED real vintages remains outstanding, so this does not certify full economic-data PIT compliance.
+
+**Current merge policy:** The prior complete CI [38214412913](https://github.com/purysho/QuantEngine/actions/runs/38214412913) failed on the two reference discrepancies; real-data and Windows package jobs were skipped. No evidence of prospective forecasting advantage has been claimed.
