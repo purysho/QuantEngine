@@ -10,6 +10,7 @@ import hashlib
 import json
 import math
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -45,12 +46,17 @@ def commit_forecast(envelope: dict, forecast_file, *, receipt_file):
     if output.exists() or receipt.exists():
         raise FileExistsError("Cannot overwrite committed forecasts or receipts.")
     raw = _canonical(envelope)
-    receipt_content = _canonical({"forecast_sha256": hashlib.sha256(raw).hexdigest()})
     # Exclusive creation prevents accidental replacement; external timestamps needed.
     with output.open("xb") as dest:
         dest.write(raw)
         dest.flush()
         os.fsync(dest.fileno())
+    # Receipt time is recorded after the prediction bytes have been durably written.
+    # This local clock is NOT an independent timestamp authority.
+    receipt_content = _canonical({
+        "forecast_sha256": hashlib.sha256(raw).hexdigest(),
+        "local_receipt_issued_at": datetime.now(timezone.utc).isoformat(),
+    })
     with receipt.open("xb") as dest:
         dest.write(receipt_content)
         dest.flush()
