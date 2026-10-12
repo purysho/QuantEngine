@@ -32,6 +32,30 @@ class LivePilotTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pilot.on_tick(tick(4, 103, 3))
 
+    def test_live_audit_reports_unsettled_and_tampering(self):
+        from experiments.audit_live_pilot import audit
+        from experiments.prospective import prepare_forecast, commit_forecast, settle_forecast
+        from experiments.exposure_ledger import fingerprint
+        with tempfile.TemporaryDirectory() as root:
+            folder = Path(root)
+            for idx in range(5):
+                forecast = folder / f"{idx:010d}.forecast.json"
+                receipt = folder / f"{idx:010d}.receipt.json"
+                envelope = prepare_forecast(dataset_sha256=fingerprint("pilot"),
+                                            index=idx, model_commit="frozen",
+                                            candidate=.01, historical_mean=.005)
+                commit_forecast(envelope, forecast, receipt_file=receipt)
+                if idx < 4:
+                    settle_forecast(forecast, receipt, outcome=.02,
+                                    settlement_file=folder / f"{idx:010d}.settled.json")
+            report = audit(folder, hac_lags=1)
+            self.assertEqual((report["settled"], report["unsettled"]), (4, 1))
+            self.assertIn("candidate_vs_zero", report)
+            p = folder / "0000000000.forecast.json"
+            p.write_text(p.read_text().replace('0.01', '0.03'))
+            with self.assertRaisesRegex(ValueError, "Tampered"):
+                audit(folder)
+
     def test_rejects_tick_that_was_received_before_commit(self):
         now = dt.datetime.now(dt.timezone.utc)
         with tempfile.TemporaryDirectory() as root:
