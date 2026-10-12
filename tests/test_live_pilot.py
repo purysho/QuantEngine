@@ -51,6 +51,10 @@ class LivePilotTests(unittest.TestCase):
             report = audit(folder, hac_lags=1)
             self.assertEqual((report["settled"], report["unsettled"]), (4, 1))
             self.assertIn("candidate_vs_zero", report)
+            (folder / "9999999999.settled.json").write_text("{}")
+            with self.assertRaisesRegex(ValueError, "Orphan settlement"):
+                audit(folder)
+            (folder / "9999999999.settled.json").unlink()
             p = folder / "0000000000.forecast.json"
             p.write_text(p.read_text().replace('0.01', '0.03'))
             with self.assertRaisesRegex(ValueError, "Tampered"):
