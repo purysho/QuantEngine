@@ -191,6 +191,28 @@ class ResearchIntegrityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             newey_west_mean(np.ones(5), lags=5)
 
+    def test_prospective_commit_and_settle_is_single_use(self):
+        from experiments.prospective import prepare_forecast, commit_forecast, settle_forecast
+        from experiments.exposure_ledger import fingerprint
+
+        with tempfile.TemporaryDirectory() as root:
+            base = Path(root)
+            p, r, s = [base / name for name in ("prediction.json", "receipt.json", "settlement.json")]
+            envelope = prepare_forecast(dataset_sha256=fingerprint("future"), index=100,
+                                        model_commit="frozen_sha", candidate=0.01, historical_mean=0.002)
+            commit_forecast(envelope, p, receipt_file=r)
+            with self.assertRaises(FileExistsError):
+                commit_forecast(envelope, p, receipt_file=r)
+            result = settle_forecast(p, r, outcome=0.02, settlement_file=s)
+            self.assertAlmostEqual(result["squared_losses"]["candidate"], 0.0001)
+            self.assertGreater(result["squared_losses"]["baseline_zero"],
+                               result["squared_losses"]["candidate"])
+            with self.assertRaises(FileExistsError):
+                settle_forecast(p, r, outcome=0.02, settlement_file=s)
+            p.write_text(p.read_text().replace("0.01", "0.03"))
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                settle_forecast(p, r, outcome=0.02, settlement_file=base / "another.json")
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
