@@ -141,7 +141,14 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
       - run: npm ci
+      - name: Audit pinned Python requirements with PyPA pip-audit
+        run: |
+          python -m pip install pip-audit==2.10.1
+          python -m pip_audit -r requirements.txt -r requirements-dev.txt
       - name: Fail on high-severity npm vulnerabilities
         run: npm audit --audit-level=high
       - name: Generate CycloneDX dependency manifest
