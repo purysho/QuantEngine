@@ -59,6 +59,24 @@ class GarchTests(unittest.TestCase):
             v = omega + alpha * r[t] ** 2 + beta * v
         return r
 
+    def test_optimizer_failure_does_not_win_on_low_objective(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        returns = self.simulate(9, n=200)
+        good = [-3.0, 2.5, -1.0, 1.8, 0.0]
+        bad = [-20.0, -20.0, -20.0, -20.0, 0.0]
+        with patch.object(vb.optimize, "minimize", side_effect=[
+            SimpleNamespace(x=bad, fun=-1e8, success=False),
+            SimpleNamespace(x=good, fun=200.0, success=True),
+        ]):
+            fit = vb.fit_garch_t(returns)
+        self.assertTrue(fit["converged"])
+        self.assertEqual(fit["_x"], good)
+        with patch.object(vb.optimize, "minimize", return_value=SimpleNamespace(x=bad, fun=0, success=False)):
+            with self.assertRaisesRegex(ArithmeticError, "did not converge"):
+                vb.fit_garch_t(returns)
+
     def test_parameter_recovery(self):
         fit = vb.fit_garch_t(self.simulate(7)[:2500])
         self.assertAlmostEqual(fit["alpha"], .08, delta=.04)
