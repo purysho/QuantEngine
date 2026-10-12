@@ -84,3 +84,7 @@ next *unseen* chronological interval after a model change.
 
 See `ASTRA_QUANTENGINE_AUDIT_BLACKBOX_PROTOCOL.md` outside this branch for
 the broader statistical and adversarial evaluation checklist.
+
+## Cross-platform disclosure serialization
+
+`ExposureLedger.reveal` now uses an exclusive sidecar `<ledger>.lock` on both Windows and POSIX, enclosing overlap checking and fsynced append. Competing reveals fail closed. A process crash leaves the lock as evidence; the custodian must inspect ledger completeness before manually removing it. The control is single-filesystem local mutual exclusion, not a tamperproof or network-distributed ledger. Six concurrent subprocesses are regression-tested to produce at most one successful reveal of the same block.

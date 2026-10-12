@@ -70,4 +70,8 @@ To verify a genuinely fresh period, use an independent producer that starts stre
 
 ## Further statistical research, not implemented
 
-White Reality Check / Hansen SPA, Model Confidence Set, PBO / CSCV, Deflated Sharpe, stationary block bootstrap, HAC covariance, dynamic quantile and expected-shortfall testing, point-in-time FRED/ALFRED release-vintage alignment, Sobol quasi-Monte Carlo, Ledoit–Wolf covariance, Kalman/VECM cointegration, American Longstaff–Schwartz, Heston simulation. All are proposed research, **not existing features**.
+Hansen SPA, Model Confidence Set, PBO / CSCV, Deflated Sharpe, dynamic quantile and expected-shortfall testing, point-in-time FRED/ALFRED release-vintage alignment, Sobol quasi-Monte Carlo, Ledoit–Wolf covariance, Kalman/VECM cointegration, American Longstaff–Schwartz, Heston simulation. All are proposed research, **not existing features**.
+
+## Audited additions
+
+Stationary bootstrap, a White-style reality-check diagnostic and Bartlett HAC for a mean are now implemented in `quant_model_selection.py` (not Hansen SPA or a general covariance estimator). Fixed daily rules and exact next-close cost equations are documented in `STRATEGY_VALIDATION.md`; historical outputs are development evidence.

@@ -86,11 +86,20 @@ jobs:
           key: public-data-${{ github.run_id }}
           restore-keys: public-data-
       - name: Remove committed research results before re-running
-        run: python -c "from pathlib import Path; [Path('experiments/results', n + '.json').unlink(missing_ok=True) for n in ('real_world_backtest', 'evolution_real')]"
+        run: python -c "from pathlib import Path; [Path('experiments/results', n + '.json').unlink(missing_ok=True) for n in ('real_world_backtest', 'evolution_real', 'strategy_five_year')]"
       - name: 100-year backtest of the maths against what happened
         run: python experiments/real_world_backtest.py
       - name: Prequential evolutionary learning on real data
         run: python experiments/evolution_real.py --offline
+      - name: Frozen daily strategies in five-year development windows
+        run: python -m experiments.strategy_five_year --offline
+      - name: Archive measured evidence including negative research outcomes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: historical-research-evidence
+          path: experiments/results/
+          if-no-files-found: error
       - name: Research acceptance gate
         run: python experiments/verify_acceptance.py experiments/results/real_world_backtest.json experiments/results/evolution_real.json
 

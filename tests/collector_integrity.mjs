@@ -25,5 +25,15 @@ try {
     assert.equal(states.filter(s => s.state === 'complete').length, 0);
     assert.equal(readFileSync(output, 'utf8').trim().split('\n').length, 1);
   }
+  for (const mode of ['rapid', 'duplicate', 'future']) {
+    const output = path.join(tmp, 'feed-' + mode + '.jsonl');
+    const fault = spawnSync(process.execPath, ['--import', './tests/mock_coinbase_ws.mjs',
+      'experiments/collect_coinbase.mjs', 'BTC-USD', output, '6', path.join(tmp, 'pilot-' + mode)],
+      {encoding:'utf8', timeout:12000, env:{...process.env,
+        QUANT_PYTHON:process.env.QUANT_PYTHON || 'python', QUANT_TEST_FEED_MODE:mode}});
+    assert.equal(fault.status, 2, mode + ' must fail closed: ' + fault.stderr);
+    const states=readFileSync(output+'.status.jsonl','utf8').trim().split('\n').map(JSON.parse);
+    assert.equal(states.at(-1).state,'failed');
+  }
   console.log('COLLECTOR_INTEGRITY_OK: reuse, missing ACK, hung child, duplicate ACK, malformed ACK');
 } finally { rmSync(tmp, {recursive:true, force:true}); }

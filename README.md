@@ -20,12 +20,14 @@ Python research modules, each with tests and a measured experiment in `experimen
 | `quant_validation` | Purged chronological ridge with information clocks; leaked features are rejected before scoring |
 | `quant_pairs` | ADF / Engle–Granger with MacKinnon inference (matches statsmodels to 1e-13), Holm pair selection, costed next-close pairs backtest |
 | `quant_lob` | Avellaneda–Stoikov market making with FIFO queue, partial fills, latency, fees and adverse selection |
-| `quant_varbacktest` | Kupiec/Christoffersen VaR backtests; GARCH-t and **GJR-GARCH filtered historical simulation** (best on 100 years of real data) |
+| `quant_varbacktest` | Kupiec/Christoffersen VaR backtests; GARCH-t and **GJR-GARCH filtered historical simulation** (historical diagnostics, not forward superiority) |
 | `quant_data` | FRED and Kenneth French data library adapters with SHA-256-verified local caching (raw data never committed) |
 | `quant_evolve` / `quant_learning` | Prequential evolutionary model search (incl. a NumPy neural network) with experience memory; runs after every continuous cycle |
 | `quant_explain` | Step-by-step workings ("show the maths") for every reported number, verified against the engine and SymPy |
 
 Desktop highlights: a Cyberpunk-styled workbench with live 3D volatility surfaces, a 3D "second mind" lineage graph of everything the engine has learned, an **Ask** panel (Ctrl+K; dictate with Handy) with permissioned actions and undo, and "The maths" panels for options and risk.
+
+Frozen daily trading-rule tests and five-year historical results: [strategy validation](docs/STRATEGY_VALIDATION.md). These are exposed-history research proxies, not live trading or unseen-data performance.
 
 See the [work log](docs/WORK_LOG.md) for what worked and what did not, and the [research index](docs/research/RESEARCH_INDEX.md) for how each curriculum topic maps to code.
 

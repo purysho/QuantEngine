@@ -22,10 +22,11 @@ class MockWebSocket {
     this.interval = setInterval(() => {
       id++;
       const tick = { type: 'ticker', product_id: 'BTC-USD', price: String(100 + id),
-        trade_id: id, sequence: id, time: new Date(Date.now() - 150).toISOString() };
+        trade_id: id, sequence: id, time: new Date(Date.now() + (process.env.QUANT_TEST_FEED_MODE === 'future' ? 60000 : -150)).toISOString() };
+      if (process.env.QUANT_TEST_FEED_MODE === 'duplicate' && id > 1) { tick.trade_id = 1; tick.sequence = 1; }
       this.emit('message', { data: JSON.stringify(tick) });
       if (id >= 6) clearInterval(this.interval);
-    }, 850);
+    }, process.env.QUANT_TEST_FEED_MODE === 'rapid' ? 1 : 850);
   }
   close() {
     if (this.interval) clearInterval(this.interval);

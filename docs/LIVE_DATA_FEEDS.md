@@ -91,3 +91,13 @@ It creates six artificial exchange ticks at controlled intervals, asserts that t
 ## Software and release quality gates
 
 CI now verifies Node and Python numerical tests, the mock live pipeline, Windows packaging, a pinned Python dependency vulnerability audit, npm high-severity vulnerability audit, and a CycloneDX npm dependency manifest. Code signing still requires an externally managed trusted signing identity. These checks must pass on the most recent head commit before merge.
+
+## Independently rechecked transport, 2026-10-12
+
+The continuation audit actually connected read-only to both public venues from the Linux host. Three Coinbase and three Kraken observations were collected, followed by a separate six-tick Coinbase/Python prospective pilot. The pilot received every final ACK and exited zero. Summary hashes, receipt ranges, missing-reference counts and the complete local pilot audit are retained in `experiments/results/live_transport_smoke.json`. This is not an independently operated custodian or market-performance experiment.
+
+The two initial short archives did not overlap causally: every Coinbase receipt preceded the Kraken references, so reconciliation reported **0 matched / 3 missing**. Later Kraken quotes were not used retrospectively. This is a negative coverage result, not a provider failure or arbitrage finding.
+
+Coinbase now requires a new output path and creates `<output>.status.jsonl` with received, processed (only after ACK), archived-only (without pilot), and terminal records. A crash may leave received-but-unacknowledged rows; exclude them and preserve evidence. Never append a fresh run to that file or restart the pilot into an occupied directory. An interrupted process may lack a terminal record and must not qualify as a complete run. A missing final ACK or hung consumer fails rather than completing successfully. Raw local samples are not distributed as a complete vendor tape.
+
+Legacy settlement files containing losses but no outcome are explicitly **unverifiable** under the strengthened auditor. Do not manufacture an outcome to retrofit them. New settlements allow arithmetic consistency checks, but a user controlling both outcomes and receipts can still rewrite everything: external custody remains necessary.

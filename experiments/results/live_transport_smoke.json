@@ -1,0 +1,48 @@
+{
+  "status": "read_only_live_transport_smoke_not_alpha",
+  "feeds": {
+    "coinbase": {
+      "rows": 3,
+      "sha256": "ca48f99adef1f3e92b1154d214d1a2d09ac888dc542f74cf5b4d36b896755fb4",
+      "first_received": "2026-10-12T13:52:54.711Z",
+      "last_received": "2026-10-12T13:52:55.007Z",
+      "feed_is_complete": false
+    },
+    "kraken": {
+      "rows": 3,
+      "sha256": "f3a7bb06c31f1b5194896f3c67720fc82ecde9b82905280ee7729390ae61e987",
+      "first_received": "2026-10-12T13:52:59.427Z",
+      "last_received": "2026-10-12T13:53:03.219Z",
+      "feed_is_complete": false
+    }
+  },
+  "reconciliation": {
+    "coinbase_observations": 3,
+    "reconciled": 0,
+    "missing_or_stale_reference": 3,
+    "disagreements": 0,
+    "comparisons": [],
+    "warning": "Not arbitrage or tradable bid/ask evidence; independent feeds have different latency and execution."
+  },
+  "prospective_pipeline": {
+    "ticker_count": 6,
+    "journal_sha256": "16bb0d66daa036b7f7097e91476098d2cdf73442036aa21951475c1b8f7fbcf2",
+    "processing_status_sha256": "90f2f512a65041f9bf3c999b4713246d4cc83879a8d19019f173d6f3baefb7b5",
+    "audit": {
+      "total_forecasts": 3,
+      "settled": 2,
+      "unsettled": 1,
+      "unsettled_ids": [
+        "0000000006"
+      ],
+      "mean_squared_loss": {
+        "candidate": 7.301870114765923e-15,
+        "baseline_zero": 7.301870114765923e-15,
+        "baseline_past_mean": 7.301869675372486e-15
+      },
+      "confidence": "insufficient_data",
+      "disclaimer": "Local-development evidence, not an independent live-market experiment."
+    },
+    "notice": "Actual live read-only transport, local timestamps only, no independent custody, insufficient observations for performance inference."
+  }
+}
