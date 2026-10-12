@@ -130,6 +130,26 @@ class ResearchIntegrityTests(unittest.TestCase):
                 evaluate_stream(values, lambda _: float("nan"),
                                 dataset_sha256=fingerprint("another"), ledger_path=opts["ledger_path"])
 
+    def test_point_in_time_vintage_requires_publication_before_prediction(self):
+        from workers.quant_point_in_time import asof_snapshot
+
+        rows = [
+            {"series_id": "MACRO", "observation_date": "2020-01-01",
+             "published_at": "2020-02-01T09:00:00Z", "value": 1.0},
+            {"series_id": "MACRO", "observation_date": "2020-01-01",
+             "published_at": "2020-03-01T09:00:00Z", "value": 2.0},
+        ]
+        self.assertEqual(asof_snapshot(rows, "2020-01-31T18:00:00Z"), {})
+        key = "MACRO|2020-01-01"
+        self.assertEqual(asof_snapshot(rows, "2020-02-02T00:00:00Z")[key]["value"], 1.0)
+        self.assertEqual(asof_snapshot(rows, "2020-03-02T00:00:00Z")[key]["value"], 2.0)
+        with self.assertRaises(ValueError):
+            asof_snapshot(rows, "2020-03-02T00:00:00")
+        with self.assertRaises(ValueError):
+            asof_snapshot([{**rows[0], "value": float("nan")}], "2020-03-02T00:00:00Z")
+        with self.assertRaises(ValueError):
+            asof_snapshot([rows[0], {**rows[0], "value": 5.0}], "2020-03-02T00:00:00Z")
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
