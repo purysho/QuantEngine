@@ -44,6 +44,9 @@ def reconcile(coinbase: list[dict], kraken: list[dict], *, max_age_seconds: floa
               tolerance_bps: float = 50.0) -> dict:
     if not math.isfinite(max_age_seconds) or max_age_seconds <= 0 or not math.isfinite(tolerance_bps) or tolerance_bps < 0:
         raise ValueError("Invalid reconciliation parameters.")
+    for feed in (coinbase, kraken):
+        if any(_receipt(feed[i]) <= _receipt(feed[i - 1]) for i in range(1, len(feed))):
+            raise ValueError("Each feed must have strictly increasing receipt timestamps.")
     for row in coinbase:
         if row.get("source") != "coinbase_exchange_ticker" or row.get("product_id") != "BTC-USD":
             raise ValueError("Only BTC-USD Coinbase is supported.")
