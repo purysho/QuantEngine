@@ -22,6 +22,27 @@ class ResearchIntegrityTests(unittest.TestCase):
             self.assertEqual(verify([str(p)]), [])
             self.assertTrue(verify([str(p) + ".missing"]))
 
+    def test_failed_research_finding_is_disclosed_not_presented_as_success(self):
+        from experiments.verify_acceptance import verify
+        with tempfile.TemporaryDirectory() as root:
+            p = Path(root) / "research.json"
+            p.write_text(json.dumps({
+                "acceptance": {"numerical_safety": True},
+                "unresolved_research_findings": {
+                    "alpha_vs_mean_baseline": {
+                        "observed_pass": False,
+                        "requires_fresh_holdout": True,
+                        "reason": "Historical learner underperformed its baseline."
+                    }
+                }
+            }))
+            self.assertEqual(verify([str(p)]), [])
+            p.write_text(json.dumps({
+                "acceptance": {"numerical_safety": True},
+                "unresolved_research_findings": {"alpha": {"observed_pass": 0}}
+            }))
+            self.assertTrue(verify([str(p)]))
+
     def test_experience_time_scope_excludes_future_and_legacy_rows(self):
         from workers.quant_evolve import Experience
 
