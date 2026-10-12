@@ -65,6 +65,14 @@ def audit(root: str | Path, *, hac_lags: int = 0, min_settled: int = 3) -> dict:
         report["candidate_vs_past_mean"] = paired_loss_comparison(
             losses["candidate"], losses["baseline_past_mean"], lags=hac_lags)
         report["confidence"] = "nominal_HAC_only"
+    if n >= 20:
+        from workers.quant_model_selection import white_reality_check
+        import numpy as np
+        candidates = np.column_stack((losses["candidate"], losses["baseline_past_mean"]))
+        report["global_model_search_diagnostic"] = white_reality_check(
+            candidates, losses["baseline_zero"], expected_block=min(5, n),
+            repetitions=500, seed=17)
+        report["warning"] = "Repeatedly inspecting the same data invalidates nominal inference; do not treat this as fresh alpha proof."
     return report
 
 
