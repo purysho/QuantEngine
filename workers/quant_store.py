@@ -166,7 +166,7 @@ class Store:
             raise ValueError("CSV must use UTF-8 text encoding.") from exc
         digest = hashlib.sha256(content).hexdigest()
         return self.add_dataset("csv-" + digest[:24], source.stem, "csv", content, dates, assets,
-                                {"original_path": str(source), "raw_sha256": digest,
+                                {"original_filename": source.name, "raw_sha256": digest,
                                  "adjustment_status": "Provided by importer; dividends/splits not inferred",
                                  "currency": "Provided by importer; no currency conversion"})
 
