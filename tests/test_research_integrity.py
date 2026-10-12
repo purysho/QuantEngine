@@ -36,6 +36,22 @@ class ResearchIntegrityTests(unittest.TestCase):
             self.assertEqual(memory.load("risk", "data", as_of=10), [{"id": "past"}])
             self.assertEqual({g["id"] for g in memory.load("risk", "data", as_of=20)}, {"past", "future"})
 
+    def test_exposure_ledger_rejects_replays_and_overlaps(self):
+        from experiments.exposure_ledger import ExposureLedger, AlreadyExposedError, fingerprint
+
+        with tempfile.TemporaryDirectory() as root:
+            ledger = ExposureLedger(Path(root) / "seen.jsonl")
+            dataset = fingerprint({"data": "fixture"})
+            forecast = fingerprint({"prediction": 1})
+            ledger.reveal(dataset, 100, 200, prediction_sha256=forecast)
+            self.assertTrue(ledger.exposed(dataset, 150, 180))
+            with self.assertRaises(AlreadyExposedError):
+                ledger.reveal(dataset, 100, 200, prediction_sha256=forecast)
+            with self.assertRaises(AlreadyExposedError):
+                ledger.reveal(dataset, 199, 210, prediction_sha256=forecast)
+            ledger.reveal(dataset, 200, 250, prediction_sha256=forecast)
+            ledger.reveal(fingerprint({"data": "other"}), 100, 200, prediction_sha256=forecast)
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
