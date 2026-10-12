@@ -35,6 +35,8 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements.txt -r requirements-dev.txt
       - run: npm ci
+      - name: Validate isolated public-feed collector syntax
+        run: node --check experiments/collect_coinbase.mjs
       - run: npm run typecheck
       - name: Numerical tests
         run: npm run test:quant
