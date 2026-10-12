@@ -107,6 +107,7 @@ jobs:
           python -m experiments.competitive_sharpe --output .cache/competitive-ci/sharpe_sensitivity.json
           python -m experiments.competitive_test --offline --core-tactical --output-dir .cache/core-tactical-ci
           python -m experiments.trade_audit --output-dir .cache/trade-audit-summary-ci --private-dir .cache/trade-audit-private-ci
+          python -m experiments.sizing_latency --output-dir .cache/sizing-latency-ci
       - name: Archive competitive evidence including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -116,6 +117,7 @@ jobs:
             .cache/competitive-ci/
             .cache/core-tactical-ci/
             .cache/trade-audit-summary-ci/
+            .cache/sizing-latency-ci/
           if-no-files-found: error
       - name: Archive strategy learning including rejected remedies
         if: always()
