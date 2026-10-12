@@ -80,7 +80,16 @@ payload = {"purpose": "Measure whether evolutionary model search improves real o
                "risk_learner_beats_baseline_on_average": results["risk"]["mean_out_of_sample"] > results["risk"]["mean_baseline"],
                "risk_learner_within_5pct_of_best_fixed_in_hindsight": abs(results["risk"]["learner_minus_best_fixed_in_hindsight"])
                                                                      <= .05 * abs(max(results["risk"]["fixed_configurations_mean_score"].values())),
-               "alpha_learner_not_worse_than_mean_forecast": results["alpha"]["mean_out_of_sample"] >= results["alpha"]["mean_baseline"] - .05},
+               },
+           "unresolved_research_findings": {
+               "alpha_vs_mean_baseline": {
+                   "observed_pass": results["alpha"]["mean_out_of_sample"] >= results["alpha"]["mean_baseline"] - .05,
+                   "candidate_mean_score": results["alpha"]["mean_out_of_sample"],
+                   "baseline_mean_score": results["alpha"]["mean_baseline"],
+                   "reason": "Search/adoption protocol changed; this development replay does not establish alpha model superiority.",
+                   "requires_fresh_holdout": True,
+               },
+           },
            "interpretation": "A learner is only useful if its frozen, forward-scored choices beat simple fixed choices. "
                              "For next-day returns, an honest result near zero R^2 is expected: daily returns are close to unpredictable."}
 path = write("evolution_real", payload, started, finished)
