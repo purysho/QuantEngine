@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import numpy as np
 from workers.quant_data import french,fred
-from workers.quant_competitive import account,regime_targets,score,select_policy,passive_vol_targets
+from workers.quant_competitive import account,regime_targets,score,select_policy,passive_vol_targets,core_tactical_targets
 from workers.quant_model_selection import newey_west_mean,white_reality_check
 
 PROTOCOL={'selection':['2000-01-01','2010-01-01'],'adoption':['2010-01-01','2015-01-01'],
@@ -56,17 +56,32 @@ def conditional(diff,states,state,comparisons):
             'standard_error':se,'notice':'Exploratory state analysis, original-grid HAC plus Bonferroni over frozen models/states/benchmarks; no independent-custody proof.'}
 
 
-def run(output,offline=False):
+def run(output,offline=False,core_tactical=False):
     root=Path(__file__).resolve().parents[1];out=Path(output);out.mkdir(parents=True,exist_ok=False)
     files=[root/'workers/quant_competitive.py',Path(__file__).resolve()]
-    frozen={'protocol':PROTOCOL,'source_sha256':{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
+    protocol=dict(PROTOCOL)
+    if core_tactical:
+        protocol.update({'candidates':['core80_tactical20','nasdaq_slow_vol15'],
+                         'parameters':{'warmup':252,'core_nasdaq_weight':.8,'tactical_weight':.2,
+                                       'relative_momentum_closes':126,'switch_margin_log':.05,
+                                       'confirmation_closes':5,'minimum_switch_closes':21,
+                                       'risk_window':20,'risk_target':.15,'risk_band':.1,'minimum_sizing_closes':21},
+                         'notice':'All matched history previously exposed. Bounded core/tactical development only; no automatic adoption.',
+                         'source_pins':{'broad_market':'2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db',
+                                        'nasdaq_total_return':'e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe'}})
+    frozen={'protocol':protocol,'source_sha256':{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
             'custody':'Local source freeze; no trusted external timestamp or future-label isolation.'}
     (out/'frozen_protocol.json').write_text(json.dumps(frozen,indent=2)+'\n')
     archive=out/'source';archive.mkdir()
     for p in files:(archive/(p.name+'.txt')).write_bytes(p.read_bytes())
     print('frozen',hashlib.sha256((out/'frozen_protocol.json').read_bytes()).hexdigest(),flush=True)
     dates,p,r,c,sources=data(root/'.cache/data',offline)
+    if core_tactical:
+        for name,digest in protocol['source_pins'].items():
+            if sources[name]['sha256']!=digest:raise ValueError('Competitive source snapshot changed: '+name)
     policies=regime_targets(p);targets=policies['weights'];n=len(dates)
+    original_targets=targets
+    if core_tactical:targets=core_tactical_targets(p)['weights']
     selection=np.flatnonzero(mask(dates,*PROTOCOL['selection']));adoption=np.flatnonzero(mask(dates,*PROTOCOL['adoption']))
     if len(selection)<2000 or len(adoption)<1000:raise ValueError('Insufficient calibration/adoption data.')
     benchmarks={'broad_buyhold':np.tile([1.,0.],(n,1)),'nasdaq_buyhold':np.tile([0.,1.],(n,1))}
@@ -74,10 +89,11 @@ def run(output,offline=False):
         vol=float(r[selection,asset].std(ddof=1)*np.sqrt(252));w=min(1.,.15/vol)
         target=np.zeros((n,2));target[:,asset]=w;benchmarks[name]=target
     benchmarks.update(passive_vol_targets(p))
+    if core_tactical:benchmarks.update(original_targets)
     all_targets={**benchmarks,**targets}
     shadow={name:account(r,w,c,cost_bps=10) for name,w in all_targets.items()}
     decisions={bench:select_policy({name:shadow[name]['returns'] for name in targets},shadow[bench]['returns'],
-                selection=selection,adoption=adoption) for bench in ['broad_buyhold','nasdaq_buyhold']}
+                selection=selection,adoption=adoption) for bench in (['broad_buyhold','nasdaq_buyhold','nasdaq_dynamic_vol15'] if core_tactical else ['broad_buyhold','nasdaq_buyhold'])}
     # Evaluate with fresh common starting capital and entry fees at evaluation boundary.
     first=int(np.flatnonzero(mask(dates,PROTOCOL['evaluation_start'],'2100-01-01'))[0]);seed=first-1
     eval_dates=dates[first:];rr=r[seed:].copy();cc=c[seed:].copy();rr[0]=0;cc[0]=0
@@ -137,5 +153,5 @@ def run(output,offline=False):
     print('saved',out)
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('--offline',action='store_true');parser.add_argument('--output-dir',required=True)
-    args=parser.parse_args();run(args.output_dir,args.offline)
+    parser=argparse.ArgumentParser();parser.add_argument('--offline',action='store_true');parser.add_argument('--core-tactical',action='store_true');parser.add_argument('--output-dir',required=True)
+    args=parser.parse_args();run(args.output_dir,args.offline,args.core_tactical)

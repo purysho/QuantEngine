@@ -120,3 +120,39 @@ def passive_vol_targets(prices):
             targets[t,asset]=held
         out[name]=targets
     return out
+
+
+def core_tactical_targets(prices):
+    """Frozen development hypothesis: 80% Nasdaq core, 20% bounded rotation.
+
+    Five consecutive relative-momentum confirmations, 21-close minimum switch
+    and sizing intervals, 10 percentage-point risk band. No cash regime gate.
+    The passive comparator uses exactly the same risk adjustment policy.
+    """
+    p=np.asarray(prices,dtype=float)
+    if p.ndim!=2 or p.shape[1]!=2 or len(p)<253 or not np.isfinite(p).all() or (p<=0).any():
+        raise ValueError('Require 253 positive finite two-asset closes.')
+    logs=np.diff(np.log(p),axis=0)
+    names=['core80_tactical20','nasdaq_slow_vol15']
+    weights={name:np.zeros_like(p) for name in names}
+    tactical=np.ones(len(p),dtype=int);confirmations=np.zeros(len(p),dtype=int)
+    asset=1;pending=1;count=0;last_switch=231
+    exposures={name:0. for name in names};last_sizing={name:231 for name in names}
+    for t in range(252,len(p)):
+        momentum=np.log(p[t]/p[t-126]);desired=asset
+        if momentum[1-asset]-momentum[asset]>.05:desired=1-asset
+        if desired!=asset:
+            count=count+1 if desired==pending else 1;pending=desired
+            if count>=5 and t-last_switch>=21:
+                asset=desired;last_switch=t;confirmations[t]=count;count=0
+        else:pending=asset;count=0
+        tactical[t]=asset
+        mix=np.array([.2, .8]) if asset==0 else np.array([0.,1.])
+        for name,composition in [('core80_tactical20',mix),('nasdaq_slow_vol15',np.array([0.,1.]))]:
+            vol=float((logs[t-20:t]@composition).std(ddof=1)*np.sqrt(252))
+            target=min(1.,.15/max(vol,1e-12))
+            if t-last_sizing[name]>=21 and (t==252 or abs(target-exposures[name])>=.1):
+                exposures[name]=target;last_sizing[name]=t
+            weights[name][t]=composition*exposures[name]
+    return {'weights':weights,'tactical_asset':tactical,'confirmation_count_at_switch':confirmations,
+            'notice':'Fixed development rules; risk-weight bands do not suppress charged daily proportional drift rebalances.'}
