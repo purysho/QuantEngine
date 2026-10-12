@@ -128,6 +128,10 @@ class Store:
         value = dict(row)
         value["assets"] = json.loads(value.pop("assets_json"))
         value["metadata"] = json.loads(value.pop("metadata_json"))
+        # Legacy imports stored absolute paths. Never expose them in dataset APIs.
+        original_path = value["metadata"].pop("original_path", None)
+        if original_path is not None:
+            value["metadata"].setdefault("original_filename", Path(original_path).name)
         return value
 
     def add_dataset(self, dataset_id, name, kind, content, dates, assets, metadata, source_url=None):
