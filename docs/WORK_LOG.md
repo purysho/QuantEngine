@@ -566,3 +566,11 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 27. **Next research gate** — Keep current baseline as the default. Any proposed alpha change must freeze code and parameters before an independently held future period, beat a zero and mean baseline on exact paired observations with costs, survive HAC uncertainty and multiple-model correction, and be assessed once only. Do not tune an already exposed benchmark result into a green efficacy check.
 
 **Do not merge until the full suite is green. Passing operational CI does not certify real-world alpha performance.**
+
+
+## 2026-10-12 — Prospective forecast commitment and settlement
+
+28. **Prospective single-observation commitment** — Added `experiments/prospective.py` with `prepare_forecast`, `commit_forecast` and `settle_forecast`. Each forecast is stored *before* the outcome, with immutable-on-create file semantics, SHA-256 receipt, a frozen model revision field, zero and past-mean baselines. A separate settlement generates per-model squared losses and cannot overwrite previous settlements. Added regression for tampering, duplicate commits, duplicate settlements and baseline scoring. **Status:** committed to branch; CI pending.
+29. **Operational limits** — Files created with exclusive mode are not immutable against a file owner who can delete them; the receipt does not independently prove clock time. For trustworthy prospective results, the evaluator needs external timestamp custody, isolated credentials and strictly post-forecast observation arrival. New code is NOT yet wired to a live feed or a securely operated service. Never use retrospective historical data to certify this feature's prospective performance.
+
+**CI:** Last completed run `38238533004` passed numerical/desktop checks on Linux and Windows and packaged Windows self-test; real-data acceptance failed on `alpha_learner_not_worse_than_mean_forecast`, explicitly preserved as underperformance. New run required before any merge.
