@@ -42,10 +42,11 @@ class MLP:
 
     def fit(self, x, y):
         rng = np.random.default_rng(self.seed)
-        self.mean_, self.scale_ = x.mean(axis=0), np.where(x.std(axis=0) > 1e-12, x.std(axis=0), 1.0)
-        self.y_mean_, self.y_scale_ = float(y.mean()), float(y.std() or 1.0)
+        cut = max(1, int(len(x) * .8))  # Split chronologically before fitting any preprocessing.
+        train_x, train_y = x[:cut], y[:cut]
+        self.mean_, self.scale_ = train_x.mean(axis=0), np.where(train_x.std(axis=0) > 1e-12, train_x.std(axis=0), 1.0)
+        self.y_mean_, self.y_scale_ = float(train_y.mean()), float(train_y.std() or 1.0)
         xs, ys = (x - self.mean_) / self.scale_, ((y - self.y_mean_) / self.y_scale_)[:, None]
-        cut = max(1, int(len(xs) * .8))  # Last 20% (later in time) is the early-stopping set.
         xt, yt, xv, yv = xs[:cut], ys[:cut], xs[cut:], ys[cut:]
         sizes = [x.shape[1], *self.hidden, 1]
         params = [(rng.normal(0, 1 / math.sqrt(a), (a, b)), np.zeros(b)) for a, b in zip(sizes[:-1], sizes[1:])]
