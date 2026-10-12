@@ -52,6 +52,24 @@ class ResearchIntegrityTests(unittest.TestCase):
             ledger.reveal(dataset, 200, 250, prediction_sha256=forecast)
             ledger.reveal(fingerprint({"data": "other"}), 100, 200, prediction_sha256=forecast)
 
+    def test_guard_model_selection_cannot_read_reserved_adoption_windows(self):
+        from workers.quant_evolve import Task, prequential
+
+        def task(adoption_bonus):
+            def score(genome, start, end):
+                if start >= 40 and start < 70 and genome["a"] == 1:
+                    return adoption_bonus
+                return float(-genome["a"])
+            return Task("guard", {"a": [0, 1]}, score, lambda g: "toy", {"a": 0}, "fixture")
+
+        settings = dict(first=70, block=10, validation=10, evidence_windows=6,
+                        guard=True, generations=2, population=8, seed=13)
+        a = prequential(task(10.0), 80, **settings)
+        b = prequential(task(-10.0), 80, **settings)
+        self.assertEqual(a["curve"][0]["champion"], b["curve"][0]["champion"])
+        self.assertEqual(a["curve"][0]["validation_score"], b["curve"][0]["validation_score"])
+        self.assertEqual(a["curve"][0]["genome"], b["curve"][0]["genome"])
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
