@@ -598,3 +598,10 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 **Merge gate:** no changes to main until the complete current-head CI suite passes; review runtime output and absence of backward-compatible API breakage.
 
 39. **Timestamp parser cleanup** — Replaced unsafe lexicographic comparison of ISO time strings in `workers/quant_live_feed.check_next` with parsed UTC datetime ordering. Without this, mixed precision timestamps such as `.900Z` and `Z` could be sorted incorrectly. Added a dedicated regression test. **Status:** committed; CI pending.
+
+
+## 2026-10-12 — Five-phase programme, continuation
+
+40. **Previous CI pass verified** — [run 38250645160](https://github.com/purysho/QuantEngine/actions/runs/38250645160), commit `6f0b5a85`, completed successfully. This predates new commits; new checks required.
+41. **Phase 1 / 3: prospective audit report** — Added `experiments/audit_live_pilot.py`, verifying forecast receipts and settlement identity, counting unsettled forecasts, reporting candidate/zero/past-mean MSE, and computing nominal HAC loss comparisons only with enough paired observations. Added tamper and unfinished-run regression test; documented command in `docs/LIVE_DATA_FEEDS.md`.
+42. **Not finished, explicitly** — Phase 1 needs transport-failure integration tests and restart recovery. Phase 2 needs independent second-provider reconciliation, gap recovery and live macro vintages. Phase 3 needs independent custodian, external timestamp and truly sealed observations. Phase 4 needs multiplicity-adjusted selection and actual unseen alpha evidence. Phase 5 needs full repository-wide dead-code/dependency review, SBOM/signing and UI reporting. Do not equate green software tests to investment returns.
