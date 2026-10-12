@@ -1,10 +1,10 @@
 // Opt-in public data collector; Node 24 built-in WebSocket. No trading API.
 // Usage: node experiments/collect_coinbase.mjs BTC-USD samples.jsonl [max-tickers]
 // Timestamps are independently recorded on receipt. Samples are not complete trade tape.
-import fs from 'node:fs';
 import { appendFileSync, openSync, closeSync, fsyncSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 
-const [product = 'BTC-USD', output = '', maxRaw = '25'] = process.argv.slice(2);
+const [product = 'BTC-USD', output = '', maxRaw = '25', pilotDir] = process.argv.slice(2);
 if (!/^[A-Z0-9]{2,12}-[A-Z0-9]{2,12}$/.test(product)
   || !output || !/^\d+$/.test(maxRaw) || +maxRaw < 1 || +maxRaw > 10000) {
   throw new Error('Usage: node experiments/collect_coinbase.mjs BTC-USD samples.jsonl [1..10000]');
@@ -12,10 +12,21 @@ if (!/^[A-Z0-9]{2,12}-[A-Z0-9]{2,12}$/.test(product)
 if (typeof WebSocket !== 'function') throw new Error('Node.js 24 WebSocket support required');
 const ws = new WebSocket('wss://ws-feed.exchange.coinbase.com');
 let count = 0, previous = null, done = false;
+const pilot = pilotDir ? spawn(process.env.QUANT_PYTHON || 'python',
+  ['-m', 'experiments.live_pilot', '--root', pilotDir, '--product', product,
+   '--model-commit', process.env.QUANT_MODEL_COMMIT || 'momentum-v1'],
+  { stdio: ['pipe', 'inherit', 'inherit'] }) : null;
+let pilotFailed = false;
+if (pilot) {
+  pilot.on('error', () => { pilotFailed = true; end('Pilot process unavailable.', 2); });
+  pilot.on('exit', code => { if (code !== 0) { pilotFailed = true; end('Pilot process failed.', 2); } });
+}
+
 const end = (why, code) => {
   if (done) return;
   done = true;
   try { ws.close(); } catch {}
+  if (pilot && !pilot.stdin.destroyed) pilot.stdin.end();
   console.error(why);
   process.exitCode = code;
 };
@@ -37,6 +48,7 @@ ws.addEventListener('message', event => {
       || Date.parse(msg.time) < Date.parse(previous.time))) return end('Non-monotonic feed; manual restart required.', 2);
     const observed = new Date().toISOString();
     if (Date.parse(msg.time) > Date.parse(observed) + 5000) return end('Exchange event time is ahead of receipt clock.', 2);
+    if (pilotFailed || (pilot && (pilot.exitCode !== null || pilot.stdin.destroyed))) return end('Pilot unavailable, refusing unscored samples.', 2);
     previous = msg;
     const sample = { source: 'coinbase_exchange_ticker', product_id: product,
       event_at: msg.time, received_at: observed, sequence: msg.sequence,
@@ -45,6 +57,7 @@ ws.addEventListener('message', event => {
     const fd = openSync(output, 'a', 0o600);
     try { appendFileSync(fd, JSON.stringify(sample) + '\n'); fsyncSync(fd); }
     finally { closeSync(fd); }
+    if (pilot && !pilot.stdin.write(JSON.stringify(sample) + '\n')) return end('Pilot backpressure; refusing late forecasts.', 2);
     count++;
     if (count >= +maxRaw) { clearTimeout(timeout); end('Finished collecting ' + count + ' tickers.', 0); }
   } catch (err) { end('Malformed exchange message: ' + err.message, 2); }
