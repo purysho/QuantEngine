@@ -100,7 +100,8 @@ def main():
                       minimum_history=args.minimum_history)
     for line in sys.stdin:
         if line.strip():
-            pilot.on_tick(json.loads(line))
+            state = pilot.on_tick(json.loads(line))
+            print(json.dumps({"ack": state["ticks"], "pending": state["pending"]}), flush=True)
     print(json.dumps({"ticks": pilot.count, "pending_forecast": pilot.pending is not None,
                       "notice": "Unsettled forecasts remain unscored; no retrospective backfill."}))
 
