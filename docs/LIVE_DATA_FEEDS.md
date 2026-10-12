@@ -55,3 +55,13 @@ The additional fourth argument is the pilot output directory. The producer journ
 Files `000000000N.forecast.json`, `.receipt.json` and `.settled.json` record each numbered evaluation. The final forecast is deliberately left unsettled if no further ticker arrives. Existing forecast or settlement paths are never overwritten. A restart into the same directory is deliberately rejected rather than resuming with a missing prior history. No trading orders or simulated fees are involved.
 
 This is a limited research **next-received-ticker** experiment. Batched ticker updates, unequal tick intervals, connectivity gaps and feed latency mean it is not a fixed-horizon forecast, complete trade sample, or tradable P&L series. The same local user can still modify both receipt and labels, so a third-party immutable timestamp and genuinely isolated evaluator remain mandatory for externally credible unseen-data claims. Never present a run of archived JSONL rows as a new live prospective run.
+
+## Inspect settled predictions (operational audit)
+
+```bash
+python -m experiments.audit_live_pilot ./pilot-run --hac-lags 1
+```
+
+The tool verifies every forecast against its recorded SHA-256 receipt and matches any settlement. It reports **all** missing settlements, the mean squared errors for candidate and both predeclared baselines, and a nominal HAC comparison if at least three paired forecasts exist. No positive performance claims are justified from a few trades or from an archive replay. The file scanner is local and does not prove timestamps were independently sealed.
+
+**Model policy:** the pilot's candidate is a fixed momentum reference, deliberately not a deployed quant optimizer. It is not selected or tuned on these outcomes. To change the predictor for a genuine unseen test, freeze a new model identifier, start an entirely new custodied run, and include transaction costs / bid-ask in any tradability claim.
