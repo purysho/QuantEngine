@@ -48,3 +48,61 @@ def paired_loss_comparison(candidate_losses, baseline_losses, *, lags: int) -> d
     result["candidate_better_at_nominal_95"] = bool(result["lower_95"] > 0 and result["standard_error"] > 0)
     result["caution"] = "Nominal, single prespecified comparison; no search/multiplicity correction."
     return result
+
+
+def stationary_bootstrap_indices(n: int, *, expected_block: float, rng) -> np.ndarray:
+    """Politis–Romano stationary-bootstrap circular index sequence.
+
+    Each subsequent observation restarts at a uniformly sampled index with
+    probability 1/expected_block; otherwise it advances one index.
+    """
+    if type(n) is not int or n < 2 or not math.isfinite(expected_block) or not 1 <= expected_block <= n:
+        raise ValueError("Invalid stationary-bootstrap sample or block length.")
+    out = np.empty(n, dtype=np.int64)
+    out[0] = rng.integers(n)
+    for i in range(1, n):
+        out[i] = (rng.integers(n) if rng.random() < 1 / expected_block else (out[i-1] + 1) % n)
+    return out
+
+
+def white_reality_check(candidate_losses, baseline_losses, *, expected_block: float,
+                        repetitions: int = 1000, seed: int = 0) -> dict:
+    """White-style reality check for many frozen candidates against one baseline.
+
+    The test statistic is max_j(mean(baseline_loss - candidate_j_loss)).
+    Each differential series is *individually centered* under the null and the
+    stationary bootstrap uses the SAME resampled time indices for all models,
+    preserving dependence and contemporaneous cross-model correlations.
+    This is conservative, not Hansen SPA; an announced candidate set and
+    bootstrap rule must be frozen before a genuinely unrevealed evaluation.
+    """
+    candidates = np.asarray(candidate_losses, dtype=np.float64)
+    baseline = np.asarray(baseline_losses, dtype=np.float64)
+    if candidates.ndim != 2 or baseline.ndim != 1 or candidates.shape[0] != len(baseline):
+        raise ValueError("Candidate losses must be N x K and baseline losses N.")
+    n, k = candidates.shape
+    if n < 20 or k < 1 or not np.isfinite(candidates).all() or not np.isfinite(baseline).all():
+        raise ValueError("Need at least 20 finite paired observations and one candidate.")
+    if type(repetitions) is not int or not 200 <= repetitions <= 100000:
+        raise ValueError("Bootstrap repetitions must be an integer >= 200.")
+    if type(seed) is not int or seed < 0:
+        raise ValueError("Need nonnegative integer seed.")
+    if not math.isfinite(expected_block) or not 1 <= expected_block <= n:
+        raise ValueError("Invalid mean bootstrap block length.")
+    differential = baseline[:, None] - candidates
+    observed = differential.mean(axis=0)
+    statistic = float(max(0., observed.max()))
+    centered = differential - observed
+    rng = np.random.default_rng(seed)
+    exceedances = 0
+    for _ in range(repetitions):
+        indices = stationary_bootstrap_indices(n, expected_block=expected_block, rng=rng)
+        simulated = float(max(0., centered[indices].mean(axis=0).max()))
+        exceedances += simulated >= statistic - 1e-14
+    return {"n": n, "models": k, "best_candidate_index": int(np.argmax(observed)),
+            "best_mean_loss_improvement": float(observed.max()),
+            "global_max_mean_improvement": statistic,
+            "one_sided_p_value": (exceedances+1)/(repetitions+1),
+            "bootstrap_repetitions": repetitions,
+            "expected_block_length": expected_block,
+            "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."}
