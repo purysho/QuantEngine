@@ -109,6 +109,27 @@ class ResearchIntegrityTests(unittest.TestCase):
         self.assertNotIn("original_path", result["metadata"])
         self.assertEqual(result["metadata"]["raw_sha256"], "abc")
 
+    def test_unseen_stream_only_exposes_past_and_rejects_replay(self):
+        from experiments.sequential_unseen import evaluate_stream
+        from experiments.exposure_ledger import AlreadyExposedError, fingerprint
+
+        values = [0.01, 0.02, -0.01, 0.05, -0.04]
+        observed = []
+        def predictor(history):
+            observed.append(history)
+            return history[-1]
+        with tempfile.TemporaryDirectory() as root:
+            opts = dict(dataset_sha256=fingerprint({"new": "unknown synthetic"}),
+                        ledger_path=Path(root)/"ledger.jsonl", minimum_history=2)
+            result = evaluate_stream(values, predictor, **opts)
+            self.assertEqual(result["n"], 3)
+            self.assertEqual(observed, [tuple(values[:2]), tuple(values[:3]), tuple(values[:4])])
+            with self.assertRaises(AlreadyExposedError):
+                evaluate_stream(values, predictor, **opts)
+            with self.assertRaises(ValueError):
+                evaluate_stream(values, lambda _: float("nan"),
+                                dataset_sha256=fingerprint("another"), ledger_path=opts["ledger_path"])
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
