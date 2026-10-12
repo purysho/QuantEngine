@@ -35,6 +35,7 @@ class ResearchIntegrityTests(unittest.TestCase):
             memory.path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
             self.assertEqual(memory.load("risk", "data", as_of=10), [{"id": "past"}])
             self.assertEqual({g["id"] for g in memory.load("risk", "data", as_of=20)}, {"past", "future"})
+            self.assertEqual(memory.load("risk", "other", as_of=20), [])
 
     def test_exposure_ledger_rejects_replays_and_overlaps(self):
         from experiments.exposure_ledger import ExposureLedger, AlreadyExposedError, fingerprint
