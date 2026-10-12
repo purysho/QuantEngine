@@ -22,6 +22,20 @@ class ResearchIntegrityTests(unittest.TestCase):
             self.assertEqual(verify([str(p)]), [])
             self.assertTrue(verify([str(p) + ".missing"]))
 
+    def test_experience_time_scope_excludes_future_and_legacy_rows(self):
+        from workers.quant_evolve import Experience
+
+        with tempfile.TemporaryDirectory() as root:
+            memory = Experience(Path(root) / "experience.jsonl")
+            rows = [
+                {"task": "risk", "fingerprint": "data", "genome": {"id": "past"}, "score": 1.0, "block": [0, 9]},
+                {"task": "risk", "fingerprint": "data", "genome": {"id": "future"}, "score": 99.0, "block": [10, 20]},
+                {"task": "risk", "fingerprint": "data", "genome": {"id": "legacy"}, "score": 100.0},
+            ]
+            memory.path.write_text("\\n".join(json.dumps(r) for r in rows) + "\\n")
+            self.assertEqual(memory.load("risk", "data", as_of=10), [{"id": "past"}])
+            self.assertEqual({g["id"] for g in memory.load("risk", "data", as_of=20)}, {"past", "future"})
+
     def test_mlp_scaling_cannot_see_early_stopping_tail(self):
         rng = np.random.default_rng(12)
         x = rng.normal(size=(120, 2))
