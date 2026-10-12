@@ -15,9 +15,30 @@ let count = 0, previous = null, done = false;
 const pilot = pilotDir ? spawn(process.env.QUANT_PYTHON || 'python',
   ['-m', 'experiments.live_pilot', '--root', pilotDir, '--product', product,
    '--model-commit', process.env.QUANT_MODEL_COMMIT || 'momentum-v1'],
-  { stdio: ['pipe', 'inherit', 'inherit'] }) : null;
+  { stdio: ['pipe', 'pipe', 'inherit'] }) : null;
 let pilotFailed = false;
+let awaitingAck = 0;
+let acknowledgementBuffer = '';
 if (pilot) {
+  pilot.stdout.on('data', chunk => {
+    acknowledgementBuffer += chunk.toString();
+    for (let cut; (cut = acknowledgementBuffer.indexOf('\n')) >= 0;) {
+      const line = acknowledgementBuffer.slice(0, cut);
+      acknowledgementBuffer = acknowledgementBuffer.slice(cut + 1);
+      try {
+        const response = JSON.parse(line);
+        if (response.ack === undefined) continue;
+        if (response.ack !== awaitingAck) {
+          pilotFailed = true;
+          return end('Unexpected or duplicate pilot acknowledgement.', 2);
+        }
+        awaitingAck = 0;
+      } catch {
+        pilotFailed = true;
+        return end('Invalid pilot acknowledgement.', 2);
+      }
+    }
+  });
   pilot.on('error', () => { pilotFailed = true; end('Pilot process unavailable.', 2); });
   pilot.on('exit', code => { if (code !== 0) { pilotFailed = true; end('Pilot process failed.', 2); } });
 }
@@ -49,6 +70,7 @@ ws.addEventListener('message', event => {
     const observed = new Date().toISOString();
     if (Date.parse(msg.time) > Date.parse(observed) + 5000) return end('Exchange event time is ahead of receipt clock.', 2);
     if (pilotFailed || (pilot && (pilot.exitCode !== null || pilot.stdin.destroyed))) return end('Pilot unavailable, refusing unscored samples.', 2);
+    if (pilot && awaitingAck !== 0) return end('Tick arrived before durable pilot acknowledgement; prospective interval invalid.', 2);
     previous = msg;
     const sample = { source: 'coinbase_exchange_ticker', product_id: product,
       event_at: msg.time, received_at: observed, sequence: msg.sequence,
@@ -57,7 +79,11 @@ ws.addEventListener('message', event => {
     const fd = openSync(output, 'a', 0o600);
     try { appendFileSync(fd, JSON.stringify(sample) + '\n'); fsyncSync(fd); }
     finally { closeSync(fd); }
-    if (pilot && !pilot.stdin.write(JSON.stringify(sample) + '\n')) return end('Pilot backpressure; refusing late forecasts.', 2);
+    if (pilot) {
+      awaitingAck = count + 1;
+      if (!pilot.stdin.write(JSON.stringify(sample) + '\n'))
+        return end('Pilot backpressure; refusing late forecasts.', 2);
+    }
     count++;
     if (count >= +maxRaw) { clearTimeout(timeout); end('Finished collecting ' + count + ' tickers.', 0); }
   } catch (err) { end('Malformed exchange message: ' + err.message, 2); }
