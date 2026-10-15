@@ -1,4 +1,5 @@
 # Quant Engine
+[Broker paper sandbox setup](docs/ALPACA_SANDBOX.md): Alpaca read-only preflight, credentials setup and remaining connection/execution gates. No order submission.
 
 [Capital-aware paper portfolios](docs/PAPER_PORTFOLIOS.md): durable nine-account comparisons at $100/$10,000/$1,000,000, frozen decisions, quoted-liquidity limits and desktop export. Software-tested; no automatic quote feed, independent custody, validated alpha or live brokerage connection.
 
