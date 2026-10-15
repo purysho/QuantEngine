@@ -382,3 +382,16 @@ test('real worker learns on the synthetic sample and remembers across runs', asy
     await assert.rejects(() => transport.request('learn', { dataset_id: 'sample', budget_seconds: 9999 }), /budget/);
   } finally { await rm(folder, { recursive: true, force: true }); }
 });
+
+test('paper operations own the shared worker slot and shutdown waits for cancellation', async () => {
+  const { Engine } = await engineModule(); const { defaultConfig } = await configModule();
+  let reject!: (reason: Error) => void;
+  const engine = new Engine(defaultConfig('/tmp/quant-paper'), {
+    request: async (command: string) => command==='history' ? {runs:[],stats:{}} : new Promise<Record<string, unknown>>((_resolve,r)=>{reject=r;}),
+    cancel: async () => { reject(new Error('cancelled')); },
+  },async()=>{});
+  const pending=engine.paperCommand({operation:'summary'});const failure=assert.rejects(pending,/interrupted|cancelled/);
+  assert.equal(engine.state.busy,true);await assert.rejects(()=>engine.paperCommand({operation:'summary'}),/active operation/);
+  await assert.rejects(()=>engine.calculateOptions({}),/already active/);
+  await engine.shutdown();await failure;assert.equal(engine.state.busy,false);
+});

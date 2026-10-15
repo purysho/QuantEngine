@@ -8,6 +8,9 @@ async function call(method: string, values?: unknown) {
 
 contextBridge.exposeInMainWorld('quant', Object.freeze({
   getState: () => call('state'),
+  paperCommand: (values: unknown) => call('paper-command', values),
+  importPaperQuote: (id: string) => call('paper-import-quote', id),
+  exportPaper: (id: string) => call('paper-export', id),
   start: () => call('start'),
   pause: () => call('pause'),
   runOnce: () => call('run-once'),

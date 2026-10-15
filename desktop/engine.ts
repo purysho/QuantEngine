@@ -22,6 +22,9 @@ export class Engine {
   optionsReport: JsonRecord | null = null;
   learning: JsonRecord | null = null;
   learningError: string | null = null;
+  paper: JsonRecord | null = null;
+  paperError: string | null = null;
+  private paperActive: Promise<JsonRecord> | null = null;
   runtime: JsonRecord = {};
   onChange: () => void = () => {};
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -44,7 +47,7 @@ export class Engine {
   snapshot() {
     return { state: { ...this.state }, config: { ...this.config }, datasets: this.datasets,
       runs: this.runs, report: this.lastReport, options: this.optionsReport, runtime: this.runtime,
-      learning: this.learning, learningError: this.learningError };
+      paper: this.paper, paperError: this.paperError, learning: this.learning, learningError: this.learningError };
   }
   private publish() { this.onChange(); }
 
@@ -60,6 +63,8 @@ export class Engine {
     this.datasets = result.datasets as Dataset[];
     this.runs = result.runs as JsonRecord[];
     this.runtime = result.runtime as JsonRecord;
+    this.paper = (result.paper as JsonRecord) ?? null;
+    this.paperError = (result.paper_error as string) ?? null;
     this.updateStats(result);
     if (!this.datasets.some(d => d.id === this.config.datasetId)) this.config.datasetId = 'sample';
     try { this.learning = (await this.transport.request('learning', {})).learning as JsonRecord; } catch { /* History is optional. */ }
@@ -266,7 +271,7 @@ export class Engine {
   private async pauseWork(): Promise<void> {
     const wasBusy = this.state.busy;
     const active = this.active, dataActive = this.dataActive, initializationActive = this.initializationActive,
-      optionsActive = this.optionsActive, learnActive = this.learnActive;
+      optionsActive = this.optionsActive, learnActive = this.learnActive, paperActive = this.paperActive;
     this.pausing = true;
     this.state.continuous = false;
     this.cancelled = true;
@@ -275,7 +280,7 @@ export class Engine {
       this.state.stage = 'Stopping worker and recovering history';
       this.publish();
       await this.transport.cancel();
-      await Promise.allSettled([active, dataActive, initializationActive, optionsActive, learnActive, this.configQueue]);
+      await Promise.allSettled([active, dataActive, initializationActive, optionsActive, learnActive, paperActive, this.configQueue]);
       // Keep the scheduler lock until the owned child has closed and SQLite history is recovered.
       this.state.busy = true;
       if (this.datasets.length) {
@@ -297,7 +302,7 @@ export class Engine {
   async shutdown(): Promise<void> {
     this.shuttingDown = true;
     await this.pause();
-    await Promise.allSettled([this.configQueue, this.dataActive, this.initializationActive, this.optionsActive, this.learnActive]);
+    await Promise.allSettled([this.configQueue, this.dataActive, this.initializationActive, this.optionsActive, this.learnActive, this.paperActive]);
   }
 
   /** Price a hypothetical option contract in the shared worker slot; never alters research history. */
@@ -328,6 +333,22 @@ export class Engine {
     });
     this.optionsActive = pending;
     return pending;
+  }
+
+  paperCommand(values: JsonRecord): Promise<JsonRecord> {
+    if (this.shuttingDown || this.pausing || this.state.settingsPending || this.state.busy) return Promise.reject(new Error('Wait for the active operation or pause before using paper portfolios.'));
+    this.clearTimer(); this.cancelled = false; this.state.busy = true; this.state.stage = 'Paper portfolio ledger'; this.publish();
+    const pending = this.transport.request('paper', { paper: values }).then(result => {
+      if (this.cancelled) throw new Error('Paper request interrupted; reload the durable ledger before retrying.');
+      if (result.paper) this.paper = result.paper as JsonRecord;
+      this.paperError = null;
+      return result;
+    }).catch(error => { this.paperError = String(error.message || error); throw error; }).finally(() => {
+      if (this.paperActive === pending) this.paperActive = null;
+      this.state.busy = this.pausing;
+      if (!this.pausing) { if (this.state.continuous && !this.cancelled) this.schedule(); else { this.state.stage = 'Ready to run'; this.publish(); } }
+    });
+    this.paperActive = pending; return pending;
   }
 
   dataCommand(command: 'import' | 'refresh', values: JsonRecord = {}): Promise<Dataset> {

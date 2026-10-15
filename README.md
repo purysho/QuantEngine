@@ -1,5 +1,7 @@
 # Quant Engine
 
+[Capital-aware paper portfolios](docs/PAPER_PORTFOLIOS.md): durable nine-account comparisons at $100/$10,000/$1,000,000, frozen decisions, quoted-liquidity limits and desktop export. Software-tested; no automatic quote feed, independent custody, validated alpha or live brokerage connection.
+
 <p align="center">
   <a href="https://github.com/purysho/QuantEngine/releases/latest/download/QuantEngine-win-x64.zip"><img alt="Download QuantEngine for Windows (x64)" src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download-QuantEngine%20for%20Windows%20x64-ff2a55?style=for-the-badge&amp;logo=windows&amp;logoColor=white&amp;labelColor=0d0a12"></a>
   <br>
