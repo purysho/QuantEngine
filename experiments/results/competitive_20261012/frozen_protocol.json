@@ -1,0 +1,54 @@
+{
+  "protocol": {
+    "selection": [
+      "2000-01-01",
+      "2010-01-01"
+    ],
+    "adoption": [
+      "2010-01-01",
+      "2015-01-01"
+    ],
+    "evaluation_start": "2015-01-01",
+    "assets": [
+      "CRSP_US_total_market",
+      "NASDAQ100_total_return"
+    ],
+    "candidates": [
+      "situation_router",
+      "router_vol15",
+      "momentum_rotation"
+    ],
+    "parameters": {
+      "trend_sma": 200,
+      "efficiency_window": 20,
+      "efficiency_cutoff": 0.25,
+      "stress_volatility": 0.25,
+      "rsi_period": 14,
+      "range_entry": 40,
+      "range_exit": 60,
+      "momentum_window": 126,
+      "router_dispatch_closes": 5,
+      "rotation_closes": 21,
+      "risk_target": 0.15,
+      "risk_weight_band": 0.05
+    },
+    "cost_sensitivity_bps": [
+      0,
+      10,
+      25
+    ],
+    "fee_sensitivity": 0.0075,
+    "hac_lags": 5,
+    "bootstrap_repetitions": 500,
+    "bootstrap_expected_block": 5,
+    "seed": 17,
+    "cash": "French realized RF, compounded across any missing common dates",
+    "restriction": "Long/cash, no leverage/shorts; source data adjusted total-return research indices, not actual executable quotes.",
+    "notice": "Rules selected by author before this replay, but prior broad-market history is exposed. No independently sealed future period."
+  },
+  "source_sha256": {
+    "workers/quant_competitive.py": "10284b16e3497456f2f1af9c13df492accce371fb1961afd26068846725ae4e7",
+    "experiments/competitive_test.py": "3c8c12520912befb6e93beb0dfd1a5149ec16ae61f4dd7b78143efde4d24f581"
+  },
+  "custody": "Local source freeze; no trusted external timestamp or future-label isolation."
+}

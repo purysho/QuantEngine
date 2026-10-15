@@ -1,0 +1,68 @@
+import unittest
+
+from workers.quant_live_feed import parse_ticker, check_next
+
+
+class PublicFeedTests(unittest.TestCase):
+    def ticker(self, **overrides):
+        return {"type": "ticker", "sequence": 100, "product_id": "BTC-USD",
+                "price": "100.5", "time": "2026-10-12T10:01:00.123Z",
+                "trade_id": 20, **overrides}
+
+    def test_public_ticker_tracks_exchange_and_receive_clocks(self):
+        sample = parse_ticker(self.ticker(), product="BTC-USD",
+                              received_at="2026-10-12T10:01:01.000Z")
+        self.assertEqual(sample["price"], 100.5)
+        self.assertFalse(sample["feed_is_complete"])
+        self.assertNotEqual(sample["event_at"], sample["received_at"])
+        self.assertIsNone(parse_ticker({"type": "heartbeat"}, product="BTC-USD",
+                                        received_at="2026-10-12T10:01:01Z"))
+
+    def test_replay_and_unexpected_asset_rejected(self):
+        a = parse_ticker(self.ticker(), product="BTC-USD",
+                         received_at="2026-10-12T10:01:01Z")
+        with self.assertRaises(ValueError):
+            check_next(a, a)
+        with self.assertRaises(ValueError):
+            parse_ticker(self.ticker(product_id="ETH-USD"), product="BTC-USD",
+                         received_at="2026-10-12T10:01:01Z")
+
+    def test_event_time_order_with_mixed_fractional_precision(self):
+        first = parse_ticker(self.ticker(time="2026-10-12T10:01:00.900Z"),
+                             product="BTC-USD", received_at="2026-10-12T10:01:01Z")
+        second = parse_ticker(self.ticker(sequence=101, trade_id=21,
+                                          time="2026-10-12T10:01:00Z"),
+                              product="BTC-USD", received_at="2026-10-12T10:01:02Z")
+        with self.assertRaisesRegex(ValueError, "backwards"):
+            check_next(first, second)
+
+    def test_kraken_ticker_quote_consistency_and_snapshot_exclusion(self):
+        from workers.quant_live_feed import parse_kraken_ticker
+
+        row = {"channel": "ticker", "type": "update",
+               "data": [{"symbol": "BTC/USD", "timestamp": "2026-10-12T10:01:00Z",
+                         "last": 100.0, "bid": 99.0, "ask": 101.0}]}
+        valid = parse_kraken_ticker(row, symbol="BTC/USD",
+                                    received_at="2026-10-12T10:01:01Z")
+        self.assertEqual(valid["price"], 100.0)
+        self.assertFalse(valid["prediction_eligible"])
+        self.assertEqual(valid["source"], "kraken_spot_ticker_v2")
+        self.assertIsNone(parse_kraken_ticker({**row, "type": "snapshot"},
+                                              symbol="BTC/USD", received_at="2026-10-12T10:01:01Z"))
+        invalid = {**row, "data": [{**row["data"][0], "bid": 105.0}]}
+        with self.assertRaises(ValueError):
+            parse_kraken_ticker(invalid, symbol="BTC/USD",
+                                received_at="2026-10-12T10:01:01Z")
+
+    def test_nonfinite_stale_clock_and_negative_prices_fail_closed(self):
+        for invalid in ("nan", "-5", "inf", "0"):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                parse_ticker(self.ticker(price=invalid), product="BTC-USD",
+                             received_at="2026-10-12T10:01:01Z")
+        with self.assertRaises(ValueError):
+            parse_ticker(self.ticker(), product="BTC-USD",
+                         received_at="2026-10-12T10:00:00Z")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -140,6 +140,28 @@ function checkedRun(id: unknown) {
 
 async function command(method: string, values?: unknown): Promise<unknown> {
   if (method === 'state') return engine.snapshot();
+  if (method === 'paper-command') {
+    if (!values || typeof values !== 'object' || Array.isArray(values) || JSON.stringify(values).length > 8000) throw new Error('A bounded paper operation is required.');
+    await engine.paperCommand(values as JsonRecord); return engine.snapshot();
+  }
+  if (method === 'paper-import-quote') {
+    if (typeof values !== 'string' || !/^[a-f0-9]{32}$/.test(values)) throw new Error('Choose a paper campaign.');
+    const selected = await dialog.showOpenDialog(window!, { title: 'Import one daily session quote', filters: [{ name: 'Quote JSON', extensions: ['json'] }], properties: ['openFile'] });
+    if (selected.canceled || !selected.filePaths[0]) return null;
+    const filename=selected.filePaths[0]; if ((await fs.promises.stat(filename)).size > 8000) throw new Error('Quote file exceeds8KB.');
+    const quote=JSON.parse(await readFile(filename,'utf8')) as unknown;
+    await engine.paperCommand({ operation:'ingest', id:values, quote }); return engine.snapshot();
+  }
+  if (method === 'paper-export') {
+    if (typeof values !== 'string' || !/^[a-f0-9]{32}$/.test(values)) throw new Error('Choose a paper campaign.');
+    const selected=await dialog.showSaveDialog(window!, { title:'Export paper journal', defaultPath:'QuantEngine-paper-'+values.slice(0,8)+'.json', filters:[{name:'JSON',extensions:['json']}] });
+    if (selected.canceled || !selected.filePath) return null;
+    const result=await engine.paperCommand({operation:'export',id:values});
+    const temporary=selected.filePath+'.'+randomUUID()+'.tmp';
+    try { await writeFile(temporary,JSON.stringify(result.export,null,2)+'\n','utf8'); await rename(temporary,selected.filePath); }
+    finally { await unlink(temporary).catch(()=>{}); }
+    return {path:selected.filePath};
+  }
   if (method === 'start') { await engine.start(); return engine.snapshot(); }
   if (method === 'pause') { await engine.pause(); return engine.snapshot(); }
   if (method === 'run-once') { await engine.runOnce(); return engine.snapshot(); }
@@ -225,13 +247,14 @@ function dispatchCommand(method: string, values?: unknown): Promise<unknown> {
     settingsQueue = pending;
     return pending;
   }
-  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'calculate-options', 'learn-now'].includes(method)) {
+  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'calculate-options', 'learn-now', 'paper-command', 'paper-import-quote', 'paper-export'].includes(method)) {
     return Promise.reject(new Error('Settings or storage are still being saved. Wait before starting another operation.'));
   }
   return command(method, values);
 }
 
 async function nativeSelfTest() {
+  if(process.env.QUANT_SELF_TEST_SCREENSHOT)window!.show();
   const ready = await window!.webContents.executeJavaScript(`(async () => {
     const state = await window.quant.getState();
     return { bridge: typeof window.quant.runOnce === 'function', rows: state.datasets[0].rows,
@@ -251,6 +274,22 @@ async function nativeSelfTest() {
   await engine.learnNow();
   const learned = engine.learning as { tasks?: Record<string, { graph: { nodes: unknown[] } }> } | null;
   if (!learned?.tasks?.risk?.graph.nodes.length) throw new Error(`Self-test learning step failed: ${engine.learningError}`);
+  const paperCheck=await window!.webContents.executeJavaScript(`(async()=>{
+    let snapshot=await window.quant.paperCommand({operation:'create',mode:'recorded',source:'Native synthetic fixture'});
+    const id=snapshot.paper.id;
+    for(let day=1;day<=2;day++) snapshot=await window.quant.paperCommand({operation:'ingest',id,quote:{event_id:'native'+day,symbol:'QQQ',session:'2020-01-0'+day,previous_session:day===1?null:'2020-01-01',asof:'2020-01-0'+day+'T20:00:00Z',bid:'99',ask:'101',bid_size:'10',ask_size:'10'}});
+    document.querySelector('[data-page="paper"]').click();
+    await new Promise(requestAnimationFrame);
+    return {visible:!document.getElementById('page-paper').classList.contains('hidden'),books:snapshot.paper.books.length,rows:document.querySelectorAll('#paper-rows tr').length,source:document.getElementById('paper-source').textContent};
+  })()`);
+  if(!paperCheck.visible||paperCheck.books!==9||paperCheck.rows!==9||!paperCheck.source.includes('recorded'))throw new Error('Native paper portfolio check failed.');
+  if(process.env.QUANT_SELF_TEST_SCREENSHOT)await new Promise(resolve=>setTimeout(resolve,300));
+  if(process.env.QUANT_SELF_TEST_SCREENSHOT){
+    await writeFile(process.env.QUANT_SELF_TEST_SCREENSHOT,(await window!.webContents.capturePage()).toPNG());
+    await window!.webContents.executeJavaScript("document.getElementById('paper-rows').scrollIntoView({block:'center'})");
+    await new Promise(resolve=>setTimeout(resolve,200));
+    await writeFile(process.env.QUANT_SELF_TEST_SCREENSHOT+'.table.png',(await window!.webContents.capturePage()).toPNG());
+  }
   console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), learnedModels: learned.tasks.risk.graph.nodes.length, completed: engine.state.completed,
     runtime: engine.runtime, report: engine.lastReportPath }));
   await quit();

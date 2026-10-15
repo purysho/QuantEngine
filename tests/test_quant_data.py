@@ -76,6 +76,27 @@ class DataTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 qd.fetch("http://unused", folder, "missing", offline=True)
 
+    def test_cache_refresh_is_explicit_and_incompatible_with_offline(self):
+        from unittest.mock import patch
+        import hashlib
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            old = b"observation_date,X\\n2020-01-01,1\\n"
+            newer = b"observation_date,X\\n2020-01-01,2\\n"
+            (root / "saved.csv").write_bytes(old)
+            (root / "demo.json").write_text(json.dumps({
+                "file": "saved.csv", "sha256": hashlib.sha256(old).hexdigest()
+            }))
+            with self.assertRaises(ValueError):
+                qd.fetch("https://example.invalid/data.csv", root, "demo", offline=True, refresh=True)
+            with patch("workers.quant_data.urllib.request.urlopen", return_value=io.BytesIO(newer)):
+                data, meta = qd.fetch("https://example.invalid/data.csv", root, "demo", refresh=True)
+            self.assertEqual(data, newer)
+            self.assertEqual(meta["sha256"], hashlib.sha256(newer).hexdigest())
+            self.assertEqual(qd.fetch("https://example.invalid/data.csv", root, "demo", offline=True)[0], newer)
+
     def test_align_drops_missing_and_unmatched_dates(self):
         import datetime as dt
         d = [dt.date(2020, 1, i) for i in (1, 2, 3, 4)]

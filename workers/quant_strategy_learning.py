@@ -1,0 +1,133 @@
+"""Causal research diagnostics and conservative selection/adoption gates.
+
+Historical replay is development evidence. This does not establish an untouched
+holdout, execute trades or change the desktop's portfolio strategy automatically.
+"""
+from __future__ import annotations
+import numpy as np
+from scipy.stats import norm
+from workers.quant_strategies import _prices, signals, backtest, five_year_blocks
+from workers.quant_model_selection import newey_west_mean
+
+
+def attribute(prices,targets,*,cost_bps=10,indices=None):
+    p=_prices(prices)
+    gross=backtest(p,targets,cost_bps=0);net=backtest(p,targets,cost_bps=cost_bps)
+    bg=backtest(p,np.ones(len(p)),cost_bps=0);bn=backtest(p,np.ones(len(p)),cost_bps=cost_bps)
+    g=np.log1p(gross['net_returns']);n=np.log1p(net['net_returns'])
+    b=np.log1p(bg['net_returns']);bc=np.log1p(bn['net_returns'])
+    held=np.zeros(len(p)-1);held[1:]=np.asarray(targets)[:-2]
+    raw=np.diff(p)/p[:-1];eligible=np.arange(len(raw))>=1
+    trades=np.zeros(len(raw));trades[:-1]=np.abs(np.diff(np.r_[0.,np.asarray(targets)[:-2]]));trades[-1]=np.asarray(targets)[-3]
+    if indices is not None:
+        ix=np.asarray(indices)
+        if ix.ndim!=1 or not len(ix) or ix.dtype.kind not in 'iu' or (ix<0).any() or (ix>=len(raw)).any() or (np.diff(ix)<=0).any():
+            raise ValueError('Indices must be a nonempty strictly increasing in-range integer list.')
+        g,n,b,bc,held,raw,eligible,trades=(v[ix] for v in (g,n,b,bc,held,raw,eligible,trades))
+    on=(held>0)&eligible;off=(held==0)&eligible
+    def average(mask): return float(raw[mask].mean()) if mask.any() else None
+    best=np.flatnonzero(eligible)[np.argsort(raw[eligible])[-min(100,int(eligible.sum())):]]
+    worst=np.flatnonzero(eligible)[np.argsort(raw[eligible])[:min(100,int(eligible.sum()))]]
+    wealth=np.r_[1.,np.exp(np.cumsum(n))]
+    annual=lambda x:float(np.expm1(x.mean()*252))
+    return {'observations':len(raw),'exposure_days':int(on.sum()),
+            'market_exposure_fraction':float(on.sum()/eligible.sum()) if eligible.any() else 0.,
+            'turnover_per_252_observations':float(trades.sum()/len(raw)*252),
+            'gross_cagr':annual(g),'net_cagr':annual(n),'buyhold_net_cagr':annual(bc),
+            'cost_log_drag':float((g-n).sum()),
+            'missed_market_log_contribution':float((g-b).sum()),
+            'relative_cost_log_contribution':float(((n-g)-(bc-b)).sum()),
+            'net_log_gap_vs_buyhold':float((n-bc).sum()),
+            'mean_return_on_invested_days':average(on),
+            'mean_return_on_cash_days':average(off),
+            'best_100_days_captured':int((held[best]>0).sum()),
+            'worst_100_days_held':int((held[worst]>0).sum()),
+            'net_max_drawdown':float((wealth/np.maximum.accumulate(wealth)-1).min()),
+            'interpretation':'Exact realized accounting, not causal market inference. CAGR uses 252 observations/year; cash return zero.'}
+
+
+def remedies(prices):
+    """Three declared remedies only; never parameter-search the reported outcomes."""
+    p=_prices(prices);inc=signals(p)
+    slow=np.zeros(len(p));weekly=np.zeros(len(p));channel=np.zeros(len(p))
+    for i in range(len(p)):
+        if i>=199:slow[i]=float(p[i-49:i+1].mean()>p[i-199:i+1].mean())
+        weekly[i]=inc['macd_12_26_9'][i] if i%5==0 else weekly[i-1]
+        if i>=20:
+            if p[i]>p[i-20:i].max():channel[i]=1
+            elif p[i]<p[i-19:i+1].mean():channel[i]=0
+            else:channel[i]=channel[i-1]
+    return {'ma_50_200':slow,'macd_every_5_closes':weekly,'channel_breakout_20':channel}
+
+
+def _evidence(candidate,baseline,*,comparisons=1):
+    c=np.asarray(candidate,dtype=float);b=np.asarray(baseline,dtype=float)
+    if c.ndim!=1 or c.shape!=b.shape or len(c)<100:
+        raise ValueError('Require at least 100 matched daily observations.')
+    result=newey_west_mean(c-b,lags=5)
+    z=float(norm.ppf(1-.025/comparisons))
+    lower=result['mean']-z*result['standard_error']
+    return {**result,'multiplicity_comparisons':comparisons,'critical_value':z,
+            'adjusted_lower':lower,
+            'passed':bool(lower>0 and result['standard_error']>0),
+            'notice':'Nominal fixed-block Bonferroni/HAC gate; no optional-stopping or independent-custody proof.'}
+
+
+def choose(candidates,baseline):
+    if not candidates:raise ValueError('Empty fixed candidate set.')
+    evidence={name:_evidence(values,baseline,comparisons=len(candidates)) for name,values in candidates.items()}
+    admissible=[name for name,r in evidence.items() if r['passed']]
+    choice=max(admissible,key=lambda name:evidence[name]['adjusted_lower']) if admissible else 'buyhold'
+    return {'choice':choice,'candidate_selected':choice!='buyhold','evidence':evidence}
+
+
+def sequential_choices(dates,candidates,baseline):
+    """10-year selection, next separate 5-year adoption, then 5-year deployment.
+
+    Every choice is made before its deployment block. No deployment outcome is
+    available for selecting/adopting that choice. Earlier blocks may become
+    later training data, but all such reuse remains explicitly historical.
+    """
+    b=np.asarray(baseline,dtype=float)
+    if b.shape!=(len(dates),) or not np.isfinite(b).all():raise ValueError('Invalid dated baseline.')
+    cs={name:np.asarray(v,dtype=float) for name,v in candidates.items()}
+    if not cs or any(v.shape!=b.shape or not np.isfinite(v).all() for v in cs.values()):raise ValueError('Invalid candidate returns.')
+    blocks=[block for block in five_year_blocks(dates) if block['complete']]
+    # Include a partial final deployment; selection/adoption still require complete blocks.
+    all_blocks=five_year_blocks(dates)
+    records=[]
+    for deploy in all_blocks:
+        year=deploy['start_year']
+        past=[block for block in blocks if block['end_year']<=year]
+        if len(past)<3:continue
+        chosen=past[-3:]
+        if [r['start_year'] for r in chosen]!=[year-15,year-10,year-5]:continue
+        sel=chosen[0]['indices']+chosen[1]['indices'];adopt=chosen[2]['indices']
+        selection=choose({name:v[sel] for name,v in cs.items()},b[sel]);proposal=selection['choice']
+        ev=_evidence(cs[proposal][adopt],b[adopt]) if proposal!='buyhold' else None
+        deployed=proposal if ev and ev['passed'] else 'buyhold'
+        records.append({'deployment_start_year':year,'deployment_end_year':year+5,
+                        'selection_years':[year-15,year-5], 'adoption_years':[year-5,year],
+                        'proposed':proposal,'deployed':deployed,'selection':selection,
+                        'adoption':{'status':'accepted' if deployed!='buyhold' else 'rejected' if proposal!='buyhold' else 'no_candidate',
+                                    'evidence':ev}})
+    return records
+
+
+def deployment_targets(dates,candidate_targets,decisions):
+    """Choose policy by execution date; feed its previous-close target to backtest."""
+    five_year_blocks(dates)  # authoritative date-order validation
+    result=np.ones(len(dates))
+    end=None
+    for decision in decisions:
+        start=decision['deployment_start_year'];stop=decision['deployment_end_year']
+        if type(start) is not int or stop!=start+5 or (end is not None and start<end):
+            raise ValueError('Deployment blocks must be ordered, nonoverlapping five-year intervals.')
+        end=stop;name=decision['deployed']
+        if name=='buyhold':continue
+        if name not in candidate_targets:raise ValueError('Unknown frozen strategy.')
+        v=np.asarray(candidate_targets[name],dtype=float)
+        if v.shape!=result.shape or not np.isin(v,[0,1]).all():raise ValueError('Invalid long/cash targets.')
+        for t,date in enumerate(dates):
+            if t>=1 and start<=date.year<stop:result[t-1]=v[t-1]
+    return result

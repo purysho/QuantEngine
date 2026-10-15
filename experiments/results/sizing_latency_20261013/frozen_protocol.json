@@ -1,0 +1,55 @@
+{
+  "protocol": {
+    "status": "exposed_development_interval_only",
+    "minimum_closes": [
+      1,
+      5,
+      21
+    ],
+    "fixed": {
+      "asset": "Nasdaq100 total return",
+      "warmup": 252,
+      "volatility_lookback": 20,
+      "risk_target": 0.15,
+      "absolute_weight_band": 0.1,
+      "periodic_override": false,
+      "leverage": false
+    },
+    "evaluation_start": "2015-01-01",
+    "cost_bps": [
+      0,
+      10,
+      25
+    ],
+    "primary": "paired mean net return at10bps versus21-close arm",
+    "hac_lags": 20,
+    "primary_family_comparisons": 2,
+    "bootstrap_blocks": [
+      5,
+      20,
+      60
+    ],
+    "bootstrap_repetitions": 1000,
+    "bootstrap_seed": 17,
+    "bootstrap_family_comparisons": 18,
+    "bootstrap_metrics": [
+      "annual_log_growth_difference",
+      "sharpe_difference",
+      "drawdown_improvement"
+    ],
+    "source_pins": {
+      "broad_market": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "nasdaq_total_return": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe"
+    },
+    "notice": "Previously exposed history. Only minimum interval varies; no parameter sweep, independent custody, automated adoption or forecasting claim."
+  },
+  "source_sha256": {
+    "experiments/sizing_latency.py": "d095390c0c3d934239d9238a052d81468765a517c5b49194aa32b990427688c7",
+    "workers/quant_sizing_latency.py": "387886d2ab424ed380ab45c5ebb7d3b1251915f6bef7649ed90fb0f4402b7724",
+    "workers/quant_competitive.py": "7ec8b47c84b396a9899257a6c5181f7d1d77e136e1ce91ebfd022d4c05ea3c40",
+    "workers/quant_trade_audit.py": "1291b8ef19a869c4e97e6eff6e1de6288321038ea671252fb50128a3800e4b45",
+    "workers/quant_model_selection.py": "78bae21989c5b908677c440a9c0730caebbf62801130136d261abacb76129490",
+    "experiments/competitive_test.py": "3c7fc342add644b6ef33cbadbfc2d2fbe8cfaf2551d53e9f85a0a6b932a3b947",
+    "workers/quant_data.py": "ab9d72f724e9dd95f51c3873be2e0ee171265af897e3ba93198be5918f47154e"
+  }
+}

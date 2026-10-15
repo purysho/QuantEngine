@@ -42,10 +42,11 @@ class MLP:
 
     def fit(self, x, y):
         rng = np.random.default_rng(self.seed)
-        self.mean_, self.scale_ = x.mean(axis=0), np.where(x.std(axis=0) > 1e-12, x.std(axis=0), 1.0)
-        self.y_mean_, self.y_scale_ = float(y.mean()), float(y.std() or 1.0)
+        cut = max(1, int(len(x) * .8))  # Split chronologically before fitting any preprocessing.
+        train_x, train_y = x[:cut], y[:cut]
+        self.mean_, self.scale_ = train_x.mean(axis=0), np.where(train_x.std(axis=0) > 1e-12, train_x.std(axis=0), 1.0)
+        self.y_mean_, self.y_scale_ = float(train_y.mean()), float(train_y.std() or 1.0)
         xs, ys = (x - self.mean_) / self.scale_, ((y - self.y_mean_) / self.y_scale_)[:, None]
-        cut = max(1, int(len(xs) * .8))  # Last 20% (later in time) is the early-stopping set.
         xt, yt, xv, yv = xs[:cut], ys[:cut], xs[cut:], ys[cut:]
         sizes = [x.shape[1], *self.hidden, 1]
         params = [(rng.normal(0, 1 / math.sqrt(a), (a, b)), np.zeros(b)) for a, b in zip(sizes[:-1], sizes[1:])]
@@ -252,8 +253,10 @@ def prequential(task: Task, n: int, *, first: int, block: int, validation: int, 
     """Evolve on data before t, freeze the champion, score it on [t, t + block). Repeat as time advances.
 
     ``evidence_windows`` > 1 scores genomes on the last K validation windows (decay-weighted) instead of
-    one, which reduces winner's-curse selection. ``guard`` keeps the baseline unless the champion's
-    advantage over it across those windows is significant (mean - 2 SE > 0): learning must earn a change.
+    one, which reduces winner's-curse selection. When ``guard`` is enabled,
+    the newest three disjoint windows are reserved *solely* for adoption testing;
+    model search uses the older windows. This is an independent acceptance gate,
+    not a multiple-testing-corrected significance claim.
     """
     evo = Evolution(task, population=population, seed=seed, experience=experience)
     started = time.perf_counter()
@@ -261,24 +264,36 @@ def prequential(task: Task, n: int, *, first: int, block: int, validation: int, 
     incumbent = dict(task.baseline)  # The adopted model; a challenger must significantly beat it to replace it.
     for t in range(first, n - block + 1, block):
         windows = [(t - validation - j * block, t - j * block) for j in range(evidence_windows) if t - validation - j * block >= 0]
-        weights = np.array([decay ** j for j in range(len(windows))])
+        # Keep the three most recent windows untouched by model search.
+        # Both sides must be non-overlapping for a standard-error gate to mean anything.
+        if guard:
+            if validation > block:
+                raise ValueError("Guard needs non-overlapping evaluation windows (validation <= block).")
+            selection_windows = windows[3:]
+            adoption_windows = windows[:3]
+        else:
+            selection_windows = windows
+            adoption_windows = []
+        weights = np.array([decay ** j for j in range(len(selection_windows))])
 
         def fitness(genome):
-            scores = np.array([task.score(genome, a, b) for a, b in windows])
+            if not selection_windows:
+                return -math.inf
+            scores = np.array([task.score(genome, a, b) for a, b in selection_windows])
             if not np.isfinite(scores).all():
                 return -math.inf
             return float(weights @ scores / weights.sum())
 
         champion = None
         for _ in range(generations):
-            champion = evo.step(windows[0][0], windows[0][1], fitness)
+            champion = evo.step((selection_windows or windows)[0][0], (selection_windows or windows)[0][1], fitness)
         genome = evo.nodes[champion]["genome"]
         guarded = False
         if guard:
             if genome != incumbent:
-                diffs = np.array([task.score(genome, a, b) - task.score(incumbent, a, b) for a, b in windows])
-                standard_error = diffs.std(ddof=1) / math.sqrt(len(diffs)) if len(diffs) > 1 else math.inf
-                if not np.isfinite(diffs).all() or diffs.mean() - 2 * standard_error <= 0:
+                diffs = np.array([task.score(genome, a, b) - task.score(incumbent, a, b) for a, b in adoption_windows])
+                standard_error = diffs.std(ddof=1) / math.sqrt(len(diffs)) if len(diffs) >= 3 and selection_windows else math.inf
+                if not np.isfinite(diffs).all() or not len(selection_windows) or diffs.mean() - 2 * standard_error <= 0:
                     genome, guarded = dict(incumbent), True
             incumbent = dict(genome)
         out_of_sample = task.score(genome, t, t + block)
@@ -320,11 +335,18 @@ class Experience:
     def __init__(self, path: str | Path):
         self.path = Path(path)
 
-    def load(self, task: str, fingerprint: str, limit: int = 6) -> list:
+    def load(self, task: str, fingerprint: str, limit: int = 6, *, as_of: int | None = None) -> list:
         if not self.path.exists():
             return []
         rows = [json.loads(line) for line in self.path.read_text(encoding="utf-8").splitlines() if line.strip()]
         rows = [r for r in rows if r.get("task") == task]
+        if as_of is not None:
+            # Fail closed: legacy rows without a complete observation interval cannot
+            # prove they were available at this replay clock.
+            rows = [r for r in rows if r.get("fingerprint") == fingerprint and isinstance(r.get("block"), list)
+                    and len(r["block"]) == 2
+                    and all(type(v) is int for v in r["block"])
+                    and 0 <= r["block"][0] < r["block"][1] <= as_of]
         # Prefer memories from the same data, then from any data (transfer), best first.
         rows.sort(key=lambda r: (r.get("fingerprint") != fingerprint, -(r.get("score") or -1e18)))
         seen, out = set(), []

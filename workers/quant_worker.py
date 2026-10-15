@@ -21,6 +21,7 @@ from quant_core import analyse
 from quant_options import options_report
 from quant_learning import learn
 from quant_store import Store
+from quant_paper import PaperLedger
 
 
 def emit(value):
@@ -43,6 +44,26 @@ def main():
             recovered = store.recover() if request.get("recover") else 0
             result = {"datasets": store.datasets(), "runs": store.history(), "stats": store.stats(), "recovered": recovered,
                       "root": str(store.root), "runtime": {"python": platform.python_version(), "numpy": np.__version__, "scipy": scipy.__version__}}
+            paper=PaperLedger(store.root)
+            try:
+                try:result["paper"]=paper.summary()
+                except Exception as exc:result["paper_error"]=str(exc)
+            finally:paper.close()
+        elif command == "paper":
+            values=request.get("paper")
+            if not isinstance(values,dict):raise ValueError("Paper operation required.")
+            operation=values.get("operation");cid=values.get("id")
+            paper=PaperLedger(store.root)
+            try:
+                allowed={"create":{"operation","mode","source","assumptions"},"ingest":{"operation","id","quote"},"control":{"operation","id","halted"},"summary":{"operation","id"},"export":{"operation","id"}}
+                if operation not in allowed or set(values)-allowed[operation]:raise ValueError("Unknown paper operation/input.")
+                if operation=="create":value=paper.create(mode=values.get("mode"),source=values.get("source"),assumptions=values.get("assumptions"))
+                elif operation=="ingest":value=paper.ingest(cid,values.get("quote"))
+                elif operation=="control":value=paper.control(cid,values.get("halted"))
+                elif operation=="export":value=paper.export(cid)
+                else:value=paper.summary(cid)
+                result={"export" if operation=="export" else "paper":value}
+            finally:paper.close()
         elif command == "import":
             result = {"dataset": store.import_csv(request.get("path", "")), "datasets": store.datasets()}
         elif command == "refresh":

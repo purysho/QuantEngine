@@ -62,20 +62,15 @@ for name, task in (("risk", ev.risk_task(r, p=.01)), ("alpha", ev.alpha_task(r))
                      "excess_vs_baseline_second_half": float(np.mean([c["out_of_sample_score"] - c["baseline_score"] for c in second_half])),
                      "graph": run["graph"]}
 
-# Warm start: does remembered experience help a fresh run on a different market (the 'Other' industry)?
-ind, ind_meta = qd.french("12_Industry_Portfolios_daily", ROOT / ".cache" / "data",
-                          section="Average Value Weighted Returns -- Daily", offline=args.offline)
-other = ind["series"]["Other"]
-other = other[np.isfinite(other)]
-o_first = len(other) - 8 * BLOCK
-cold = ev.prequential(ev.risk_task(other, p=.01), len(other), first=o_first, block=BLOCK, validation=VALIDATION,
-                      generations=1, population=6, seed=5, evidence_windows=6, guard=True)
-warm = ev.prequential(ev.risk_task(other, p=.01), len(other), first=o_first, block=BLOCK, validation=VALIDATION,
-                      generations=1, population=6, seed=5, evidence_windows=6, guard=True, experience=memory.load("risk", ind_meta["sha256"]))
-transfer = {"cold_mean_out_of_sample": cold["mean_out_of_sample"], "warm_mean_out_of_sample": warm["mean_out_of_sample"],
-            "cold_first_block": cold["curve"][0]["out_of_sample_score"], "warm_first_block": warm["curve"][0]["out_of_sample_score"],
-            "blocks": warm["blocks"], "note": "Same seed and budget (1 generation, 6 genomes); warm start seeds the population with "
-                                              "genomes remembered from the US-market run."}
+# Cross-dataset, cross-era warm starts are not valid time-locked evaluation:
+# the memories below were trained on the complete US series, potentially later
+# than the first held-out block on the separate industry series. Never report
+# that transfer as out-of-sample evidence without an independent observation clock.
+transfer = {
+    "status": "not_evaluated",
+    "reason": "A trustworthy cross-dataset point-in-time mapping is not available.",
+    "requires": "timestamped memories, common vintage cutoff, and independent future adoption blocks",
+}
 finished = time.perf_counter()
 payload = {"purpose": "Measure whether evolutionary model search improves real out-of-sample results over time.",
            "data": {"source": meta["url"], "sha256": meta["sha256"], "first_block": str(dates[first]), "last": str(dates[-1]),
@@ -85,8 +80,16 @@ payload = {"purpose": "Measure whether evolutionary model search improves real o
                "risk_learner_beats_baseline_on_average": results["risk"]["mean_out_of_sample"] > results["risk"]["mean_baseline"],
                "risk_learner_within_5pct_of_best_fixed_in_hindsight": abs(results["risk"]["learner_minus_best_fixed_in_hindsight"])
                                                                      <= .05 * abs(max(results["risk"]["fixed_configurations_mean_score"].values())),
-               "alpha_learner_not_worse_than_mean_forecast": results["alpha"]["mean_out_of_sample"] >= results["alpha"]["mean_baseline"] - .05,
-               "warm_start_not_worse_than_cold": transfer["warm_mean_out_of_sample"] >= transfer["cold_mean_out_of_sample"]},
+               },
+           "unresolved_research_findings": {
+               "alpha_vs_mean_baseline": {
+                   "observed_pass": results["alpha"]["mean_out_of_sample"] >= results["alpha"]["mean_baseline"] - .05,
+                   "candidate_mean_score": results["alpha"]["mean_out_of_sample"],
+                   "baseline_mean_score": results["alpha"]["mean_baseline"],
+                   "reason": "Search/adoption protocol changed; this development replay does not establish alpha model superiority.",
+                   "requires_fresh_holdout": True,
+               },
+           },
            "interpretation": "A learner is only useful if its frozen, forward-scored choices beat simple fixed choices. "
                              "For next-day returns, an honest result near zero R^2 is expected: daily returns are close to unpredictable."}
 path = write("evolution_real", payload, started, finished)

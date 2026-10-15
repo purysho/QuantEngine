@@ -1,0 +1,57 @@
+{
+  "protocol": {
+    "selection": [
+      "2000-01-01",
+      "2010-01-01"
+    ],
+    "adoption": [
+      "2010-01-01",
+      "2015-01-01"
+    ],
+    "evaluation_start": "2015-01-01",
+    "assets": [
+      "CRSP_US_total_market",
+      "NASDAQ100_total_return"
+    ],
+    "candidates": [
+      "core80_tactical20",
+      "nasdaq_slow_vol15"
+    ],
+    "parameters": {
+      "warmup": 252,
+      "core_nasdaq_weight": 0.8,
+      "tactical_weight": 0.2,
+      "relative_momentum_closes": 126,
+      "switch_margin_log": 0.05,
+      "confirmation_closes": 5,
+      "minimum_switch_closes": 21,
+      "risk_window": 20,
+      "risk_target": 0.15,
+      "risk_band": 0.1,
+      "minimum_sizing_closes": 21
+    },
+    "cost_sensitivity_bps": [
+      0,
+      10,
+      25
+    ],
+    "fee_sensitivity": 0.0075,
+    "hac_lags": 5,
+    "bootstrap_repetitions": 500,
+    "bootstrap_expected_block": 5,
+    "seed": 17,
+    "cash": "French realized RF, compounded across any missing common dates",
+    "restriction": "Long/cash, no leverage/shorts; source data adjusted total-return research indices, not actual executable quotes.",
+    "added_control": "After the initial replay, add strong passive rolling-volatility controls without changing candidate rules; later replay is exposed development.",
+    "notice": "All matched history previously exposed. Bounded core/tactical development only; no automatic adoption.",
+    "source_pins": {
+      "broad_market": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "nasdaq_total_return": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe"
+    }
+  },
+  "source_sha256": {
+    "workers/quant_competitive.py": "7ec8b47c84b396a9899257a6c5181f7d1d77e136e1ce91ebfd022d4c05ea3c40",
+    "experiments/competitive_test.py": "3c7fc342add644b6ef33cbadbfc2d2fbe8cfaf2551d53e9f85a0a6b932a3b947"
+  },
+  "custody": "Local source freeze; no trusted external timestamp or future-label isolation."
+}

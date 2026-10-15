@@ -24,20 +24,37 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 24
           cache: npm
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.13'
           cache: pip
       - run: python -m pip install -r requirements.txt -r requirements-dev.txt
       - run: npm ci
+      - name: Validate isolated public-feed collector syntax
+        run: node --check experiments/collect_coinbase.mjs
       - run: npm run typecheck
       - name: Numerical tests
         run: npm run test:quant
+        env:
+          QUANT_PYTHON: python
+      - name: Capital-aware synthetic paper acceptance
+        run: python -m experiments.paper_acceptance --output-dir .cache/paper-acceptance-ci
+      - name: Archive synthetic paper evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: paper-acceptance-${{ runner.os }}
+          path: .cache/paper-acceptance-ci/
+          if-no-files-found: error
+      - name: Synthetic end-to-end WebSocket to prospective settlement
+        run: |
+          node tests/live_pipeline_smoke.mjs
+          node tests/collector_integrity.mjs
         env:
           QUANT_PYTHON: python
       - name: Desktop tests
@@ -49,9 +66,10 @@ jobs:
         shell: bash
         run: |
           for script in options_reference first_alpha pairs_cointegration market_making var_backtest; do
+            rm -f "experiments/results/$script.json"  # Reject committed/stale evidence.
             python experiments/$script.py > /dev/null
           done
-          python -c "import json,glob; [print(p, json.load(open(p)).get('acceptance', 'no acceptance block')) for p in sorted(glob.glob('experiments/results/*.json'))]"
+          python experiments/verify_acceptance.py experiments/results/options_reference.json experiments/results/first_alpha.json experiments/results/pairs_cointegration.json experiments/results/market_making.json experiments/results/var_backtest.json
       - name: Native self-test (Linux, Xvfb)
         if: runner.os == 'Linux'
         run: xvfb-run -a npx electron . --self-test --no-sandbox | tee self-test.log && grep -q QUANT_SELF_TEST_OK self-test.log
@@ -64,25 +82,70 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.13'
           cache: pip
       - run: python -m pip install -r requirements.txt
       - name: Cache public data snapshots (hash-verified on read)
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .cache/data
           key: public-data-${{ github.run_id }}
           restore-keys: public-data-
+      - name: Remove committed research results before re-running
+        run: python -c "from pathlib import Path; [Path('experiments/results', n + '.json').unlink(missing_ok=True) for n in ('real_world_backtest', 'evolution_real', 'strategy_five_year')]"
       - name: 100-year backtest of the maths against what happened
         run: python experiments/real_world_backtest.py
       - name: Prequential evolutionary learning on real data
         run: python experiments/evolution_real.py --offline
-      - name: Acceptance summary
+      - name: Frozen daily strategies in five-year development windows
+        run: python -m experiments.strategy_five_year --offline
+      - name: Diagnose failures and test frozen remedies with separate adoption blocks
+        env:
+          OPENBLAS_NUM_THREADS: 2
+          OMP_NUM_THREADS: 2
+        run: python -m experiments.strategy_learning --output-dir .cache/strategy-learning-ci
+      - name: Matched competitive test with causal situation-dependent decisions
+        env:
+          OPENBLAS_NUM_THREADS: 2
+          OMP_NUM_THREADS: 2
         run: |
-          python -c "import json; [print(p, json.load(open('experiments/results/'+p+'.json')).get('acceptance')) for p in ('real_world_backtest','evolution_real')]"
+          python -m experiments.competitive_test --output-dir .cache/competitive-ci
+          python -m experiments.competitive_sharpe --output .cache/competitive-ci/sharpe_sensitivity.json
+          python -m experiments.competitive_test --offline --core-tactical --output-dir .cache/core-tactical-ci
+          python -m experiments.trade_audit --output-dir .cache/trade-audit-summary-ci --private-dir .cache/trade-audit-private-ci
+          python -m experiments.sizing_latency --output-dir .cache/sizing-latency-ci
+          python -m experiments.sizing_window_audit --output-dir .cache/sizing-window-summary-ci --private-dir .cache/sizing-window-private-ci
+      - name: Archive competitive evidence including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: competitive-evidence
+          path: |
+            .cache/competitive-ci/
+            .cache/core-tactical-ci/
+            .cache/trade-audit-summary-ci/
+            .cache/sizing-latency-ci/
+            .cache/sizing-window-summary-ci/
+          if-no-files-found: error
+      - name: Archive strategy learning including rejected remedies
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: strategy-learning-evidence
+          path: .cache/strategy-learning-ci/
+          if-no-files-found: error
+      - name: Archive measured evidence including negative research outcomes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: historical-research-evidence
+          path: experiments/results/
+          if-no-files-found: error
+      - name: Research acceptance gate
+        run: python experiments/verify_acceptance.py experiments/results/real_world_backtest.json experiments/results/evolution_real.json
 
   windows-package:
     name: Windows portable package with embedded runtime
@@ -90,12 +153,12 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 24
           cache: npm
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.13'
       - run: npm ci
@@ -116,9 +179,37 @@ jobs:
             -RedirectStandardOutput self-test.log -RedirectStandardError self-test.err
           Get-Content self-test.log, self-test.err
           if ($process.ExitCode -ne 0) { throw "Self-test exited with $($process.ExitCode)" }
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: QuantEngine-win-x64
           path: release/
           if-no-files-found: error
           retention-days: 14
+
+  security:
+    name: Dependency audit and CycloneDX SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - run: npm ci
+      - name: Audit pinned Python requirements with PyPA pip-audit
+        run: |
+          python -m pip install pip-audit==2.10.1
+          python -m pip_audit -r requirements.txt -r requirements-dev.txt
+      - name: Fail on high-severity npm vulnerabilities
+        run: npm audit --audit-level=high
+      - name: Generate CycloneDX dependency manifest
+        run: npm sbom --sbom-format=cyclonedx --sbom-type=application > quantengine.cdx.json
+      - name: Archive reproducible dependency manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: quantengine-cyclonedx
+          path: quantengine.cdx.json

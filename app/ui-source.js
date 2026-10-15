@@ -49,8 +49,8 @@ function receive(value) {
 
 function navigate(name) {
   page = name;
-  const labels = { monitor: 'Research monitor', datasets: 'Datasets', options: 'Options calculator', evolution: 'Evolution', runs: 'Research runs', preferences: 'Preferences' };
-  const kickers = { monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', options: 'DERIVATIVES / PRICING', evolution: 'LEARNING / SECOND MIND', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
+  const labels = { paper: 'Paper portfolios', monitor: 'Research monitor', datasets: 'Datasets', options: 'Options calculator', evolution: 'Evolution', runs: 'Research runs', preferences: 'Preferences' };
+  const kickers = { paper: 'FORWARD / PAPER LEDGER', monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', options: 'DERIVATIVES / PRICING', evolution: 'LEARNING / SECOND MIND', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
   $('page-title').textContent = labels[name];
   $('page-kicker').textContent = kickers[name];
   document.querySelectorAll('.page').forEach(section => section.classList.toggle('hidden', section.id !== 'page-' + name));
@@ -77,6 +77,7 @@ function renderControls() {
   ['export-report', 'runs-export'].forEach(id => { $(id).disabled = !current.report; });
   $('calculate-options').disabled = state.busy || operation || state.settingsPending;
   $('learn-now').disabled = state.busy || operation || state.settingsPending;
+  renderPaper();
 }
 
 function render() {
@@ -1044,3 +1045,34 @@ document.querySelectorAll('[data-maths]').forEach(button => button.addEventListe
   document.querySelectorAll('[data-maths^="' + scope + ':"]').forEach(b => { b.classList.toggle('active', b === button); b.setAttribute('aria-selected', String(b === button)); });
   renderMaths(scope);
 }));
+
+
+function renderPaper() {
+  const p=current.paper; const active=Boolean(p?.id); const locked=Boolean(current.state.busy||operation||current.state.settingsPending);
+  $('paper-create').disabled=locked;
+  ['paper-import','paper-halt','paper-export'].forEach(id=>$(id).disabled=locked||!active);
+  $('paper-refresh').disabled=locked;
+  $('paper-error').textContent=current.paperError||'';
+  $('paper-source').textContent=active ? p.config.mode+' · '+p.config.source+' · QQQ · local unverified custody' : 'No campaign or quote feed connected.';
+  $('paper-health').textContent=active ? (p.engine_compatible===false?'Engine changed: export this campaign; new observations require a new freeze. ':'')+(p.halted?'Execution halted. ':'')+(p.evidence_complete?'':'Incomplete evidence: session gap recorded. ')+(p.feed_status||'')+' · '+p.quotes+' observations · '+p.warmup_quotes+' warmup quotes remaining'+(p.quote_age_seconds==null?'':' · quote age '+number(p.quote_age_seconds/3600,1)+' hours') : 'Freeze a campaign to start a separate, durable comparison.';
+  $('paper-halt').textContent=p?.halted?'Resume paper execution':'Halt paper execution';
+  $('paper-freeze').textContent=active?'Frozen engine '+p.config.engine_sha256.slice(0,12):'';
+  const choices=(p?.campaigns||[]).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.source)+' · '+esc(c.mode)+' · '+esc(c.id.slice(0,8))+'</option>').join('');
+  if ($('paper-campaign').innerHTML!==choices) $('paper-campaign').innerHTML=choices;
+  if(active)$('paper-campaign').value=p.id;
+  const policyLabel=name=>({buyhold:'Nasdaq buy & hold',vol15_interval1:'Risk sizing · 1 close',vol15_interval5:'Risk sizing · 5 closes'}[name]||name);
+  const money=x=>'$'+Number(x||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  $('paper-rows').innerHTML=(p?.books||[]).map(b=>'<tr><td>'+money(b.initial)+'</td><td>'+esc(policyLabel(b.strategy))+'</td><td>'+money(b.equity)+'</td><td>'+money(b.cash)+'</td><td>'+number(b.shares,6)+'</td><td>'+percent(b.net_return)+'</td><td>'+percent(b.drawdown)+'</td><td>'+money(b.fees)+'</td><td>'+money(b.excess_dollars)+'</td></tr>').join('')||'<tr><td colspan="9">No observations or positions yet.</td></tr>';
+  $('paper-fills').innerHTML=(p?.recent_fills||[]).map(f=>'<div class="runtime-row"><span>'+esc(f.book.split(':')[1])+' USD · '+esc(policyLabel(f.book.split(':')[0]))+' · '+esc(f.side)+' · '+esc(f.status)+'</span><span>'+esc(f.quantity)+' shares · fee '+money(f.fee)+'</span></div>').join('')||'<p class="subtle">No execution outcomes yet.</p>';
+  const curve=p?.curve||[];const scale=$('paper-scale').value||'100';const policies=['buyhold','vol15_interval1','vol15_interval5'];const colors=['#2de2e6','#ffb347','#ff2a55'];
+  if(curve.length<2){$('paper-chart').innerHTML='<p class="subtle">Two or more observations are needed for a comparison curve.</p>';return;}
+  const values=curve.flatMap(point=>policies.map(name=>Number(point.equity[name+':'+scale])));const lo=Math.min(...values),hi=Math.max(...values);const span=hi-lo||1;
+  $('paper-chart').innerHTML='<svg viewBox="0 0 800 180" role="img" aria-label="Matched-capital simulated equity"><text x="12" y="16" fill="#b9aab1">'+esc(money(hi))+'</text>'+policies.map((name,i)=>'<polyline fill="none" stroke="'+colors[i]+'" stroke-width="2" points="'+curve.map((point,j)=>(j/(curve.length-1)*780+10).toFixed(2)+','+(165-(Number(point.equity[name+':'+scale])-lo)/span*135).toFixed(2)).join(' ')+'"/>').join('')+'</svg><p class="subtle">Cyan: buy-and-hold · gold: 1-close sizing · pink: 5-close sizing. Last '+curve.length+' observations; full returns remain in the journal.</p>';
+}
+$('paper-scale').addEventListener('change',renderPaper);
+$('paper-create').addEventListener('click',()=>action(()=>window.quant.paperCommand({operation:'create',mode:$('paper-mode').value,source:$('paper-label').value}),'Paper campaign frozen'));
+$('paper-refresh').addEventListener('click',()=>action(()=>window.quant.paperCommand({operation:'summary',id:$('paper-campaign').value||undefined})));
+$('paper-campaign').addEventListener('change',()=>action(()=>window.quant.paperCommand({operation:'summary',id:$('paper-campaign').value})));
+$('paper-import').addEventListener('click',()=>action(()=>window.quant.importPaperQuote(current.paper.id),'Quote processed'));
+$('paper-halt').addEventListener('click',()=>action(()=>window.quant.paperCommand({operation:'control',id:current.paper.id,halted:!current.paper.halted})));
+$('paper-export').addEventListener('click',async()=>{try{const result=await window.quant.exportPaper(current.paper.id);if(result)toast('Paper journal exported');}catch(error){toast(error.message,true);}});

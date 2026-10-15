@@ -1,4 +1,7 @@
 # Quant Engine
+[Broker paper sandbox setup](docs/ALPACA_SANDBOX.md): Alpaca read-only preflight, credentials setup and remaining connection/execution gates. No order submission.
+
+[Capital-aware paper portfolios](docs/PAPER_PORTFOLIOS.md): durable nine-account comparisons at $100/$10,000/$1,000,000, frozen decisions, quoted-liquidity limits and desktop export. Software-tested; no automatic quote feed, independent custody, validated alpha or live brokerage connection.
 
 <p align="center">
   <a href="https://github.com/purysho/QuantEngine/releases/latest/download/QuantEngine-win-x64.zip"><img alt="Download QuantEngine for Windows (x64)" src="https://img.shields.io/badge/%E2%AC%87%EF%B8%8F%20Download-QuantEngine%20for%20Windows%20x64-ff2a55?style=for-the-badge&amp;logo=windows&amp;logoColor=white&amp;labelColor=0d0a12"></a>
@@ -20,12 +23,18 @@ Python research modules, each with tests and a measured experiment in `experimen
 | `quant_validation` | Purged chronological ridge with information clocks; leaked features are rejected before scoring |
 | `quant_pairs` | ADF / Engle–Granger with MacKinnon inference (matches statsmodels to 1e-13), Holm pair selection, costed next-close pairs backtest |
 | `quant_lob` | Avellaneda–Stoikov market making with FIFO queue, partial fills, latency, fees and adverse selection |
-| `quant_varbacktest` | Kupiec/Christoffersen VaR backtests; GARCH-t and **GJR-GARCH filtered historical simulation** (best on 100 years of real data) |
+| `quant_varbacktest` | Kupiec/Christoffersen VaR backtests; GARCH-t and **GJR-GARCH filtered historical simulation** (historical diagnostics, not forward superiority) |
 | `quant_data` | FRED and Kenneth French data library adapters with SHA-256-verified local caching (raw data never committed) |
 | `quant_evolve` / `quant_learning` | Prequential evolutionary model search (incl. a NumPy neural network) with experience memory; runs after every continuous cycle |
 | `quant_explain` | Step-by-step workings ("show the maths") for every reported number, verified against the engine and SymPy |
 
 Desktop highlights: a Cyberpunk-styled workbench with live 3D volatility surfaces, a 3D "second mind" lineage graph of everything the engine has learned, an **Ask** panel (Ctrl+K; dictate with Handy) with permissioned actions and undo, and "The maths" panels for options and risk.
+
+Matched-period Nasdaq, broad-market and published AI-fund comparison: [competitive test](docs/COMPETITIVE_TEST.md). Context-dependent shadow strategies did not qualify for adoption; all failed horizons remain recorded. [Persistent-core follow-up](docs/CORE_TACTICAL_TEST.md) improved participation but did not beat the stronger volatility-managed control. [Transaction and classifier audit](docs/TRADE_AUDIT.md) separates cash participation, risk sizing, asset choice and costs without changing any strategy. [Controlled sizing intervals](docs/SIZING_LATENCY_EXPERIMENT.md) improved development point estimates; uncertainty still prevents adoption. [Adverse-window examination](docs/SIZING_WINDOW_EXAMINATION.md) identifies the2018 exposure reversals behind the2015–2019 loss.
+
+Failure attribution, tested remedies and the separate selection/adoption gate: [strategy learning](docs/STRATEGY_LEARNING.md). No remedy qualified for adoption in the US/European checks.
+
+Frozen daily trading-rule tests and five-year historical results: [strategy validation](docs/STRATEGY_VALIDATION.md). These are exposed-history research proxies, not live trading or unseen-data performance.
 
 See the [work log](docs/WORK_LOG.md) for what worked and what did not, and the [research index](docs/research/RESEARCH_INDEX.md) for how each curriculum topic maps to code.
 

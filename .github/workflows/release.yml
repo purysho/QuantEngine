@@ -5,7 +5,6 @@ name: Release
 # Runs when main is updated, when a v* tag is pushed, or manually from the Actions tab.
 on:
   push:
-    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
@@ -22,12 +21,12 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 24
           cache: npm
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.13'
       - run: npm ci
@@ -62,14 +61,15 @@ jobs:
           $size = [math]::Round((Get-Item QuantEngine-win-x64.zip).Length / 1MB)
           "SHA256=$hash" >> $env:GITHUB_ENV
           "ZIP_MB=$size" >> $env:GITHUB_ENV
-      - name: Publish the release (create, or replace the assets of this version)
+      - name: Publish the release (never replace published assets)
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $PSNativeCommandUseErrorActionPreference = $false  # `gh release view` exits 1 when the release does not exist yet.
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $tag = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}' } else { "v$version" }
+          $tag = '${{ github.ref_name }}'
+          if ($tag -ne "v$version") { throw "Tag/version mismatch." }
           $commit = '${{ github.sha }}'.Substring(0, 7)
           $notes = @"
           ## Download
@@ -89,10 +89,7 @@ jobs:
           "@
           $notes | Out-File -Encoding utf8 release-notes.md
           gh release view $tag --repo ${{ github.repository }} *> $null
-          if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag QuantEngine-win-x64.zip SHA256SUMS.txt --clobber --repo ${{ github.repository }}
-            gh release edit $tag --notes-file release-notes.md --latest --repo ${{ github.repository }}
-          } else {
+          if ($LASTEXITCODE -eq 0) { throw 'Version already published; refusing to overwrite assets.' } else {
             gh release create $tag QuantEngine-win-x64.zip SHA256SUMS.txt --title "QuantEngine $version for Windows" `
               --notes-file release-notes.md --target ${{ github.sha }} --latest --repo ${{ github.repository }}
           }

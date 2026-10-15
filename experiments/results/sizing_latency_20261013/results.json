@@ -1,0 +1,687 @@
+{
+  "status": "exposed_development_interval_only",
+  "frozen": {
+    "protocol": {
+      "status": "exposed_development_interval_only",
+      "minimum_closes": [
+        1,
+        5,
+        21
+      ],
+      "fixed": {
+        "asset": "Nasdaq100 total return",
+        "warmup": 252,
+        "volatility_lookback": 20,
+        "risk_target": 0.15,
+        "absolute_weight_band": 0.1,
+        "periodic_override": false,
+        "leverage": false
+      },
+      "evaluation_start": "2015-01-01",
+      "cost_bps": [
+        0,
+        10,
+        25
+      ],
+      "primary": "paired mean net return at10bps versus21-close arm",
+      "hac_lags": 20,
+      "primary_family_comparisons": 2,
+      "bootstrap_blocks": [
+        5,
+        20,
+        60
+      ],
+      "bootstrap_repetitions": 1000,
+      "bootstrap_seed": 17,
+      "bootstrap_family_comparisons": 18,
+      "bootstrap_metrics": [
+        "annual_log_growth_difference",
+        "sharpe_difference",
+        "drawdown_improvement"
+      ],
+      "source_pins": {
+        "broad_market": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+        "nasdaq_total_return": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe"
+      },
+      "notice": "Previously exposed history. Only minimum interval varies; no parameter sweep, independent custody, automated adoption or forecasting claim."
+    },
+    "source_sha256": {
+      "experiments/sizing_latency.py": "d095390c0c3d934239d9238a052d81468765a517c5b49194aa32b990427688c7",
+      "workers/quant_sizing_latency.py": "387886d2ab424ed380ab45c5ebb7d3b1251915f6bef7649ed90fb0f4402b7724",
+      "workers/quant_competitive.py": "7ec8b47c84b396a9899257a6c5181f7d1d77e136e1ce91ebfd022d4c05ea3c40",
+      "workers/quant_trade_audit.py": "1291b8ef19a869c4e97e6eff6e1de6288321038ea671252fb50128a3800e4b45",
+      "workers/quant_model_selection.py": "78bae21989c5b908677c440a9c0730caebbf62801130136d261abacb76129490",
+      "experiments/competitive_test.py": "3c7fc342add644b6ef33cbadbfc2d2fbe8cfaf2551d53e9f85a0a6b932a3b947",
+      "workers/quant_data.py": "ab9d72f724e9dd95f51c3873be2e0ee171265af897e3ba93198be5918f47154e"
+    }
+  },
+  "sources": {
+    "broad_market": {
+      "name": "french-F-F_Research_Data_Factors_daily",
+      "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip",
+      "sha256": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "bytes": 178184,
+      "retrieved_at": "2026-10-12T13:50:21+00:00",
+      "file": "french-F-F_Research_Data_Factors_daily-2f29e22546069914.zip"
+    },
+    "nasdaq_total_return": {
+      "name": "fred-NASDAQXNDX",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=NASDAQXNDX",
+      "sha256": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe",
+      "bytes": 136636,
+      "retrieved_at": "2026-10-12T14:47:15+00:00",
+      "file": "fred-NASDAQXNDX-e4a3f645aa8ae8d5.csv"
+    },
+    "common_closes": 6916,
+    "raw_nasdaq_missing": 258
+  },
+  "first": "2015-01-02",
+  "last": "2026-08-31",
+  "years": 11.665982203969884,
+  "scores": {
+    "1": {
+      "observations": 2932,
+      "total_return": 4.1812762281561415,
+      "cagr": 0.15143924681961352,
+      "annualized_volatility": 0.1493891678654657,
+      "sharpe_vs_cash": 0.8821186125277122,
+      "max_drawdown": -0.20047556582456905,
+      "worst_day": -0.047427581057157275
+    },
+    "5": {
+      "observations": 2932,
+      "total_return": 4.231413752754448,
+      "cagr": 0.15239014121097738,
+      "annualized_volatility": 0.15006740888593045,
+      "sharpe_vs_cash": 0.8843334611850113,
+      "max_drawdown": -0.20047556582456594,
+      "worst_day": -0.04661774151635689
+    },
+    "21": {
+      "observations": 2932,
+      "total_return": 3.6849403725172225,
+      "cagr": 0.1415430467656431,
+      "annualized_volatility": 0.15743586158286377,
+      "sharpe_vs_cash": 0.7899473907510085,
+      "max_drawdown": -0.24586925615717103,
+      "worst_day": -0.08352993640421225
+    },
+    "nasdaq_buyhold": {
+      "observations": 2932,
+      "total_return": 6.756497149942402,
+      "cagr": 0.1919595807121075,
+      "annualized_volatility": 0.2212249665473821,
+      "sharpe_vs_cash": 0.8127135819351333,
+      "max_drawdown": -0.35036724960824805,
+      "worst_day": -0.12191955423694512
+    },
+    "prior_faster_control": {
+      "observations": 2932,
+      "total_return": 4.157054845577691,
+      "cagr": 0.1509768532495528,
+      "annualized_volatility": 0.14818367627744217,
+      "sharpe_vs_cash": 0.8853767952534831,
+      "max_drawdown": -0.20902398995002514,
+      "worst_day": -0.0455600325808011
+    }
+  },
+  "cost_sensitivity": {
+    "0": {
+      "1": {
+        "observations": 2932,
+        "total_return": 4.336220805451745,
+        "cagr": 0.1543512625187291,
+        "annualized_volatility": 0.149370550516183,
+        "sharpe_vs_cash": 0.8991740584332267,
+        "max_drawdown": -0.19825388616615236,
+        "worst_day": -0.04742328306024102
+      },
+      "5": {
+        "observations": 2932,
+        "total_return": 4.3850640826283565,
+        "cagr": 0.1552532016768955,
+        "annualized_volatility": 0.15005823684232988,
+        "sharpe_vs_cash": 0.9009677816232861,
+        "max_drawdown": -0.19825388616615247,
+        "worst_day": -0.04661279318301925
+      },
+      "21": {
+        "observations": 2932,
+        "total_return": 3.8025194823455486,
+        "cagr": 0.14397113743678025,
+        "annualized_volatility": 0.15739369461500996,
+        "sharpe_vs_cash": 0.8036573294982536,
+        "max_drawdown": -0.24383095900741159,
+        "worst_day": -0.08298231513594845
+      }
+    },
+    "10": {
+      "1": {
+        "observations": 2932,
+        "total_return": 4.1812762281561415,
+        "cagr": 0.15143924681961352,
+        "annualized_volatility": 0.1493891678654657,
+        "sharpe_vs_cash": 0.8821186125277122,
+        "max_drawdown": -0.20047556582456905,
+        "worst_day": -0.047427581057157275
+      },
+      "5": {
+        "observations": 2932,
+        "total_return": 4.231413752754448,
+        "cagr": 0.15239014121097738,
+        "annualized_volatility": 0.15006740888593045,
+        "sharpe_vs_cash": 0.8843334611850113,
+        "max_drawdown": -0.20047556582456594,
+        "worst_day": -0.04661774151635689
+      },
+      "21": {
+        "observations": 2932,
+        "total_return": 3.6849403725172225,
+        "cagr": 0.1415430467656431,
+        "annualized_volatility": 0.15743586158286377,
+        "sharpe_vs_cash": 0.7899473907510085,
+        "max_drawdown": -0.24586925615717103,
+        "worst_day": -0.08352993640421225
+      }
+    },
+    "25": {
+      "1": {
+        "observations": 2932,
+        "total_return": 3.9572504537520414,
+        "cagr": 0.14708491941385948,
+        "annualized_volatility": 0.14942256202576953,
+        "sharpe_vs_cash": 0.8565174740303771,
+        "max_drawdown": -0.20379734460473242,
+        "worst_day": -0.047434013430347366
+      },
+      "5": {
+        "observations": 2932,
+        "total_return": 4.009115215133329,
+        "cagr": 0.14810877213827722,
+        "annualized_volatility": 0.15008647144594323,
+        "sharpe_vs_cash": 0.8593606065182048,
+        "max_drawdown": -0.2037973446047281,
+        "worst_day": -0.046625147468746464
+      },
+      "21": {
+        "observations": 2932,
+        "total_return": 3.513944321727786,
+        "cagr": 0.13791051010575472,
+        "annualized_volatility": 0.1575054424794472,
+        "sharpe_vs_cash": 0.769371657378114,
+        "max_drawdown": -0.2489171113600106,
+        "worst_day": -0.08435196661196165
+      }
+    }
+  },
+  "sizing_diagnostics": {
+    "1": {
+      "mean_risky_exposure": 0.8036850834739504,
+      "target_adjustments": 169,
+      "transaction_rows": 2018,
+      "drift_rebalances": 1847,
+      "mean_absolute_deviation_from_current_vol_target": 0.024524888516849773
+    },
+    "5": {
+      "mean_risky_exposure": 0.8004055032531613,
+      "target_adjustments": 161,
+      "transaction_rows": 2150,
+      "drift_rebalances": 1987,
+      "mean_absolute_deviation_from_current_vol_target": 0.029974924685496254
+    },
+    "21": {
+      "mean_risky_exposure": 0.8073676521109474,
+      "target_adjustments": 92,
+      "transaction_rows": 1870,
+      "drift_rebalances": 1776,
+      "mean_absolute_deviation_from_current_vol_target": 0.07113237492379697
+    }
+  },
+  "primary_paired_vs_21": {
+    "1": {
+      "n": 2932,
+      "mean": 2.940739887441358e-05,
+      "lags": 20,
+      "long_run_variance": 4.309401707270948e-06,
+      "standard_error": 3.833773990798138e-05,
+      "lower_95": -4.573457134522993e-05,
+      "upper_95": 0.00010454936909405708,
+      "family_lower": -5.6522915925544914e-05,
+      "family_upper": 0.00011533771367437206,
+      "family_comparisons": 2
+    },
+    "5": {
+      "n": 2932,
+      "mean": 3.3094836309894877e-05,
+      "lags": 20,
+      "long_run_variance": 4.926332118468876e-06,
+      "standard_error": 4.0990183325793435e-05,
+      "lower_95": -4.724592300866025e-05,
+      "upper_95": 0.00011343559562845,
+      "family_lower": -5.878067240156534e-05,
+      "family_upper": 0.0001249703450213551,
+      "family_comparisons": 2
+    }
+  },
+  "by_five_year_period": [
+    {
+      "start": "2015-01-01",
+      "end_exclusive": "2020-01-01",
+      "partial": false,
+      "scores": {
+        "1": {
+          "observations": 1258,
+          "total_return": 0.8966384330333419,
+          "cagr": 0.1365918071044112,
+          "annualized_volatility": 0.13818055666671444,
+          "sharpe_vs_cash": 0.9245187480482777,
+          "max_drawdown": -0.15188086361573527,
+          "worst_day": -0.044375283913336894
+        },
+        "5": {
+          "observations": 1258,
+          "total_return": 0.8851152221211125,
+          "cagr": 0.13520715422230833,
+          "annualized_volatility": 0.13797054228839603,
+          "sharpe_vs_cash": 0.9168589421540778,
+          "max_drawdown": -0.14944686528980589,
+          "worst_day": -0.04266041361453521
+        },
+        "21": {
+          "observations": 1258,
+          "total_return": 0.9670064054456629,
+          "cagr": 0.14490433536706315,
+          "annualized_volatility": 0.13890636323451133,
+          "sharpe_vs_cash": 0.9729728795899962,
+          "max_drawdown": -0.14714529105361052,
+          "worst_day": -0.044375283913336894
+        },
+        "nasdaq_buyhold": {
+          "observations": 1258,
+          "total_return": 1.184878070322751,
+          "cagr": 0.16921596133616856,
+          "annualized_volatility": 0.17126460873430388,
+          "sharpe_vs_cash": 0.9413601760744662,
+          "max_drawdown": -0.22720516409128555,
+          "worst_day": -0.04628915461405447
+        },
+        "prior_faster_control": {
+          "observations": 1258,
+          "total_return": 0.893880716930973,
+          "cagr": 0.13626104807776152,
+          "annualized_volatility": 0.13726236738616646,
+          "sharpe_vs_cash": 0.9276625362079101,
+          "max_drawdown": -0.15058850028205495,
+          "worst_day": -0.044375283913336894
+        }
+      }
+    },
+    {
+      "start": "2020-01-01",
+      "end_exclusive": "2025-01-01",
+      "partial": false,
+      "scores": {
+        "1": {
+          "observations": 1258,
+          "total_return": 1.1498319853480226,
+          "cagr": 0.1653425739340273,
+          "annualized_volatility": 0.15713767893878017,
+          "sharpe_vs_cash": 0.9026094908671826,
+          "max_drawdown": -0.20047556582456783,
+          "worst_day": -0.047427581057157275
+        },
+        "5": {
+          "observations": 1258,
+          "total_return": 1.1364155703698442,
+          "cagr": 0.16388502146316064,
+          "annualized_volatility": 0.15812305128386833,
+          "sharpe_vs_cash": 0.8900468382438368,
+          "max_drawdown": -0.2004755658245687,
+          "worst_day": -0.04661774151635689
+        },
+        "21": {
+          "observations": 1258,
+          "total_return": 0.8930358620196219,
+          "cagr": 0.13608025798521872,
+          "annualized_volatility": 0.17186378871492808,
+          "sharpe_vs_cash": 0.691244783037753,
+          "max_drawdown": -0.24586925615717237,
+          "worst_day": -0.08352993640421225
+        },
+        "nasdaq_buyhold": {
+          "observations": 1258,
+          "total_return": 1.506545844618417,
+          "cagr": 0.20166210477265478,
+          "annualized_volatility": 0.2604761436996112,
+          "sharpe_vs_cash": 0.7457550366020558,
+          "max_drawdown": -0.3503672496082475,
+          "worst_day": -0.12191955423694512
+        },
+        "prior_faster_control": {
+          "observations": 1258,
+          "total_return": 1.1429041749271462,
+          "cagr": 0.16459085178072774,
+          "annualized_volatility": 0.15624127702399934,
+          "sharpe_vs_cash": 0.9027428091148124,
+          "max_drawdown": -0.20902398995002658,
+          "worst_day": -0.0455600325808011
+        }
+      }
+    },
+    {
+      "start": "2025-01-01",
+      "end_exclusive": "2100-01-01",
+      "partial": true,
+      "scores": {
+        "1": {
+          "observations": 416,
+          "total_return": 0.2707136043350111,
+          "cagr": 0.15479691947611274,
+          "annualized_volatility": 0.15807842927057486,
+          "sharpe_vs_cash": 0.718290227518694,
+          "max_drawdown": -0.16475446058987497,
+          "worst_day": -0.04113957877748342
+        },
+        "5": {
+          "observations": 416,
+          "total_return": 0.29895897492468193,
+          "cagr": 0.1701494599970632,
+          "annualized_volatility": 0.16017671140600867,
+          "sharpe_vs_cash": 0.79410754713469,
+          "max_drawdown": -0.1647544605898763,
+          "worst_day": -0.04093948531173153
+        },
+        "21": {
+          "observations": 416,
+          "total_return": 0.25817036683439665,
+          "cagr": 0.14793551311121433,
+          "annualized_volatility": 0.1647619015771247,
+          "sharpe_vs_cash": 0.6590151895424724,
+          "max_drawdown": -0.16240801595723398,
+          "worst_day": -0.044689244637706405
+        },
+        "nasdaq_buyhold": {
+          "observations": 416,
+          "total_return": 0.4163245376971072,
+          "cagr": 0.23256419577273868,
+          "annualized_volatility": 0.22645588165599653,
+          "sharpe_vs_cash": 0.848760090302018,
+          "max_drawdown": -0.22818810728518368,
+          "worst_day": -0.060668002016407874
+        },
+        "prior_faster_control": {
+          "observations": 416,
+          "total_return": 0.270709793340689,
+          "cagr": 0.1547948389022218,
+          "annualized_volatility": 0.1551524591245617,
+          "sharpe_vs_cash": 0.7289560988762721,
+          "max_drawdown": -0.1558113133520308,
+          "worst_day": -0.044212935049803614
+        }
+      }
+    }
+  ],
+  "annual_log_gap_components_vs_full_nasdaq": {
+    "1": {
+      "participation": 1.0520766439655797e-15,
+      "risk_sizing": -3.223158925534056,
+      "asset_choice": 1.2475375273551258e-13,
+      "strategy_cost": -0.25258298492401227,
+      "benchmark_cost_credit": 0.017143868657627116
+    },
+    "5": {
+      "participation": 1.0520766439655797e-15,
+      "risk_sizing": -3.1450555777098974,
+      "asset_choice": 4.666580525035952e-14,
+      "strategy_cost": -0.24813729936048082,
+      "benchmark_cost_credit": 0.017143868657627116
+    },
+    "21": {
+      "participation": 1.0520766439655797e-15,
+      "risk_sizing": -4.126443483021857,
+      "asset_choice": -7.173035324290512e-15,
+      "strategy_cost": -0.21247661479548413,
+      "benchmark_cost_credit": 0.017143868657627116
+    },
+    "nasdaq_buyhold": {
+      "participation": 1.0520766439655797e-15,
+      "risk_sizing": 0.0,
+      "asset_choice": -1.0520766439655797e-15,
+      "strategy_cost": -0.017143868657627116,
+      "benchmark_cost_credit": 0.017143868657627116
+    },
+    "prior_faster_control": {
+      "participation": 1.0520766439655797e-15,
+      "risk_sizing": -3.169375987620171,
+      "asset_choice": -1.7163131110018386e-14,
+      "strategy_cost": -0.3465318664537244,
+      "benchmark_cost_credit": 0.017143868657627116
+    }
+  },
+  "paired_bootstrap_sensitivity": {
+    "5": {
+      "1": {
+        "observed": {
+          "annual_log_growth_difference": 0.008631781873594056,
+          "sharpe_difference": 0.09217122177670367,
+          "drawdown_improvement": 0.04539369033260199
+        },
+        "percentile_95": {
+          "annual_log_growth_difference": [
+            -0.009527699300421888,
+            0.02947020017741771
+          ],
+          "sharpe_difference": [
+            -0.03503254353669231,
+            0.2367211148953649
+          ],
+          "drawdown_improvement": [
+            -0.022483337284790572,
+            0.10309534425578042
+          ]
+        },
+        "family_percentile_interval": {
+          "annual_log_growth_difference": [
+            -0.01563918113208515,
+            0.042908361246020155
+          ],
+          "sharpe_difference": [
+            -0.0770019679508331,
+            0.3343019152720859
+          ],
+          "drawdown_improvement": [
+            -0.04417493190021248,
+            0.1694110749487951
+          ]
+        }
+      },
+      "5": {
+        "observed": {
+          "annual_log_growth_difference": 0.009457272207470174,
+          "sharpe_difference": 0.09438607043400282,
+          "drawdown_improvement": 0.0453936903326051
+        },
+        "percentile_95": {
+          "annual_log_growth_difference": [
+            -0.00967251127425887,
+            0.03232832038228168
+          ],
+          "sharpe_difference": [
+            -0.03846875400567107,
+            0.24718622354881087
+          ],
+          "drawdown_improvement": [
+            -0.02391877064221382,
+            0.10722722318687027
+          ]
+        },
+        "family_percentile_interval": {
+          "annual_log_growth_difference": [
+            -0.015936467530996166,
+            0.04680459099721254
+          ],
+          "sharpe_difference": [
+            -0.08954994396911739,
+            0.34641881277232295
+          ],
+          "drawdown_improvement": [
+            -0.04588717794701751,
+            0.1934053054434382
+          ]
+        }
+      }
+    },
+    "20": {
+      "1": {
+        "observed": {
+          "annual_log_growth_difference": 0.008631781873594056,
+          "sharpe_difference": 0.09217122177670367,
+          "drawdown_improvement": 0.04539369033260199
+        },
+        "percentile_95": {
+          "annual_log_growth_difference": [
+            -0.009823799624705282,
+            0.0303779739264596
+          ],
+          "sharpe_difference": [
+            -0.04300059938332385,
+            0.23898550312207156
+          ],
+          "drawdown_improvement": [
+            -0.02207173989755932,
+            0.10702790354169558
+          ]
+        },
+        "family_percentile_interval": {
+          "annual_log_growth_difference": [
+            -0.01595698177628317,
+            0.04242017603149273
+          ],
+          "sharpe_difference": [
+            -0.08906787160059258,
+            0.3144104547668639
+          ],
+          "drawdown_improvement": [
+            -0.05032666552866959,
+            0.17526118042180103
+          ]
+        }
+      },
+      "5": {
+        "observed": {
+          "annual_log_growth_difference": 0.009457272207470174,
+          "sharpe_difference": 0.09438607043400282,
+          "drawdown_improvement": 0.0453936903326051
+        },
+        "percentile_95": {
+          "annual_log_growth_difference": [
+            -0.009509936820013441,
+            0.03264946619966316
+          ],
+          "sharpe_difference": [
+            -0.05221493026287452,
+            0.2507276163930549
+          ],
+          "drawdown_improvement": [
+            -0.02313972890117881,
+            0.11799991351822067
+          ]
+        },
+        "family_percentile_interval": {
+          "annual_log_growth_difference": [
+            -0.019085119499004474,
+            0.045087665031256476
+          ],
+          "sharpe_difference": [
+            -0.10799552175521908,
+            0.3246246607475995
+          ],
+          "drawdown_improvement": [
+            -0.055422137352717435,
+            0.20179065589093373
+          ]
+        }
+      }
+    },
+    "60": {
+      "1": {
+        "observed": {
+          "annual_log_growth_difference": 0.008631781873594056,
+          "sharpe_difference": 0.09217122177670367,
+          "drawdown_improvement": 0.04539369033260199
+        },
+        "percentile_95": {
+          "annual_log_growth_difference": [
+            -0.007686082598415412,
+            0.025376650071649152
+          ],
+          "sharpe_difference": [
+            -0.03739209736106316,
+            0.22684769026445503
+          ],
+          "drawdown_improvement": [
+            -0.015010870832320574,
+            0.10717037728236507
+          ]
+        },
+        "family_percentile_interval": {
+          "annual_log_growth_difference": [
+            -0.017267559322618094,
+            0.03449195080367232
+          ],
+          "sharpe_difference": [
+            -0.09143943883313076,
+            0.28189933283319224
+          ],
+          "drawdown_improvement": [
+            -0.042305690771373194,
+            0.14305756540803413
+          ]
+        }
+      },
+      "5": {
+        "observed": {
+          "annual_log_growth_difference": 0.009457272207470174,
+          "sharpe_difference": 0.09438607043400282,
+          "drawdown_improvement": 0.0453936903326051
+        },
+        "percentile_95": {
+          "annual_log_growth_difference": [
+            -0.009420893949013324,
+            0.028158741415865586
+          ],
+          "sharpe_difference": [
+            -0.046272435337461754,
+            0.2363537666078609
+          ],
+          "drawdown_improvement": [
+            -0.017526814030773753,
+            0.11467783049012084
+          ]
+        },
+        "family_percentile_interval": {
+          "annual_log_growth_difference": [
+            -0.0166401265734323,
+            0.03954538706848441
+          ],
+          "sharpe_difference": [
+            -0.1070127555650974,
+            0.31268103641375494
+          ],
+          "drawdown_improvement": [
+            -0.046640413320080544,
+            0.15437966495730454
+          ]
+        }
+      }
+    }
+  },
+  "limits": [
+    "Only interval varies in the three-arm comparison; prior faster control also differs in band/override and is contextual only.",
+    "Repeated public-history development, no independent labels or model adoption.",
+    "Daily proportional drift rebalances still occur and are charged; target-update interval is not trade frequency.",
+    "Primary HAC is nominal. Bootstrap percentile intervals are approximate, especially extreme18-way tails with1000 replicates.",
+    "Drawdown bootstrap is path-dependent and stationary-block assumptions may fail under structural change.",
+    "No public daily benchmark return paths exported. Risk protection and raw growth are distinct objectives."
+  ]
+}

@@ -1,0 +1,423 @@
+{
+  "status": "exposed_adverse_window_examination",
+  "first": "2015-01-02",
+  "last": "2019-12-31",
+  "years": 4.999315537303217,
+  "frozen": {
+    "protocol": {
+      "status": "exposed_adverse_window_examination",
+      "window": [
+        "2015-01-01",
+        "2020-01-01"
+      ],
+      "comparisons": [
+        1,
+        5
+      ],
+      "reference": 21,
+      "cost_bps": 10,
+      "source_pins": {
+        "broad_market": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+        "nasdaq_total_return": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe"
+      },
+      "partitions": "less/more held equity crossed with Nasdaq daily return above/below RF; equal/tied separately",
+      "intervals": "non-overlapping intervals between either arm changing its held target; signal s affects first return s+2",
+      "ranking": "top5 negative intervals per arm for descriptive concentration, never a signal or selection feature",
+      "notice": "Diagnostic chosen after observing the adverse window. No new inference, parameter change, model selection or independent validation."
+    },
+    "source_sha256": {
+      "experiments/sizing_window_audit.py": "ed0dcadb8f2b5e01d5db7bd510121daf1c95178e916adccdf6947fb5e62f76bf",
+      "workers/quant_sizing_latency.py": "387886d2ab424ed380ab45c5ebb7d3b1251915f6bef7649ed90fb0f4402b7724",
+      "workers/quant_trade_audit.py": "1291b8ef19a869c4e97e6eff6e1de6288321038ea671252fb50128a3800e4b45",
+      "workers/quant_competitive.py": "7ec8b47c84b396a9899257a6c5181f7d1d77e136e1ce91ebfd022d4c05ea3c40",
+      "experiments/competitive_test.py": "3c7fc342add644b6ef33cbadbfc2d2fbe8cfaf2551d53e9f85a0a6b932a3b947",
+      "experiments/sizing_latency.py": "d095390c0c3d934239d9238a052d81468765a517c5b49194aa32b990427688c7"
+    }
+  },
+  "sources": {
+    "broad_market": {
+      "name": "french-F-F_Research_Data_Factors_daily",
+      "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip",
+      "sha256": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "bytes": 178184,
+      "retrieved_at": "2026-10-12T13:50:21+00:00",
+      "file": "french-F-F_Research_Data_Factors_daily-2f29e22546069914.zip"
+    },
+    "nasdaq_total_return": {
+      "name": "fred-NASDAQXNDX",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=NASDAQXNDX",
+      "sha256": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe",
+      "bytes": 136636,
+      "retrieved_at": "2026-10-12T14:47:15+00:00",
+      "file": "fred-NASDAQXNDX-e4a3f645aa8ae8d5.csv"
+    },
+    "common_closes": 6916,
+    "raw_nasdaq_missing": 258
+  },
+  "comparisons": {
+    "1": {
+      "gross_log_difference": -0.034271930978973575,
+      "fee_log_difference": -0.0021577914402960575,
+      "net_log_difference": -0.03642972241926962,
+      "annual_log_percentage_points": {
+        "gross": -0.6855324638592606,
+        "fees": -0.04316173732574671,
+        "net": -0.7286942011850069
+      },
+      "fee_share_of_net_shortfall": 0.05923161904617442,
+      "gross_share_of_net_shortfall": 0.940768380953826,
+      "year2018_share_of_net_shortfall": 0.8755683239968431,
+      "mean_fast_exposure": 0.8857173397619981,
+      "mean_reference_exposure": 0.8823238466731127,
+      "exposure_cells": {
+        "less_equity_above_cash": {
+          "days": 228,
+          "gross_log_contribution": -0.1685699602452338,
+          "annual_log_percentage_points": -3.371860787490232
+        },
+        "less_equity_below_cash": {
+          "days": 178,
+          "gross_log_contribution": 0.12830198631633347,
+          "annual_log_percentage_points": 2.566391046113954
+        },
+        "more_equity_above_cash": {
+          "days": 153,
+          "gross_log_contribution": 0.13353718443534907,
+          "annual_log_percentage_points": 2.6711093436479323
+        },
+        "more_equity_below_cash": {
+          "days": 129,
+          "gross_log_contribution": -0.12754114148542164,
+          "annual_log_percentage_points": -2.551172066130901
+        },
+        "equal_exposure_or_return": {
+          "days": 570,
+          "gross_log_contribution": -6.639366113099163e-16,
+          "annual_log_percentage_points": -1.3280550234443972e-14
+        }
+      },
+      "by_year": {
+        "2015": {
+          "gross_log_difference": 0.005276777360097693,
+          "fee_log_difference": -0.0004916414297615793,
+          "net_log_difference": 0.004785135930336111
+        },
+        "2016": {
+          "gross_log_difference": -0.004601662355704172,
+          "fee_log_difference": -0.0002565114892283902,
+          "net_log_difference": -0.004858173844932562
+        },
+        "2017": {
+          "gross_log_difference": -0.000500804278164537,
+          "fee_log_difference": 3.757284018747741e-06,
+          "net_log_difference": -0.0004970469941457892
+        },
+        "2018": {
+          "gross_log_difference": -0.03106141994866181,
+          "fee_log_difference": -0.0008352910536483115,
+          "net_log_difference": -0.03189671100231012
+        },
+        "2019": {
+          "gross_log_difference": -0.003384821756540736,
+          "fee_log_difference": -0.0005781047516765242,
+          "net_log_difference": -0.003962926508217262
+        }
+      },
+      "year2018_by_quarter": {
+        "1": {
+          "gross_log_difference": -0.041011734637966764,
+          "fee_log_difference": -0.0008190540241425383,
+          "net_log_difference": -0.0418307886621093
+        },
+        "2": {
+          "gross_log_difference": 0.012163905329792625,
+          "fee_log_difference": 5.943831453468761e-05,
+          "net_log_difference": 0.012223343644327311
+        },
+        "3": {
+          "gross_log_difference": -3.3046651623947626e-16,
+          "fee_log_difference": 1.0581982610047974e-16,
+          "net_log_difference": -2.246466901389965e-16
+        },
+        "4": {
+          "gross_log_difference": -0.0022135906404873486,
+          "fee_log_difference": -7.567534404056661e-05,
+          "net_log_difference": -0.002289265984527911
+        }
+      },
+      "interval_count": 79,
+      "top5_negative_gross_intervals": [
+        {
+          "start": "2018-02-12",
+          "end_inclusive": "2018-03-08",
+          "observations": 18,
+          "fast_exposure": 0.5614605928273301,
+          "slow_exposure": 0.7717108107907619,
+          "relative_exposure": "less",
+          "gross_log_difference": -0.01718398218653785,
+          "fee_log_difference_same_calendar_days": 0.00014217819183777615,
+          "net_log_difference": -0.01704180399470007,
+          "cash_relative_index_log_return": 0.08210663403441947,
+          "candidate_signal_date_for_first_outcome": "2018-02-08",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        },
+        {
+          "start": "2018-03-21",
+          "end_inclusive": "2018-03-23",
+          "observations": 3,
+          "fast_exposure": 0.8631304543081411,
+          "slow_exposure": 0.6180124999648327,
+          "relative_exposure": "more",
+          "gross_log_difference": -0.013964382173619862,
+          "fee_log_difference_same_calendar_days": -9.076824142225867e-05,
+          "net_log_difference": -0.014055150415042121,
+          "cash_relative_index_log_return": -0.05664115099232255,
+          "candidate_signal_date_for_first_outcome": "2018-03-19",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        },
+        {
+          "start": "2015-07-30",
+          "end_inclusive": "2015-08-24",
+          "observations": 18,
+          "fast_exposure": 0.9969294767256145,
+          "slow_exposure": 0.8920342585401472,
+          "relative_exposure": "more",
+          "gross_log_difference": -0.013276222590908682,
+          "fee_log_difference_same_calendar_days": -9.366521309031356e-05,
+          "net_log_difference": -0.013369887803998996,
+          "cash_relative_index_log_return": -0.12432835276212711,
+          "candidate_signal_date_for_first_outcome": "2015-07-28",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        },
+        {
+          "start": "2018-03-13",
+          "end_inclusive": "2018-03-19",
+          "observations": 5,
+          "fast_exposure": 0.8774326471413104,
+          "slow_exposure": 0.6180124999648327,
+          "relative_exposure": "more",
+          "gross_log_difference": -0.010004783447972763,
+          "fee_log_difference_same_calendar_days": -0.00010313795332211602,
+          "net_log_difference": -0.010107921401294878,
+          "cash_relative_index_log_return": -0.03840444016789328,
+          "candidate_signal_date_for_first_outcome": "2018-03-09",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        },
+        {
+          "start": "2019-06-06",
+          "end_inclusive": "2019-06-13",
+          "observations": 6,
+          "fast_exposure": 0.6501500603633764,
+          "slow_exposure": 0.8821749637594983,
+          "relative_exposure": "less",
+          "gross_log_difference": -0.009044368211507156,
+          "fee_log_difference_same_calendar_days": 0.00015039697829946413,
+          "net_log_difference": -0.008893971233207695,
+          "cash_relative_index_log_return": 0.03914351103470691,
+          "candidate_signal_date_for_first_outcome": "2019-06-04",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        }
+      ],
+      "transaction_rows_by_kind": {
+        "responsive": {
+          "entry": 1,
+          "drift_rebalance": 623,
+          "risk_adjustment": 55
+        },
+        "reference": {
+          "entry": 1,
+          "drift_rebalance": 491,
+          "risk_adjustment": 30
+        }
+      },
+      "private_interval_ledger_sha256": "bd33a52d11b4a3eac50ee1f3b8703d920e9b0be1d113d4ef9ed219d303d5a671",
+      "reconciliation_max_error": 1.734723475976807e-18
+    },
+    "5": {
+      "gross_log_difference": -0.04040058783152589,
+      "fee_log_difference": -0.002123263198859188,
+      "net_log_difference": -0.04252385103038507,
+      "annual_log_percentage_points": {
+        "gross": -0.8081223825555768,
+        "fees": -0.04247107795089367,
+        "net": -0.8505934605064703
+      },
+      "fee_share_of_net_shortfall": 0.04993111271465107,
+      "gross_share_of_net_shortfall": 0.9500688872853491,
+      "year2018_share_of_net_shortfall": 0.8513636733436719,
+      "mean_fast_exposure": 0.8802382688880307,
+      "mean_reference_exposure": 0.8823238466731127,
+      "exposure_cells": {
+        "less_equity_above_cash": {
+          "days": 270,
+          "gross_log_contribution": -0.18678786567369504,
+          "annual_log_percentage_points": -3.736268780795023
+        },
+        "less_equity_below_cash": {
+          "days": 216,
+          "gross_log_contribution": 0.14318100078380774,
+          "annual_log_percentage_points": 2.8640120775622
+        },
+        "more_equity_above_cash": {
+          "days": 149,
+          "gross_log_contribution": 0.13681821923322013,
+          "annual_log_percentage_points": 2.736739023818929
+        },
+        "more_equity_below_cash": {
+          "days": 127,
+          "gross_log_contribution": -0.13361194217485942,
+          "annual_log_percentage_points": -2.6726047031416975
+        },
+        "equal_exposure_or_return": {
+          "days": 496,
+          "gross_log_contribution": 6.929881473348443e-16,
+          "annual_log_percentage_points": 1.386166050460306e-14
+        }
+      },
+      "by_year": {
+        "2015": {
+          "gross_log_difference": 0.0027293270666508204,
+          "fee_log_difference": -0.0005317557840032181,
+          "net_log_difference": 0.002197571282647602
+        },
+        "2016": {
+          "gross_log_difference": -0.006661601431156502,
+          "fee_log_difference": -0.0003739249224014266,
+          "net_log_difference": -0.00703552635355793
+        },
+        "2017": {
+          "gross_log_difference": -0.0005008042781664204,
+          "fee_log_difference": 3.7572840208564092e-06,
+          "net_log_difference": -0.000497046994145564
+        },
+        "2018": {
+          "gross_log_difference": -0.03561313977389145,
+          "fee_log_difference": -0.0005901222440562727,
+          "net_log_difference": -0.03620326201794772
+        },
+        "2019": {
+          "gross_log_difference": -0.00035436941496233207,
+          "fee_log_difference": -0.0006312175324191269,
+          "net_log_difference": -0.000985586947381459
+        }
+      },
+      "year2018_by_quarter": {
+        "1": {
+          "gross_log_difference": -0.03831815306001152,
+          "fee_log_difference": -0.0006207370494223769,
+          "net_log_difference": -0.0389388901094339
+        },
+        "2": {
+          "gross_log_difference": 0.007042613388523903,
+          "fee_log_difference": 6.186753133166512e-05,
+          "net_log_difference": 0.0071044809198555665
+        },
+        "3": {
+          "gross_log_difference": -0.004555324137097037,
+          "fee_log_difference": -2.187631705594376e-05,
+          "net_log_difference": -0.004577200454152982
+        },
+        "4": {
+          "gross_log_difference": 0.00021772403469320684,
+          "fee_log_difference": -9.376408909617131e-06,
+          "net_log_difference": 0.0002083476257835939
+        }
+      },
+      "interval_count": 75,
+      "top5_negative_gross_intervals": [
+        {
+          "start": "2018-03-19",
+          "end_inclusive": "2018-03-23",
+          "observations": 5,
+          "fast_exposure": 0.9259049111687893,
+          "slow_exposure": 0.6180124999648327,
+          "relative_exposure": "more",
+          "gross_log_difference": -0.023586880378202432,
+          "fee_log_difference_same_calendar_days": -0.00014916787025310587,
+          "net_log_difference": -0.023736048248455537,
+          "cash_relative_index_log_return": -0.07609565895954698,
+          "candidate_signal_date_for_first_outcome": "2018-03-15",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        },
+        {
+          "start": "2018-02-14",
+          "end_inclusive": "2018-03-08",
+          "observations": 16,
+          "fast_exposure": 0.5334907423524402,
+          "slow_exposure": 0.7717108107907619,
+          "relative_exposure": "less",
+          "gross_log_difference": -0.014345728893512337,
+          "fee_log_difference_same_calendar_days": 0.0001433124538602348,
+          "net_log_difference": -0.014202416439652104,
+          "cash_relative_index_log_return": 0.06051669556289806,
+          "candidate_signal_date_for_first_outcome": "2018-02-12",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        },
+        {
+          "start": "2015-07-31",
+          "end_inclusive": "2015-08-24",
+          "observations": 17,
+          "fast_exposure": 0.9958014120304677,
+          "slow_exposure": 0.8920342585401472,
+          "relative_exposure": "more",
+          "gross_log_difference": -0.013520716211642808,
+          "fee_log_difference_same_calendar_days": -9.301671800900709e-05,
+          "net_log_difference": -0.013613732929651816,
+          "cash_relative_index_log_return": -0.12806955931592687,
+          "candidate_signal_date_for_first_outcome": "2015-07-29",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        },
+        {
+          "start": "2016-07-06",
+          "end_inclusive": "2016-07-26",
+          "observations": 15,
+          "fast_exposure": 0.6820657951416166,
+          "slow_exposure": 0.8558267681551063,
+          "relative_exposure": "less",
+          "gross_log_difference": -0.009980346648482963,
+          "fee_log_difference_same_calendar_days": -0.00032431726166984597,
+          "net_log_difference": -0.010304663910152808,
+          "cash_relative_index_log_return": 0.05760699580403233,
+          "candidate_signal_date_for_first_outcome": "2016-07-01",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        },
+        {
+          "start": "2019-06-06",
+          "end_inclusive": "2019-06-13",
+          "observations": 6,
+          "fast_exposure": 0.6501500603633764,
+          "slow_exposure": 0.8821749637594983,
+          "relative_exposure": "less",
+          "gross_log_difference": -0.009044368211506604,
+          "fee_log_difference_same_calendar_days": 0.000150396978298471,
+          "net_log_difference": -0.008893971233208134,
+          "cash_relative_index_log_return": 0.03914351103470691,
+          "candidate_signal_date_for_first_outcome": "2019-06-04",
+          "signal_context_notice": "Most recent held-target change may come from either arm. First-return context is signal close two dates earlier; not an inferred trade cause."
+        }
+      ],
+      "transaction_rows_by_kind": {
+        "responsive": {
+          "entry": 1,
+          "drift_rebalance": 729,
+          "risk_adjustment": 52
+        },
+        "reference": {
+          "entry": 1,
+          "drift_rebalance": 491,
+          "risk_adjustment": 30
+        }
+      },
+      "private_interval_ledger_sha256": "f48a7eece07aa76f3faab2de034013615567ad4aa964dc5d2f5d9b3553737509",
+      "reconciliation_max_error": 1.734723475976807e-18
+    }
+  },
+  "limits": [
+    "Chosen adverse window and ranked intervals are retrospective descriptions, not new statistical discoveries.",
+    "Gross exposure differences describe realized counterfactual portfolios, not causal effects on market prices.",
+    "Fees are attributed to their calendar day; new target execution fees precede its first risky return.",
+    "Full-sample portfolios continue beyond2019; no artificial boundary liquidation is inserted.",
+    "Private complete interval ledger can reconstruct vendor observations and must not be publicly archived.",
+    "All original strategies/parameters remain unchanged; no hindsight rule or model adoption."
+  ]
+}

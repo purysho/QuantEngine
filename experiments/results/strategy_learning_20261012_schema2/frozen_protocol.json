@@ -1,0 +1,31 @@
+{
+  "protocol": {
+    "candidate_set": [
+      "ma_50_200",
+      "macd_every_5_closes",
+      "channel_breakout_20"
+    ],
+    "selection_years": 10,
+    "adoption_years": 5,
+    "deployment_years": 5,
+    "cost_bps": 10,
+    "cash_yield": 0,
+    "hac_lags": 5,
+    "family_alpha": 0.05,
+    "bootstrap_mean_block": 5,
+    "bootstrap_repetitions": 500,
+    "seed": 17,
+    "cross_market": "Europe_3_Factors_Daily",
+    "hypotheses": {
+      "ma_50_200": "Longer trend horizon reduces whipsaw; may delay recovery entry.",
+      "macd_every_5_closes": "Less frequent decisions reduce fees; may lose predictive timing.",
+      "channel_breakout_20": "Removing rare two-sigma entry requirement broadens exposure; may add false breakouts."
+    },
+    "non_adoption_policy": "Use buyhold research baseline unless selection AND separate adoption gate pass. No desktop change; no economic-alpha claim."
+  },
+  "source_sha256": {
+    "workers/quant_strategy_learning.py": "89e5fa2467a0d7f4f5002a216c2baa6d576b199612afb8f27702a03bac2aa2c8",
+    "experiments/strategy_learning.py": "adaa4de7434f60890eb7965385a9b95ffea47b2dc35d62e642fa06211efc62ec"
+  },
+  "custody": "Local freeze before cross-market fetch; not independently time-stamped."
+}

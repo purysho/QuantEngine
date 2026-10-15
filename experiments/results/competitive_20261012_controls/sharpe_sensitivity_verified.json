@@ -1,0 +1,29 @@
+{
+  "status": "post_replay_exploratory_risk_control_diagnostic",
+  "observed_sharpe_difference": 0.0726632133183498,
+  "candidate": "passive_Nasdaq_vol15",
+  "benchmark": "Nasdaq_buyhold",
+  "blocks": {
+    "5": {
+      "repetitions": 1000,
+      "percentile_95": [
+        -0.11423812951878286,
+        0.27308421509877845
+      ]
+    },
+    "20": {
+      "repetitions": 1000,
+      "percentile_95": [
+        -0.108656799721125,
+        0.2529804140398444
+      ]
+    },
+    "60": {
+      "repetitions": 1000,
+      "percentile_95": [
+        -0.10823257462250073,
+        0.2261214145984285
+      ]
+    }
+  }
+}

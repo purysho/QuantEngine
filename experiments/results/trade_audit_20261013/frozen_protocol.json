@@ -1,0 +1,32 @@
+{
+  "protocol": {
+    "status": "exposed_historical_diagnostics",
+    "evaluation_start": "2015-01-01",
+    "cost_bps": 10,
+    "attribution_order": [
+      "participation",
+      "risk_sizing",
+      "asset_choice",
+      "strategy_cost",
+      "benchmark_cost_credit"
+    ],
+    "horizons_closes": [
+      1,
+      5,
+      20
+    ],
+    "classifier_family_comparisons": 18,
+    "hac_lags": "max(5,horizon); original time grid; Bonferroni for 9 conditional edges and 9 state contrasts",
+    "source_pins": {
+      "broad_market": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "nasdaq_total_return": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe"
+    },
+    "notice": "No signal, model, threshold, execution or adoption change. Outcome labels for diagnosis only. Local freeze is not independent custody."
+  },
+  "source_sha256": {
+    "experiments/trade_audit.py": "9404e86e224a9e80159c5d1a448fdb9ad10a4e32657ee54e07f878eddf2cecbf",
+    "workers/quant_trade_audit.py": "1291b8ef19a869c4e97e6eff6e1de6288321038ea671252fb50128a3800e4b45",
+    "workers/quant_competitive.py": "7ec8b47c84b396a9899257a6c5181f7d1d77e136e1ce91ebfd022d4c05ea3c40",
+    "experiments/competitive_test.py": "3c7fc342add644b6ef33cbadbfc2d2fbe8cfaf2551d53e9f85a0a6b932a3b947"
+  }
+}

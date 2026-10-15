@@ -1,0 +1,2836 @@
+{
+  "status": "historical_development_only",
+  "source": {
+    "name": "french-F-F_Research_Data_Factors_daily",
+    "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip",
+    "sha256": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+    "bytes": 178184,
+    "retrieved_at": "2026-10-12T13:50:21+00:00",
+    "file": "french-F-F_Research_Data_Factors_daily-2f29e22546069914.zip"
+  },
+  "source_first": "1926-07-01",
+  "source_last": "2026-08-31",
+  "code_commit": "984f0d10671f203f84929892b006b5eee59f15d5",
+  "rule_source_sha256": "d471a585d96e2d608f0addea8ff99148d10ae1d097627fda73e471a151b41b96",
+  "rules": [
+    "ma_20_50",
+    "rsi_14_30_70",
+    "bollinger_20_2",
+    "macd_12_26_9",
+    "volatility_breakout_20_2"
+  ],
+  "cost_bps": 10,
+  "cost_sensitivity_bps": [
+    0,
+    10,
+    25
+  ],
+  "window_policy": "Nonoverlapping calendar blocks [year,year+5); partial edges marked. Indicators and holdings carry across blocks. No refit/search or per-block liquidation.",
+  "benchmark": "CRSP total market Mkt-RF + RF, constructed total-return index; no directly executable price, spreads, individual-stock survivorship or intraday fills.",
+  "timing": "signal close s, execution close s+1, first held interval s+1 to s+2",
+  "cash_yield": 0,
+  "inference": "HAC lag 5 and stationary bootstrap mean block 5/500 repetitions/seed17 prespecified. Return-score diagnostic, not MSE forecasting evidence. Exposed history and repeated inspection invalidate fresh-alpha interpretation.",
+  "blocks": [
+    {
+      "start_year": 1925,
+      "end_year": 1930,
+      "complete": false,
+      "first_observed": "1926-07-02",
+      "last_observed": "1929-12-31",
+      "observations": 1036,
+      "buyhold_compounded_return": 0.6963712220113001,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.6821963616780968,
+          "gross_compounded_return": 0.7093416613887282,
+          "cost_25bps_compounded_return": 0.6422351652373812,
+          "max_drawdown": -0.1134864968033934,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1036,
+            "mean": -5.764729729729608e-05,
+            "lags": 5,
+            "long_run_variance": 9.489403894020081e-05,
+            "standard_error": 0.00030264924034861134,
+            "lower_95": -0.0006508398083805743,
+            "upper_95": 0.0005355452137859821
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.0271452997106314,
+            "mean_daily_cash_opportunity_gap": 5.764729729729608e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": -0.013285890530817746,
+          "gross_compounded_return": -0.004360898113143996,
+          "cost_25bps_compounded_return": -0.026540060995814296,
+          "max_drawdown": -0.41603604921192416,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1036,
+            "mean": -0.000546045752895752,
+            "lags": 5,
+            "long_run_variance": 5.1507789849895565e-05,
+            "standard_error": 0.0002229752090940954,
+            "lower_95": -0.000983077162720179,
+            "upper_95": -0.00010901434307132503
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.00892499241767375,
+            "mean_daily_cash_opportunity_gap": 0.000546045752895752,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": -0.02229368403615606,
+          "gross_compounded_return": 0.008505534118518288,
+          "cost_25bps_compounded_return": -0.06679228432160322,
+          "max_drawdown": -0.3695538740273532,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1036,
+            "mean": -0.0005560848455598425,
+            "lags": 5,
+            "long_run_variance": 5.775907392539638e-05,
+            "standard_error": 0.00023611861819536957,
+            "lower_95": -0.001018877337222767,
+            "upper_95": -9.329235389691815e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.030799218154674346,
+            "mean_daily_cash_opportunity_gap": 0.0005560848455598425,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.43185844958058284,
+          "gross_compounded_return": 0.5496246525296966,
+          "cost_25bps_compounded_return": 0.27158665419778116,
+          "max_drawdown": -0.11803822391052687,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1036,
+            "mean": -0.00022104652509652488,
+            "lags": 5,
+            "long_run_variance": 0.00010376617931725986,
+            "standard_error": 0.0003164812865658724,
+            "lower_95": -0.0008413498467656347,
+            "upper_95": 0.000399256796572585
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.11776620294911377,
+            "mean_daily_cash_opportunity_gap": 0.00022104652509652488,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": -0.02823505885196309,
+          "gross_compounded_return": -0.0026248741662361352,
+          "cost_25bps_compounded_return": -0.06546828138537875,
+          "max_drawdown": -0.1364520619311631,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1036,
+            "mean": -0.0006054101351351339,
+            "lags": 5,
+            "long_run_variance": 0.00013162626782846533,
+            "standard_error": 0.00035644407986921067,
+            "lower_95": -0.0013040405316787867,
+            "upper_95": 9.322026140851905e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.025610184685726956,
+            "mean_daily_cash_opportunity_gap": 0.0006054101351351339,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1036,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": -5.764729729729608e-05,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1930,
+      "end_year": 1935,
+      "complete": true,
+      "first_observed": "1930-01-02",
+      "last_observed": "1934-12-31",
+      "observations": 1486,
+      "buyhold_compounded_return": -0.4168381552882029,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": -0.09821108179593696,
+          "gross_compounded_return": -0.06232820374820902,
+          "cost_25bps_compounded_return": -0.149539547288705,
+          "max_drawdown": -0.46139914057929987,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1486,
+            "mean": 0.00015421352624495364,
+            "lags": 5,
+            "long_run_variance": 0.0002803717383342288,
+            "standard_error": 0.0004343678892515023,
+            "lower_95": -0.0006971475366879909,
+            "upper_95": 0.001005574589177898
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03588287804772794,
+            "mean_daily_cash_opportunity_gap": -0.00015421352624495364,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": -0.5412270169078336,
+          "gross_compounded_return": -0.5352210102066514,
+          "cost_25bps_compounded_return": -0.5501018116756119,
+          "max_drawdown": -0.7365460104420465,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1486,
+            "mean": -0.00023730753701211172,
+            "lags": 5,
+            "long_run_variance": 0.00017170079199157795,
+            "standard_error": 0.0003399200206694756,
+            "lower_95": -0.0009035507775242838,
+            "upper_95": 0.00042893570350006037
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.006006006701182232,
+            "mean_daily_cash_opportunity_gap": 0.00023730753701211172,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": -0.4706946143037216,
+          "gross_compounded_return": -0.4418699098816553,
+          "cost_25bps_compounded_return": -0.5112133136531807,
+          "max_drawdown": -0.6151260801650099,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1486,
+            "mean": -0.00019097826379542405,
+            "lags": 5,
+            "long_run_variance": 0.00032554626880487703,
+            "standard_error": 0.00046805507262789414,
+            "lower_95": -0.0011083662061460967,
+            "upper_95": 0.0007264096785552485
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.028824704422066305,
+            "mean_daily_cash_opportunity_gap": 0.00019097826379542405,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.1831376450899318,
+          "gross_compounded_return": 0.3076347411548037,
+          "cost_25bps_compounded_return": 0.018068232938157403,
+          "max_drawdown": -0.3614097804492581,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1486,
+            "mean": 0.0003468109690444152,
+            "lags": 5,
+            "long_run_variance": 0.0002860598957636598,
+            "standard_error": 0.00043875197388953686,
+            "lower_95": -0.000513142899779077,
+            "upper_95": 0.0012067648378679074
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.12449709606487191,
+            "mean_daily_cash_opportunity_gap": -0.0003468109690444152,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.884161198403548,
+          "gross_compounded_return": 0.9222430145961977,
+          "cost_25bps_compounded_return": 0.8283796483997357,
+          "max_drawdown": -0.27861080421342543,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1486,
+            "mean": 0.0006065775908479144,
+            "lags": 5,
+            "long_run_variance": 0.0003857092698067675,
+            "standard_error": 0.0005094723670001359,
+            "lower_95": -0.000391988248472352,
+            "upper_95": 0.0016051434301681809
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03808181619264972,
+            "mean_daily_cash_opportunity_gap": -0.0006065775908479144,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1486,
+        "models": 5,
+        "best_candidate_index": 4,
+        "best_mean_loss_improvement": 0.0006065775908479144,
+        "global_max_mean_improvement": 0.0006065775908479144,
+        "one_sided_p_value": 0.2275449101796407,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1935,
+      "end_year": 1940,
+      "complete": true,
+      "first_observed": "1935-01-02",
+      "last_observed": "1939-12-30",
+      "observations": 1502,
+      "buyhold_compounded_return": 0.6385956677996802,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.10406017763955488,
+          "gross_compounded_return": 0.13656319168440412,
+          "cost_25bps_compounded_return": 0.05698254015441884,
+          "max_drawdown": -0.436054296897353,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1502,
+            "mean": -0.00031582836218375416,
+            "lags": 5,
+            "long_run_variance": 0.0001237120174136609,
+            "standard_error": 0.0002869927846906398,
+            "lower_95": -0.0008783342201774081,
+            "upper_95": 0.00024667749580989986
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03250301404484923,
+            "mean_daily_cash_opportunity_gap": 0.00031582836218375416,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.0554046714123797,
+          "gross_compounded_return": 0.06922145610235475,
+          "cost_25bps_compounded_return": 0.03498825588458132,
+          "max_drawdown": -0.46814513977304106,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1502,
+            "mean": -0.00032991371504660367,
+            "lags": 5,
+            "long_run_variance": 7.827001426972267e-05,
+            "standard_error": 0.00022827730681798184,
+            "lower_95": -0.0007773372364098481,
+            "upper_95": 0.00011750980631664075
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.013816784689975048,
+            "mean_daily_cash_opportunity_gap": 0.00032991371504660367,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.11353913871899346,
+          "gross_compounded_return": 0.17066079689799452,
+          "cost_25bps_compounded_return": 0.03294284776685319,
+          "max_drawdown": -0.34913823118363496,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1502,
+            "mean": -0.00030263828229027794,
+            "lags": 5,
+            "long_run_variance": 0.00011580818227983021,
+            "standard_error": 0.00027767364174175645,
+            "lower_95": -0.0008468786201041205,
+            "upper_95": 0.0002416020555235647
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.057121658179001056,
+            "mean_daily_cash_opportunity_gap": 0.00030263828229027794,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.5083222515375887,
+          "gross_compounded_return": 0.6703763752475631,
+          "cost_25bps_compounded_return": 0.2939889973053236,
+          "max_drawdown": -0.2921091224927612,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1502,
+            "mean": -0.00010576631158455357,
+            "lags": 5,
+            "long_run_variance": 0.00010365527093678048,
+            "standard_error": 0.00026270039708068934,
+            "lower_95": -0.0006206590898627047,
+            "upper_95": 0.0004091264666935975
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.1620541237099744,
+            "mean_daily_cash_opportunity_gap": 0.00010576631158455357,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.39424787722437094,
+          "gross_compounded_return": 0.451177255128024,
+          "cost_25bps_compounded_return": 0.31291508192759254,
+          "max_drawdown": -0.1369524102643478,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1502,
+            "mean": -0.00018222789613848184,
+            "lags": 5,
+            "long_run_variance": 0.0001617747506540709,
+            "standard_error": 0.00032818626642313296,
+            "lower_95": -0.0008254729783278225,
+            "upper_95": 0.00046101718605085873
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.056929377903653045,
+            "mean_daily_cash_opportunity_gap": 0.00018222789613848184,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1502,
+        "models": 5,
+        "best_candidate_index": 3,
+        "best_mean_loss_improvement": -0.00010576631158455357,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1940,
+      "end_year": 1945,
+      "complete": true,
+      "first_observed": "1940-01-02",
+      "last_observed": "1944-12-30",
+      "observations": 1503,
+      "buyhold_compounded_return": 0.4939183493595434,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.6139546060402059,
+          "gross_compounded_return": 0.6581473971406329,
+          "cost_25bps_compounded_return": 0.5497853499525795,
+          "max_drawdown": -0.1450923268280473,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1503,
+            "mean": 3.519886892881016e-05,
+            "lags": 5,
+            "long_run_variance": 4.105819779109792e-05,
+            "standard_error": 0.00016528005586578784,
+            "lower_95": -0.00028875004056813403,
+            "upper_95": 0.00035914777842575434
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.044192791100426954,
+            "mean_daily_cash_opportunity_gap": -3.519886892881016e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.028924482443691835,
+          "gross_compounded_return": 0.04239460288303154,
+          "cost_25bps_compounded_return": 0.009020316440535137,
+          "max_drawdown": -0.2310531642702357,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1503,
+            "mean": -0.00026354524284763736,
+            "lags": 5,
+            "long_run_variance": 4.4585036002089325e-05,
+            "standard_error": 0.0001722324861231872,
+            "lower_95": -0.0006011209156490842,
+            "upper_95": 7.403042995380953e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.013470120439339706,
+            "mean_daily_cash_opportunity_gap": 0.00026354524284763736,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": -0.17327896287583489,
+          "gross_compounded_return": -0.1395226164526744,
+          "cost_25bps_compounded_return": -0.2215053464180622,
+          "max_drawdown": -0.2542807189988111,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1503,
+            "mean": -0.0004106721224218217,
+            "lags": 5,
+            "long_run_variance": 4.2535182212594736e-05,
+            "standard_error": 0.0001682265964887759,
+            "lower_95": -0.0007403962515398225,
+            "upper_95": -8.094799330382092e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.0337563464231605,
+            "mean_daily_cash_opportunity_gap": 0.0004106721224218217,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.22577072046767466,
+          "gross_compounded_return": 0.38906706760893384,
+          "cost_25bps_compounded_return": 0.015865613425553038,
+          "max_drawdown": -0.27812049125566396,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1503,
+            "mean": -0.00014743772455089684,
+            "lags": 5,
+            "long_run_variance": 4.5489987456630824e-05,
+            "standard_error": 0.00017397162427337372,
+            "lower_95": -0.0004884221081267094,
+            "upper_95": 0.00019354665902491567
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.16329634714125918,
+            "mean_daily_cash_opportunity_gap": 0.00014743772455089684,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.16398748910691308,
+          "gross_compounded_return": 0.21759075595199429,
+          "cost_25bps_compounded_return": 0.08788261964453725,
+          "max_drawdown": -0.13526834807808774,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1503,
+            "mean": -0.00018889321357285277,
+            "lags": 5,
+            "long_run_variance": 6.172629722854763e-05,
+            "standard_error": 0.00020265420638196274,
+            "lower_95": -0.0005860954580814997,
+            "upper_95": 0.0002083090309357942
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.05360326684508121,
+            "mean_daily_cash_opportunity_gap": 0.00018889321357285277,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1503,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": 3.519886892881016e-05,
+        "global_max_mean_improvement": 3.519886892881016e-05,
+        "one_sided_p_value": 0.716566866267465,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1945,
+      "end_year": 1950,
+      "complete": true,
+      "first_observed": "1945-01-02",
+      "last_observed": "1949-12-31",
+      "observations": 1415,
+      "buyhold_compounded_return": 0.5970441849034283,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.3177199293684281,
+          "gross_compounded_return": 0.3524475155636302,
+          "cost_25bps_compounded_return": 0.26723142408346945,
+          "max_drawdown": -0.14718692670249467,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1415,
+            "mean": -0.00015456120141342888,
+            "lags": 5,
+            "long_run_variance": 4.1507881815824456e-05,
+            "standard_error": 0.000171272274744014,
+            "lower_95": -0.0004902548599116963,
+            "upper_95": 0.00018113245708483857
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03472758619520211,
+            "mean_daily_cash_opportunity_gap": 0.00015456120141342888,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.06232250608907974,
+          "gross_compounded_return": 0.07515362545774051,
+          "cost_25bps_compounded_return": 0.04333884243011066,
+          "max_drawdown": -0.23510259002727985,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1415,
+            "mean": -0.0003044601413427553,
+            "lags": 5,
+            "long_run_variance": 3.69229254836605e-05,
+            "standard_error": 0.00016153618873533622,
+            "lower_95": -0.0006210710712640143,
+            "upper_95": 1.2150788578503655e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.01283111936866077,
+            "mean_daily_cash_opportunity_gap": 0.0003044601413427553,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": -0.09653653507111282,
+          "gross_compounded_return": -0.0539847520218667,
+          "cost_25bps_compounded_return": -0.15687544660603703,
+          "max_drawdown": -0.18290797044515195,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1415,
+            "mean": -0.00042178572438162385,
+            "lags": 5,
+            "long_run_variance": 4.571431636028343e-05,
+            "standard_error": 0.0001797413067636117,
+            "lower_95": -0.0007740786856383027,
+            "upper_95": -6.949276312494495e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04255178304924612,
+            "mean_daily_cash_opportunity_gap": 0.00042178572438162385,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.37480063699654753,
+          "gross_compounded_return": 0.5225092001217535,
+          "cost_25bps_compounded_return": 0.1794408628185289,
+          "max_drawdown": -0.1800482172036375,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1415,
+            "mean": -0.00012745604240282698,
+            "lags": 5,
+            "long_run_variance": 4.7059036241411576e-05,
+            "standard_error": 0.00018236575728068966,
+            "lower_95": -0.0004848929266729787,
+            "upper_95": 0.00022998084186732473
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.14770856312520597,
+            "mean_daily_cash_opportunity_gap": 0.00012745604240282698,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.08784381438482458,
+          "gross_compounded_return": 0.13566581435742564,
+          "cost_25bps_compounded_return": 0.01977753456334752,
+          "max_drawdown": -0.14403598281512064,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1415,
+            "mean": -0.0002995773851590129,
+            "lags": 5,
+            "long_run_variance": 6.383373177468147e-05,
+            "standard_error": 0.00021239627570331142,
+            "lower_95": -0.0007158740855375033,
+            "upper_95": 0.00011671931521947746
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04782199997260106,
+            "mean_daily_cash_opportunity_gap": 0.0002995773851590129,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1415,
+        "models": 5,
+        "best_candidate_index": 3,
+        "best_mean_loss_improvement": -0.00012745604240282698,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1950,
+      "end_year": 1955,
+      "complete": true,
+      "first_observed": "1950-01-03",
+      "last_observed": "1954-12-31",
+      "observations": 1338,
+      "buyhold_compounded_return": 1.6819206772336313,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.9815964868287139,
+          "gross_compounded_return": 1.021647621117722,
+          "cost_25bps_compounded_return": 0.9229303155844051,
+          "max_drawdown": -0.09014116246687232,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1338,
+            "mean": -0.0002306994768310906,
+            "lags": 5,
+            "long_run_variance": 1.2446931585117594e-05,
+            "standard_error": 9.645019155377833e-05,
+            "lower_95": -0.00041974185227649613,
+            "upper_95": -4.165710138568507e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04005113428900797,
+            "mean_daily_cash_opportunity_gap": 0.0002306994768310906,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.3711299430377515,
+          "gross_compounded_return": 0.3932556199764725,
+          "cost_25bps_compounded_return": 0.33855824436589055,
+          "max_drawdown": -0.07626224224514133,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1338,
+            "mean": -0.000513240807174889,
+            "lags": 5,
+            "long_run_variance": 2.7767299372215877e-05,
+            "standard_error": 0.00014405845893454097,
+            "lower_95": -0.0007955953866865893,
+            "upper_95": -0.00023088622766318867
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.02212567693872103,
+            "mean_daily_cash_opportunity_gap": 0.000513240807174889,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.14808876581294128,
+          "gross_compounded_return": 0.19019436896915987,
+          "cost_25bps_compounded_return": 0.0876331803820325,
+          "max_drawdown": -0.0800641960666586,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1338,
+            "mean": -0.0006463159940209267,
+            "lags": 5,
+            "long_run_variance": 3.0750325110380845e-05,
+            "standard_error": 0.00015159916148388313,
+            "lower_95": -0.0009434503505293377,
+            "upper_95": -0.00034918163751251576
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.042105603156218585,
+            "mean_daily_cash_opportunity_gap": 0.0006463159940209267,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.6589318852157302,
+          "gross_compounded_return": 0.8243458498098977,
+          "cost_25bps_compounded_return": 0.4382457094724739,
+          "max_drawdown": -0.06810703028758247,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1338,
+            "mean": -0.000370183109118087,
+            "lags": 5,
+            "long_run_variance": 2.5962148979281863e-05,
+            "standard_error": 0.00013929716001663832,
+            "lower_95": -0.0006432055427506981,
+            "upper_95": -9.716067548547593e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.16541396459416746,
+            "mean_daily_cash_opportunity_gap": 0.000370183109118087,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.15276667263953136,
+          "gross_compounded_return": 0.18551687948044937,
+          "cost_25bps_compounded_return": 0.10527173481128771,
+          "max_drawdown": -0.05492975724169047,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1338,
+            "mean": -0.0006456753363228712,
+            "lags": 5,
+            "long_run_variance": 3.527146252766373e-05,
+            "standard_error": 0.00016236173266177142,
+            "lower_95": -0.0009639043323399431,
+            "upper_95": -0.00032744634030579923
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.032750206840918006,
+            "mean_daily_cash_opportunity_gap": 0.0006456753363228712,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1338,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": -0.0002306994768310906,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1955,
+      "end_year": 1960,
+      "complete": true,
+      "first_observed": "1955-01-03",
+      "last_observed": "1959-12-31",
+      "observations": 1260,
+      "buyhold_compounded_return": 0.9804169615470422,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.7929118551605225,
+          "gross_compounded_return": 0.8328131743258151,
+          "cost_25bps_compounded_return": 0.7346109907231582,
+          "max_drawdown": -0.1030199829459516,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1260,
+            "mean": -8.777825396825269e-05,
+            "lags": 5,
+            "long_run_variance": 1.8871585646229943e-05,
+            "standard_error": 0.00012238238813481016,
+            "lower_95": -0.0003276477347124806,
+            "upper_95": 0.0001520912267759752
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.039901319165292604,
+            "mean_daily_cash_opportunity_gap": 8.777825396825269e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.1952954792291557,
+          "gross_compounded_return": 0.20973269475165446,
+          "cost_25bps_compounded_return": 0.17393559348757726,
+          "max_drawdown": -0.18313559774805233,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1260,
+            "mean": -0.0004147004761904767,
+            "lags": 5,
+            "long_run_variance": 3.0120787591720994e-05,
+            "standard_error": 0.00015461367008630364,
+            "lower_95": -0.0007177432695596318,
+            "upper_95": -0.00011165768282132154
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.01443721552249877,
+            "mean_daily_cash_opportunity_gap": 0.0004147004761904767,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.00219520500855519,
+          "gross_compounded_return": 0.04103125348541026,
+          "cost_25bps_compounded_return": -0.05342695408523668,
+          "max_drawdown": -0.21474349300677487,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1260,
+            "mean": -0.0005565238095238101,
+            "lags": 5,
+            "long_run_variance": 3.602613501512258e-05,
+            "standard_error": 0.0001690921957008149,
+            "lower_95": -0.0008879445130974073,
+            "upper_95": -0.00022510310595021295
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03883604847685507,
+            "mean_daily_cash_opportunity_gap": 0.0005565238095238101,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.520582882368694,
+          "gross_compounded_return": 0.6456464124812042,
+          "cost_25bps_compounded_return": 0.35037992085599146,
+          "max_drawdown": -0.11489948253359206,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1260,
+            "mean": -0.00022220611111111195,
+            "lags": 5,
+            "long_run_variance": 2.6515894648725053e-05,
+            "standard_error": 0.00014506674612853722,
+            "lower_95": -0.0005065369335230449,
+            "upper_95": 6.2124711300821e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.12506353011251026,
+            "mean_daily_cash_opportunity_gap": 0.00022220611111111195,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.09134089574697435,
+          "gross_compounded_return": 0.12346946009571758,
+          "cost_25bps_compounded_return": 0.044805614334573196,
+          "max_drawdown": -0.08639134870875143,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1260,
+            "mean": -0.0004935865873015863,
+            "lags": 5,
+            "long_run_variance": 4.326252042349914e-05,
+            "standard_error": 0.00018529795916157242,
+            "lower_95": -0.0008567705872582682,
+            "upper_95": -0.00013040258734490443
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03212856434874323,
+            "mean_daily_cash_opportunity_gap": 0.0004935865873015863,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1260,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": -8.777825396825269e-05,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1960,
+      "end_year": 1965,
+      "complete": true,
+      "first_observed": "1960-01-04",
+      "last_observed": "1964-12-31",
+      "observations": 1258,
+      "buyhold_compounded_return": 0.6121540362150535,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.2331650130457068,
+          "gross_compounded_return": 0.26946881292039393,
+          "cost_25bps_compounded_return": 0.18058228556463862,
+          "max_drawdown": -0.18449611980112846,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00022540333863275,
+            "lags": 5,
+            "long_run_variance": 3.11082911217978e-05,
+            "standard_error": 0.00015725257174680464,
+            "lower_95": -0.0005336183792564871,
+            "upper_95": 8.281170199098709e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.036303799874687126,
+            "mean_daily_cash_opportunity_gap": 0.00022540333863275,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.23981881153340834,
+          "gross_compounded_return": 0.25982554439328975,
+          "cost_25bps_compounded_return": 0.21036645733312453,
+          "max_drawdown": -0.2637964785348281,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.0002167155007949073,
+            "lags": 5,
+            "long_run_variance": 2.038582436094384e-05,
+            "standard_error": 0.00012729865601289692,
+            "lower_95": -0.00046622086658018526,
+            "upper_95": 3.2789864990370645e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.020006732859881415,
+            "mean_daily_cash_opportunity_gap": 0.0002167155007949073,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": -0.1175799518629187,
+          "gross_compounded_return": -0.08338530834922586,
+          "cost_25bps_compounded_return": -0.16655455088289062,
+          "max_drawdown": -0.26252328483650356,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.0004876204292527767,
+            "lags": 5,
+            "long_run_variance": 2.6488545622882587e-05,
+            "standard_error": 0.00014510712457234992,
+            "lower_95": -0.0007720303934145825,
+            "upper_95": -0.00020321046509097084
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.034194643513692835,
+            "mean_daily_cash_opportunity_gap": 0.0004876204292527767,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.46469774227221383,
+          "gross_compounded_return": 0.5819961371635543,
+          "cost_25bps_compounded_return": 0.3046651278122017,
+          "max_drawdown": -0.09052829503304671,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -9.151542130365401e-05,
+            "lags": 5,
+            "long_run_variance": 3.04534672668577e-05,
+            "standard_error": 0.0001555887001499604,
+            "lower_95": -0.00039646927359757644,
+            "upper_95": 0.0002134384309902684
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.11729839489134042,
+            "mean_daily_cash_opportunity_gap": 9.151542130365401e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.160596154277594,
+          "gross_compounded_return": 0.1923752286121423,
+          "cost_25bps_compounded_return": 0.11445198667868106,
+          "max_drawdown": -0.055162078473017795,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00027972329093799305,
+            "lags": 5,
+            "long_run_variance": 4.6211660237331084e-05,
+            "standard_error": 0.0001916617570708216,
+            "lower_95": -0.0006553803347968033,
+            "upper_95": 9.593375292081725e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.031779074334548296,
+            "mean_daily_cash_opportunity_gap": 0.00027972329093799305,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1258,
+        "models": 5,
+        "best_candidate_index": 3,
+        "best_mean_loss_improvement": -9.151542130365401e-05,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1965,
+      "end_year": 1970,
+      "complete": true,
+      "first_observed": "1965-01-04",
+      "last_observed": "1969-12-31",
+      "observations": 1231,
+      "buyhold_compounded_return": 0.3746637952326999,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.11170750359639614,
+          "gross_compounded_return": 0.13644859490647288,
+          "cost_25bps_compounded_return": 0.0755576458805085,
+          "max_drawdown": -0.17781838318853915,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1231,
+            "mean": -0.0001819714053614946,
+            "lags": 5,
+            "long_run_variance": 2.6879924633132797e-05,
+            "standard_error": 0.00014776956568782518,
+            "lower_95": -0.00047159975410963195,
+            "upper_95": 0.00010765694338664276
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.024741091310076735,
+            "mean_daily_cash_opportunity_gap": 0.0001819714053614946,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.040786413125404986,
+          "gross_compounded_return": 0.0565238146235727,
+          "cost_25bps_compounded_return": 0.017590060130170393,
+          "max_drawdown": -0.19909077523763152,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1231,
+            "mean": -0.0002324950446791218,
+            "lags": 5,
+            "long_run_variance": 2.2771443575398413e-05,
+            "standard_error": 0.00013600856395181856,
+            "lower_95": -0.0004990718300246862,
+            "upper_95": 3.408174066644258e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.015737401498167713,
+            "mean_daily_cash_opportunity_gap": 0.0002324950446791218,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": -0.22767842753190792,
+          "gross_compounded_return": -0.19935390541509812,
+          "cost_25bps_compounded_return": -0.268347018841932,
+          "max_drawdown": -0.256552423045601,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1231,
+            "mean": -0.0004776847278635251,
+            "lags": 5,
+            "long_run_variance": 3.0765664014233464e-05,
+            "standard_error": 0.00015808989826543993,
+            "lower_95": -0.0007875409284637874,
+            "upper_95": -0.00016782852726326286
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.028324522116809803,
+            "mean_daily_cash_opportunity_gap": 0.0004776847278635251,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.37032640190652577,
+          "gross_compounded_return": 0.4874897808299612,
+          "cost_25bps_compounded_return": 0.2114685610423448,
+          "max_drawdown": -0.11447633187378037,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1231,
+            "mean": -1.3674004874086859e-05,
+            "lags": 5,
+            "long_run_variance": 3.274724433945636e-05,
+            "standard_error": 0.00016310164966374565,
+            "lower_95": -0.0003333532382150283,
+            "upper_95": 0.00030600522846685463
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.11716337892343542,
+            "mean_daily_cash_opportunity_gap": 1.3674004874086859e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.13904978517017552,
+          "gross_compounded_return": 0.16439937996057674,
+          "cost_25bps_compounded_return": 0.10201082705213738,
+          "max_drawdown": -0.043234455048130616,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1231,
+            "mean": -0.0001686979691307882,
+            "lags": 5,
+            "long_run_variance": 5.040508689784139e-05,
+            "standard_error": 0.00020235230575425342,
+            "lower_95": -0.0005653084884091248,
+            "upper_95": 0.00022791255014754848
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.02534959479040122,
+            "mean_daily_cash_opportunity_gap": 0.0001686979691307882,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1231,
+        "models": 5,
+        "best_candidate_index": 3,
+        "best_mean_loss_improvement": -1.3674004874086859e-05,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1970,
+      "end_year": 1975,
+      "complete": true,
+      "first_observed": "1970-01-02",
+      "last_observed": "1974-12-31",
+      "observations": 1263,
+      "buyhold_compounded_return": -0.20558594833344201,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": -0.15482461677949466,
+          "gross_compounded_return": -0.13081310666709411,
+          "cost_25bps_compounded_return": -0.18964653975208168,
+          "max_drawdown": -0.35949481722201015,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": 1.5901187648454977e-05,
+            "lags": 5,
+            "long_run_variance": 0.00010064999987974036,
+            "standard_error": 0.00028229631826541367,
+            "lower_95": -0.0005373995961517558,
+            "upper_95": 0.0005692019714486657
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.024011510112400547,
+            "mean_daily_cash_opportunity_gap": -1.5901187648454977e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": -0.29819909905849595,
+          "gross_compounded_return": -0.2897224913603632,
+          "cost_25bps_compounded_return": -0.31074025504706915,
+          "max_drawdown": -0.3781360846017222,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.00010531765637371313,
+            "lags": 5,
+            "long_run_variance": 2.4340762445296024e-05,
+            "standard_error": 0.00013882427486431952,
+            "lower_95": -0.0003774132351077794,
+            "upper_95": 0.00016677792236035309
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.008476607698132743,
+            "mean_daily_cash_opportunity_gap": 0.00010531765637371313,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.16605900146553143,
+          "gross_compounded_return": 0.2283302239602807,
+          "cost_25bps_compounded_return": 0.07841560787842838,
+          "max_drawdown": -0.20320297960319633,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": 0.00028035859065716524,
+            "lags": 5,
+            "long_run_variance": 7.785696188017483e-05,
+            "standard_error": 0.0002482830381779082,
+            "lower_95": -0.0002062761641715348,
+            "upper_95": 0.0007669933454858653
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.062271222494749257,
+            "mean_daily_cash_opportunity_gap": -0.00028035859065716524,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": -0.351033526275634,
+          "gross_compounded_return": -0.2827452406670704,
+          "cost_25bps_compounded_return": -0.4415762579421154,
+          "max_drawdown": -0.4667466043526529,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0001860232779097391,
+            "lags": 5,
+            "long_run_variance": 7.479105619677068e-05,
+            "standard_error": 0.00024334540940669437,
+            "lower_95": -0.0006629802803468601,
+            "upper_95": 0.00029093372452738183
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.06828828560856359,
+            "mean_daily_cash_opportunity_gap": 0.0001860232779097391,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.21543197809167114,
+          "gross_compounded_return": 0.22519933572151274,
+          "cost_25bps_compounded_return": 0.20090869018487734,
+          "max_drawdown": -0.03431282496647392,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": 0.00029523974663499513,
+            "lags": 5,
+            "long_run_variance": 0.00012823766756251922,
+            "standard_error": 0.0003186442822218089,
+            "lower_95": -0.00032930304651975027,
+            "upper_95": 0.0009197825397897405
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.0097673576298416,
+            "mean_daily_cash_opportunity_gap": -0.00029523974663499513,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1263,
+        "models": 5,
+        "best_candidate_index": 4,
+        "best_mean_loss_improvement": 0.00029523974663499513,
+        "global_max_mean_improvement": 0.00029523974663499513,
+        "one_sided_p_value": 0.2634730538922156,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1975,
+      "end_year": 1980,
+      "complete": true,
+      "first_observed": "1975-01-02",
+      "last_observed": "1979-12-31",
+      "observations": 1263,
+      "buyhold_compounded_return": 1.2694582406223227,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.4404157467232164,
+          "gross_compounded_return": 0.4857910072614735,
+          "cost_25bps_compounded_return": 0.3748577325100111,
+          "max_drawdown": -0.1802358982262996,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.000370950514647664,
+            "lags": 5,
+            "long_run_variance": 3.1201783232332555e-05,
+            "standard_error": 0.000157176651536003,
+            "lower_95": -0.0006790167516582299,
+            "upper_95": -6.288427763709813e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.045375260538257134,
+            "mean_daily_cash_opportunity_gap": 0.000370950514647664,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.3657995889492671,
+          "gross_compounded_return": 0.3809139191905384,
+          "cost_25bps_compounded_return": 0.34340993314252155,
+          "max_drawdown": -0.07911625446083415,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.00042002763262074215,
+            "lags": 5,
+            "long_run_variance": 5.5230325343329e-05,
+            "standard_error": 0.00020911593374893088,
+            "lower_95": -0.0008298948627686467,
+            "upper_95": -1.0160402472837607e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.01511433024127129,
+            "mean_daily_cash_opportunity_gap": 0.00042002763262074215,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.09557129221593286,
+          "gross_compounded_return": 0.13575084229342815,
+          "cost_25bps_compounded_return": 0.037881150282255804,
+          "max_drawdown": -0.08659001187602045,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0005979712589073607,
+            "lags": 5,
+            "long_run_variance": 6.09508829856626e-05,
+            "standard_error": 0.0002196788900087785,
+            "lower_95": -0.0010285418833245665,
+            "upper_95": -0.00016740063449015486
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.040179550077495296,
+            "mean_daily_cash_opportunity_gap": 0.0005979712589073607,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.3493063387902928,
+          "gross_compounded_return": 0.48979744878587983,
+          "cost_25bps_compounded_return": 0.16279928953890188,
+          "max_drawdown": -0.20103574570757854,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0004247469517022951,
+            "lags": 5,
+            "long_run_variance": 3.4780299664976836e-05,
+            "standard_error": 0.00016594531066651603,
+            "lower_95": -0.0007499997606086664,
+            "upper_95": -9.949414279592368e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.140491109995587,
+            "mean_daily_cash_opportunity_gap": 0.0004247469517022951,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.1377081497818211,
+          "gross_compounded_return": 0.1735476661369324,
+          "cost_25bps_compounded_return": 0.08592734467499352,
+          "max_drawdown": -0.15555556110260527,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0005661577988915266,
+            "lags": 5,
+            "long_run_variance": 5.672649138395833e-05,
+            "standard_error": 0.0002119294378005554,
+            "lower_95": -0.000981539496980615,
+            "upper_95": -0.000150776100802438
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03583951635511129,
+            "mean_daily_cash_opportunity_gap": 0.0005661577988915266,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1263,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": -0.000370950514647664,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1980,
+      "end_year": 1985,
+      "complete": true,
+      "first_observed": "1980-01-02",
+      "last_observed": "1984-12-31",
+      "observations": 1265,
+      "buyhold_compounded_return": 0.992228687785434,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.4016131475266531,
+          "gross_compounded_return": 0.44287598151175556,
+          "cost_25bps_compounded_return": 0.34184771354936694,
+          "max_drawdown": -0.2159760818746007,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.0002933407114624503,
+            "lags": 5,
+            "long_run_variance": 4.0150431424486495e-05,
+            "standard_error": 0.00017815575062794776,
+            "lower_95": -0.0006425259826932279,
+            "upper_95": 5.5844559768327274e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04126283398510244,
+            "mean_daily_cash_opportunity_gap": 0.0002933407114624503,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.07020112324110861,
+          "gross_compounded_return": 0.07880138824562533,
+          "cost_25bps_compounded_return": 0.05741320971639752,
+          "max_drawdown": -0.143616061958998,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.0005164556521739127,
+            "lags": 5,
+            "long_run_variance": 6.246355237787651e-05,
+            "standard_error": 0.0002222122910079485,
+            "lower_95": -0.0009519917425494919,
+            "upper_95": -8.091956179833365e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.008600265004516716,
+            "mean_daily_cash_opportunity_gap": 0.0005164556521739127,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.17311119084113358,
+          "gross_compounded_return": 0.2161344793973119,
+          "cost_25bps_compounded_return": 0.11133798485768276,
+          "max_drawdown": -0.11974461549250692,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.00044892007905138307,
+            "lags": 5,
+            "long_run_variance": 7.807936836119892e-05,
+            "standard_error": 0.0002484407793396495,
+            "lower_95": -0.000935864006557096,
+            "upper_95": 3.8023848454329945e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04302328855617832,
+            "mean_daily_cash_opportunity_gap": 0.00044892007905138307,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.2401245764545128,
+          "gross_compounded_return": 0.36377879312859185,
+          "cost_25bps_compounded_return": 0.0751519499940978,
+          "max_drawdown": -0.159307260601396,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.0003956181027667994,
+            "lags": 5,
+            "long_run_variance": 6.023315428086687e-05,
+            "standard_error": 0.00021820894052262257,
+            "lower_95": -0.0008233076261911396,
+            "upper_95": 3.207142065754086e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.12365421667407905,
+            "mean_daily_cash_opportunity_gap": 0.0003956181027667994,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.27141863093880003,
+          "gross_compounded_return": 0.3206873515819946,
+          "cost_25bps_compounded_return": 0.20085448434194575,
+          "max_drawdown": -0.10188707362933402,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.00038238529644268806,
+            "lags": 5,
+            "long_run_variance": 7.688503865889514e-05,
+            "standard_error": 0.0002465333378812562,
+            "lower_95": -0.0008655906386899502,
+            "upper_95": 0.00010082004580457406
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04926872064319454,
+            "mean_daily_cash_opportunity_gap": 0.00038238529644268806,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1265,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": -0.0002933407114624503,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1985,
+      "end_year": 1990,
+      "complete": true,
+      "first_observed": "1985-01-02",
+      "last_observed": "1989-12-29",
+      "observations": 1263,
+      "buyhold_compounded_return": 1.369836844522335,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 1.0009709269489035,
+          "gross_compounded_return": 1.043457105787558,
+          "cost_25bps_compounded_return": 0.9388156532961576,
+          "max_drawdown": -0.17190432974724523,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.00016650380047505845,
+            "lags": 5,
+            "long_run_variance": 6.345765080392448e-05,
+            "standard_error": 0.0002241508138170751,
+            "lower_95": -0.0006058393955565256,
+            "upper_95": 0.00027283179460640874
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.042486178838654354,
+            "mean_daily_cash_opportunity_gap": 0.00016650380047505845,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.16373634684330285,
+          "gross_compounded_return": 0.174262534694547,
+          "cost_25bps_compounded_return": 0.1481043012797989,
+          "max_drawdown": -0.21831101123859664,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0005883629453681709,
+            "lags": 5,
+            "long_run_variance": 6.409352602845622e-05,
+            "standard_error": 0.00022527106225011924,
+            "lower_95": -0.0010298942273784047,
+            "upper_95": -0.00014683166335793726
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.010526187851244151,
+            "mean_daily_cash_opportunity_gap": 0.0005883629453681709,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.08205439223730648,
+          "gross_compounded_return": 0.11949586181607863,
+          "cost_25bps_compounded_return": 0.02816127104423294,
+          "max_drawdown": -0.24817270861307927,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0006479461599366571,
+            "lags": 5,
+            "long_run_variance": 6.248058807991176e-05,
+            "standard_error": 0.00022241848539280039,
+            "lower_95": -0.0010838863913065458,
+            "upper_95": -0.00021200592856676832
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.037441469578772146,
+            "mean_daily_cash_opportunity_gap": 0.0006479461599366571,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.44894495547995383,
+          "gross_compounded_return": 0.5791373285937154,
+          "cost_25bps_compounded_return": 0.2732968791623167,
+          "max_drawdown": -0.17303396681768024,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0004272119556611258,
+            "lags": 5,
+            "long_run_variance": 7.411685088409984e-05,
+            "standard_error": 0.0002422461056037965,
+            "lower_95": -0.0009020143226445669,
+            "upper_95": 4.759041132231537e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.13019237311376153,
+            "mean_daily_cash_opportunity_gap": 0.0004272119556611258,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.08081697509066088,
+          "gross_compounded_return": 0.12833007271525454,
+          "cost_25bps_compounded_return": 0.013190363908498481,
+          "max_drawdown": -0.13151065318236932,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0006679509105304844,
+            "lags": 5,
+            "long_run_variance": 9.647662484503413e-05,
+            "standard_error": 0.00027638175837392726,
+            "lower_95": -0.001209659156943382,
+            "upper_95": -0.00012624266411758692
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04751309762459366,
+            "mean_daily_cash_opportunity_gap": 0.0006679509105304844,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1263,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": -0.00016650380047505845,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1990,
+      "end_year": 1995,
+      "complete": true,
+      "first_observed": "1990-01-02",
+      "last_observed": "1994-12-30",
+      "observations": 1265,
+      "buyhold_compounded_return": 0.5266714338697636,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.12033122371746963,
+          "gross_compounded_return": 0.15562334078919937,
+          "cost_25bps_compounded_return": 0.06934129913836573,
+          "max_drawdown": -0.12224890671342403,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.0002552833201581004,
+            "lags": 5,
+            "long_run_variance": 2.750348092526465e-05,
+            "standard_error": 0.00014745128739471693,
+            "lower_95": -0.0005442878434517456,
+            "upper_95": 3.3721203135544746e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.035292117071729745,
+            "mean_daily_cash_opportunity_gap": 0.0002552833201581004,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.17235679477927257,
+          "gross_compounded_return": 0.18414510110986315,
+          "cost_25bps_compounded_return": 0.15487230380435046,
+          "max_drawdown": -0.1385673356318391,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.0002238030830039511,
+            "lags": 5,
+            "long_run_variance": 3.7829873946775964e-05,
+            "standard_error": 0.0001729307338014372,
+            "lower_95": -0.000562747321254768,
+            "upper_95": 0.00011514115524686579
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.011788306330590581,
+            "mean_daily_cash_opportunity_gap": 0.0002238030830039511,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.29396856537217686,
+          "gross_compounded_return": 0.354912556804744,
+          "cost_25bps_compounded_return": 0.20754929350808538,
+          "max_drawdown": -0.10057178288592272,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.000148674624505926,
+            "lags": 5,
+            "long_run_variance": 4.451949979494993e-05,
+            "standard_error": 0.00018759872193145705,
+            "lower_95": -0.0005163681194915818,
+            "upper_95": 0.0002190188704797298
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.060943991432567124,
+            "mean_daily_cash_opportunity_gap": 0.000148674624505926,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.011335008580360295,
+          "gross_compounded_return": 0.10441444234649255,
+          "cost_25bps_compounded_return": -0.11393075881463899,
+          "max_drawdown": -0.16940426265046538,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.00033992885375493993,
+            "lags": 5,
+            "long_run_variance": 3.372787037569605e-05,
+            "standard_error": 0.0001632860928648851,
+            "lower_95": -0.0006599695957701147,
+            "upper_95": -1.9888111739765142e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.09307943376613226,
+            "mean_daily_cash_opportunity_gap": 0.00033992885375493993,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": -0.06502975088715934,
+          "gross_compounded_return": -0.028798735474696358,
+          "cost_25bps_compounded_return": -0.11692090311400993,
+          "max_drawdown": -0.10446380639000186,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1265,
+            "mean": -0.00040855525691699333,
+            "lags": 5,
+            "long_run_variance": 5.169845431711891e-05,
+            "standard_error": 0.00020215920294087736,
+            "lower_95": -0.000804787294681113,
+            "upper_95": -1.2323219152873702e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.036231015412462986,
+            "mean_daily_cash_opportunity_gap": 0.00040855525691699333,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1265,
+        "models": 5,
+        "best_candidate_index": 2,
+        "best_mean_loss_improvement": -0.000148674624505926,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 1995,
+      "end_year": 2000,
+      "complete": true,
+      "first_observed": "1995-01-03",
+      "last_observed": "1999-12-31",
+      "observations": 1263,
+      "buyhold_compounded_return": 2.398112202880352,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 1.248440491653004,
+          "gross_compounded_return": 1.2915910716369807,
+          "cost_25bps_compounded_return": 1.1851552819450837,
+          "max_drawdown": -0.1264554691978501,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0003446411718131437,
+            "lags": 5,
+            "long_run_variance": 4.0624268913261345e-05,
+            "standard_error": 0.00017934575592651477,
+            "lower_95": -0.0006961588534291126,
+            "upper_95": 6.876509802825233e-06
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.043150579983976645,
+            "mean_daily_cash_opportunity_gap": 0.0003446411718131437,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.43403676331631913,
+          "gross_compounded_return": 0.4499062257134794,
+          "cost_25bps_compounded_return": 0.41052849035690664,
+          "max_drawdown": -0.15383188320881347,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0007102182897862239,
+            "lags": 5,
+            "long_run_variance": 5.0644288551139496e-05,
+            "standard_error": 0.00020024586738285244,
+            "lower_95": -0.0011027001898566147,
+            "upper_95": -0.0003177363897158331
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.01586946239716025,
+            "mean_daily_cash_opportunity_gap": 0.0007102182897862239,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.25389736514806027,
+          "gross_compounded_return": 0.30509600645065205,
+          "cost_25bps_compounded_return": 0.1807518510764985,
+          "max_drawdown": -0.17225113628509536,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.000821438163103721,
+            "lags": 5,
+            "long_run_variance": 6.74925786915902e-05,
+            "standard_error": 0.00023116726538500667,
+            "lower_95": -0.0012745260032583341,
+            "upper_95": -0.000368350322949108
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.051198641302591774,
+            "mean_daily_cash_opportunity_gap": 0.000821438163103721,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.34870512878960547,
+          "gross_compounded_return": 0.5086285689647336,
+          "cost_25bps_compounded_return": 0.13979727908648165,
+          "max_drawdown": -0.16016240552362415,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0007592289786223273,
+            "lags": 5,
+            "long_run_variance": 4.775561259815246e-05,
+            "standard_error": 0.00019445115851245238,
+            "lower_95": -0.0011403532493067339,
+            "upper_95": -0.00037810470793792067
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.15992344017512816,
+            "mean_daily_cash_opportunity_gap": 0.0007592289786223273,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.5185847783281927,
+          "gross_compounded_return": 0.5632912022876382,
+          "cost_25bps_compounded_return": 0.4538316198206298,
+          "max_drawdown": -0.11337859203226541,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1263,
+            "mean": -0.0006753730799683276,
+            "lags": 5,
+            "long_run_variance": 7.91826398673109e-05,
+            "standard_error": 0.00025038788573588484,
+            "lower_95": -0.0011661333360106618,
+            "upper_95": -0.0001846128239259933
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04470642395944546,
+            "mean_daily_cash_opportunity_gap": 0.0006753730799683276,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1263,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": -0.0003446411718131437,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 2000,
+      "end_year": 2005,
+      "complete": true,
+      "first_observed": "2000-01-03",
+      "last_observed": "2004-12-31",
+      "observations": 1256,
+      "buyhold_compounded_return": -0.09141679850798423,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": -0.17867507297278062,
+          "gross_compounded_return": -0.15195405762195124,
+          "cost_25bps_compounded_return": -0.2172333394032835,
+          "max_drawdown": -0.3773780241254787,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1256,
+            "mean": -0.0001335669585987275,
+            "lags": 5,
+            "long_run_variance": 0.00010187070235884647,
+            "standard_error": 0.00028479334104046815,
+            "lower_95": -0.0006917619070380451,
+            "upper_95": 0.00042462798984059004
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.02672101535082938,
+            "mean_daily_cash_opportunity_gap": 0.0001335669585987275,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.08843404307224279,
+          "gross_compounded_return": 0.09718083001450428,
+          "cost_25bps_compounded_return": 0.075428263020352,
+          "max_drawdown": -0.32636386722827404,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1256,
+            "mean": 0.00012245421974522227,
+            "lags": 5,
+            "long_run_variance": 4.04328109280823e-05,
+            "standard_error": 0.00017942053518459194,
+            "lower_95": -0.00022921002921657792,
+            "upper_95": 0.00047411846870702246
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.008746786942261497,
+            "mean_daily_cash_opportunity_gap": -0.00012245421974522227,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": -0.11006762345896448,
+          "gross_compounded_return": -0.066286641508012,
+          "cost_25bps_compounded_return": -0.17199495781079444,
+          "max_drawdown": -0.35223955115876726,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1256,
+            "mean": -6.527770700637083e-05,
+            "lags": 5,
+            "long_run_variance": 8.732636160937654e-05,
+            "standard_error": 0.00026368040877025514,
+            "lower_95": -0.000582091308196071,
+            "upper_95": 0.00045153589418332925
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04378098195095248,
+            "mean_daily_cash_opportunity_gap": 6.527770700637083e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": -0.247429215277991,
+          "gross_compounded_return": -0.15650658406761542,
+          "cost_25bps_compounded_return": -0.365907240916568,
+          "max_drawdown": -0.31785396196748716,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1256,
+            "mean": -0.0001976649681528674,
+            "lags": 5,
+            "long_run_variance": 9.44579211952897e-05,
+            "standard_error": 0.0002742359408796285,
+            "lower_95": -0.0007351674122769393,
+            "upper_95": 0.00033983747597120446
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.09092263121037558,
+            "mean_daily_cash_opportunity_gap": 0.0001976649681528674,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": -0.09994495343280962,
+          "gross_compounded_return": -0.08175344684851216,
+          "cost_25bps_compounded_return": -0.12659154058724864,
+          "max_drawdown": -0.13003939891646998,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1256,
+            "mean": -8.708917197452417e-05,
+            "lags": 5,
+            "long_run_variance": 0.00014750187004887246,
+            "standard_error": 0.0003426919821427085,
+            "lower_95": -0.0007587654569742329,
+            "upper_95": 0.0005845871130251845
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.018191506584297468,
+            "mean_daily_cash_opportunity_gap": 8.708917197452417e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1256,
+        "models": 5,
+        "best_candidate_index": 1,
+        "best_mean_loss_improvement": 0.00012245421974522227,
+        "global_max_mean_improvement": 0.00012245421974522227,
+        "one_sided_p_value": 0.6027944111776448,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 2005,
+      "end_year": 2010,
+      "complete": true,
+      "first_observed": "2005-01-03",
+      "last_observed": "2009-12-31",
+      "observations": 1259,
+      "buyhold_compounded_return": 0.05811510242344364,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.19650701584912933,
+          "gross_compounded_return": 0.22804012057038658,
+          "cost_25bps_compounded_return": 0.15066278943438816,
+          "max_drawdown": -0.2545316504708093,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1259,
+            "mean": 1.644034948371636e-05,
+            "lags": 5,
+            "long_run_variance": 0.00011833273227961518,
+            "standard_error": 0.0003065770077801923,
+            "lower_95": -0.0005844505857654606,
+            "upper_95": 0.0006173312847328932
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.031533104721257255,
+            "mean_daily_cash_opportunity_gap": -1.644034948371636e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": -0.050407486710218885,
+          "gross_compounded_return": -0.042776447008204155,
+          "cost_25bps_compounded_return": -0.06175423890469378,
+          "max_drawdown": -0.5072866327433798,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1259,
+            "mean": -0.00010659547259729824,
+            "lags": 5,
+            "long_run_variance": 3.644636188877862e-05,
+            "standard_error": 0.00017014305500088637,
+            "lower_95": -0.0004400758603990355,
+            "upper_95": 0.00022688491520443904
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.00763103970201473,
+            "mean_daily_cash_opportunity_gap": 0.00010659547259729824,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": -0.04880794888333839,
+          "gross_compounded_return": -0.013923438014261547,
+          "cost_25bps_compounded_return": -0.0988954281966361,
+          "max_drawdown": -0.3383696481017071,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1259,
+            "mean": -0.00014565027799841177,
+            "lags": 5,
+            "long_run_variance": 0.00010176466045852993,
+            "standard_error": 0.0002843057405981055,
+            "lower_95": -0.0007028895295706987,
+            "upper_95": 0.00041158897357387506
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.034884510869076846,
+            "mean_daily_cash_opportunity_gap": 0.00014565027799841177,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": -0.2715386819795257,
+          "gross_compounded_return": -0.18352886135665136,
+          "cost_25bps_compounded_return": -0.3862211284221193,
+          "max_drawdown": -0.3672965957361163,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1259,
+            "mean": -0.00036585409054805396,
+            "lags": 5,
+            "long_run_variance": 0.00010375757733841505,
+            "standard_error": 0.00028707610576141345,
+            "lower_95": -0.0009285232578404244,
+            "upper_95": 0.00019681507674431645
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.08800982062287432,
+            "mean_daily_cash_opportunity_gap": 0.00036585409054805396,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.10616738143139703,
+          "gross_compounded_return": 0.12064872394796433,
+          "cost_25bps_compounded_return": 0.08476897993258481,
+          "max_drawdown": -0.07365565171582211,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1259,
+            "mean": -6.839491660047515e-05,
+            "lags": 5,
+            "long_run_variance": 0.00015234285902186682,
+            "standard_error": 0.00034785494843170593,
+            "lower_95": -0.0007501906155266188,
+            "upper_95": 0.0006134007823256685
+          },
+          "beat_buyhold_realized": true,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.014481342516567297,
+            "mean_daily_cash_opportunity_gap": 6.839491660047515e-05,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1259,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": 1.644034948371636e-05,
+        "global_max_mean_improvement": 1.644034948371636e-05,
+        "one_sided_p_value": 0.7844311377245509,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 2010,
+      "end_year": 2015,
+      "complete": true,
+      "first_observed": "2010-01-04",
+      "last_observed": "2014-12-31",
+      "observations": 1258,
+      "buyhold_compounded_return": 1.0702237791221094,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.17783370498457085,
+          "gross_compounded_return": 0.21372229938871734,
+          "cost_25bps_compounded_return": 0.12591722151042273,
+          "max_drawdown": -0.2784763989958894,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00047079721780604215,
+            "lags": 5,
+            "long_run_variance": 3.957734323112477e-05,
+            "standard_error": 0.00017737115664828658,
+            "lower_95": -0.0008184446848366839,
+            "upper_95": -0.00012314975077540048
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03588859440414649,
+            "mean_daily_cash_opportunity_gap": 0.00047079721780604215,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.4986281370458352,
+          "gross_compounded_return": 0.5106712930862496,
+          "cost_25bps_compounded_return": 0.4807209169859268,
+          "max_drawdown": -0.10535194150223381,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.0002891026232114474,
+            "lags": 5,
+            "long_run_variance": 6.327263239199934e-05,
+            "standard_error": 0.00022426816574922293,
+            "lower_95": -0.0007286682280799243,
+            "upper_95": 0.0001504629816570295
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.012043156040414393,
+            "mean_daily_cash_opportunity_gap": 0.0002891026232114474,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.1330522201753186,
+          "gross_compounded_return": 0.1840456433466573,
+          "cost_25bps_compounded_return": 0.06056242416397395,
+          "max_drawdown": -0.15940763050564344,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.0005099103338632753,
+            "lags": 5,
+            "long_run_variance": 5.5891995663208515e-05,
+            "standard_error": 0.00021078246923030372,
+            "lower_95": -0.0009230439735546706,
+            "upper_95": -9.677669417188e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.0509934231713387,
+            "mean_daily_cash_opportunity_gap": 0.0005099103338632753,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.28616347284775023,
+          "gross_compounded_return": 0.4243488601730727,
+          "cost_25bps_compounded_return": 0.10339907861494702,
+          "max_drawdown": -0.11353554219677309,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00041398887122416595,
+            "lags": 5,
+            "long_run_variance": 6.326304548990818e-05,
+            "standard_error": 0.00022425117484562002,
+            "lower_95": -0.0008535211739215812,
+            "upper_95": 2.554343147324927e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.13818538732532248,
+            "mean_daily_cash_opportunity_gap": 0.00041398887122416595,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": -0.006014298229577886,
+          "gross_compounded_return": 0.02222492667389342,
+          "cost_25bps_compounded_return": -0.046967329079832365,
+          "max_drawdown": -0.07013146934826964,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.0006335770270270284,
+            "lags": 5,
+            "long_run_variance": 8.738666712635022e-05,
+            "standard_error": 0.0002635616801470423,
+            "lower_95": -0.0011501579201152311,
+            "upper_95": -0.00011699613393882549
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": false,
+          "diagnostics": {
+            "cost_drag_compounded": 0.028239224903471305,
+            "mean_daily_cash_opportunity_gap": 0.0006335770270270284,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1258,
+        "models": 5,
+        "best_candidate_index": 1,
+        "best_mean_loss_improvement": -0.0002891026232114474,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 2015,
+      "end_year": 2020,
+      "complete": true,
+      "first_observed": "2015-01-02",
+      "last_observed": "2019-12-31",
+      "observations": 1258,
+      "buyhold_compounded_return": 0.7274954498836705,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.5213126325544073,
+          "gross_compounded_return": 0.5551695010485371,
+          "cost_25bps_compounded_return": 0.4718434735981898,
+          "max_drawdown": -0.11041641845255779,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00012060635930047769,
+            "lags": 5,
+            "long_run_variance": 3.9730223506533526e-05,
+            "standard_error": 0.00017771340315741904,
+            "lower_95": -0.00046892462948901903,
+            "upper_95": 0.00022771191088806361
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03385686849412983,
+            "mean_daily_cash_opportunity_gap": 0.00012060635930047769,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.425785356702028,
+          "gross_compounded_return": 0.4401219431587451,
+          "cost_25bps_compounded_return": 0.4045212404257785,
+          "max_drawdown": -0.16815866441483185,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00016875238473767695,
+            "lags": 5,
+            "long_run_variance": 3.334271560222335e-05,
+            "standard_error": 0.00016280216031734076,
+            "lower_95": -0.00048784461895966485,
+            "upper_95": 0.00015033984948431092
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.014336586456717093,
+            "mean_daily_cash_opportunity_gap": 0.00016875238473767695,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.3511822581030415,
+          "gross_compounded_return": 0.41199270217806494,
+          "cost_25bps_compounded_return": 0.2647370576789341,
+          "max_drawdown": -0.11911818296952137,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00021722138314785304,
+            "lags": 5,
+            "long_run_variance": 4.5615061502635175e-05,
+            "standard_error": 0.0001904205485135792,
+            "lower_95": -0.0005904456582344682,
+            "upper_95": 0.0001560028919387622
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.06081044407502345,
+            "mean_daily_cash_opportunity_gap": 0.00021722138314785304,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.2061713213547247,
+          "gross_compounded_return": 0.3357623529310221,
+          "cost_25bps_compounded_return": 0.03477384697280872,
+          "max_drawdown": -0.20842383444212886,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.0003115702702702697,
+            "lags": 5,
+            "long_run_variance": 4.305112991917314e-05,
+            "standard_error": 0.0001849915778583339,
+            "lower_95": -0.0006741537628726041,
+            "upper_95": 5.101322233206474e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.12959103157629737,
+            "mean_daily_cash_opportunity_gap": 0.0003115702702702697,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.014872088148966789,
+          "gross_compounded_return": 0.031248896248394775,
+          "cost_25bps_compounded_return": -0.009236573479727284,
+          "max_drawdown": -0.10736747662603296,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.0004580999205087449,
+            "lags": 5,
+            "long_run_variance": 6.0558789103028294e-05,
+            "standard_error": 0.00021940588427223559,
+            "lower_95": -0.0008881354536823267,
+            "upper_95": -2.806438733516319e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.016376808099427986,
+            "mean_daily_cash_opportunity_gap": 0.0004580999205087449,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1258,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": -0.00012060635930047769,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 2020,
+      "end_year": 2025,
+      "complete": true,
+      "first_observed": "2020-01-02",
+      "last_observed": "2024-12-31",
+      "observations": 1258,
+      "buyhold_compounded_return": 0.9516242250161169,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.6171765778981013,
+          "gross_compounded_return": 0.6564782019412796,
+          "cost_25bps_compounded_return": 0.559895229346292,
+          "max_drawdown": -0.24536582929813933,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00020669904610492928,
+            "lags": 5,
+            "long_run_variance": 9.247215567315615e-05,
+            "standard_error": 0.00027112225648143234,
+            "lower_95": -0.0007380986688085366,
+            "upper_95": 0.000324700576598678
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.039301624043178274,
+            "mean_daily_cash_opportunity_gap": 0.00020669904610492928,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.2473319882645726,
+          "gross_compounded_return": 0.25735569821471205,
+          "cost_25bps_compounded_return": 0.23242752474258355,
+          "max_drawdown": -0.2855970097420001,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00038911271860095305,
+            "lags": 5,
+            "long_run_variance": 6.651312573002706e-05,
+            "standard_error": 0.00022993938119051957,
+            "lower_95": -0.0008397939057343714,
+            "upper_95": 6.156846853246534e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.010023709950139459,
+            "mean_daily_cash_opportunity_gap": 0.00038911271860095305,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.1500049896593858,
+          "gross_compounded_return": 0.19696153857502474,
+          "cost_25bps_compounded_return": 0.08291998853287064,
+          "max_drawdown": -0.2855970097420001,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00046462941176470484,
+            "lags": 5,
+            "long_run_variance": 8.678020804744039e-05,
+            "standard_error": 0.0002626455354716919,
+            "lower_95": -0.000979414661289221,
+            "upper_95": 5.0155837759811254e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.04695654891563894,
+            "mean_daily_cash_opportunity_gap": 0.00046462941176470484,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.337606735416198,
+          "gross_compounded_return": 0.48577204653325423,
+          "cost_25bps_compounded_return": 0.14237092435362597,
+          "max_drawdown": -0.17805955470794121,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.00036373585055643866,
+            "lags": 5,
+            "long_run_variance": 9.60109770601365e-05,
+            "standard_error": 0.0002762613464209943,
+            "lower_95": -0.0009052080895415875,
+            "upper_95": 0.00017773638842871016
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.14816531111705622,
+            "mean_daily_cash_opportunity_gap": 0.00036373585055643866,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.0054547466346621665,
+          "gross_compounded_return": 0.027831178937371526,
+          "cost_25bps_compounded_return": -0.027240045757242703,
+          "max_drawdown": -0.11597474077047765,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 1258,
+            "mean": -0.0006170085850556433,
+            "lags": 5,
+            "long_run_variance": 0.0001496878181582903,
+            "standard_error": 0.0003449474259592416,
+            "lower_95": -0.0012931055399357568,
+            "upper_95": 5.90883698244702e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.02237643230270936,
+            "mean_daily_cash_opportunity_gap": 0.0006170085850556433,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 1258,
+        "models": 5,
+        "best_candidate_index": 0,
+        "best_mean_loss_improvement": -0.00020669904610492928,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    {
+      "start_year": 2025,
+      "end_year": 2030,
+      "complete": false,
+      "first_observed": "2025-01-02",
+      "last_observed": "2026-08-31",
+      "observations": 416,
+      "buyhold_compounded_return": 0.33383369493890713,
+      "cash_return": 0,
+      "strategies": {
+        "ma_20_50": {
+          "net_compounded_return": 0.17857611022019704,
+          "gross_compounded_return": 0.18685924237126472,
+          "cost_25bps_compounded_return": 0.16624433346190792,
+          "max_drawdown": -0.11391583136295347,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 416,
+            "mean": -0.000331937259615384,
+            "lags": 5,
+            "long_run_variance": 5.296099253440968e-05,
+            "standard_error": 0.00035680537861376975,
+            "lower_95": -0.0010312758016983727,
+            "upper_95": 0.0003674012824676047
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.008283132151067685,
+            "mean_daily_cash_opportunity_gap": 0.000331937259615384,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "rsi_14_30_70": {
+          "net_compounded_return": 0.16239279367202775,
+          "gross_compounded_return": 0.16705401206325732,
+          "cost_25bps_compounded_return": 0.15542716357278863,
+          "max_drawdown": -0.14122551710851228,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 416,
+            "mean": -0.00035841850961538466,
+            "lags": 5,
+            "long_run_variance": 4.7265516312201796e-05,
+            "standard_error": 0.00033707421971524153,
+            "lower_95": -0.001019083980257258,
+            "upper_95": 0.00030224696102648874
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.004661218391229571,
+            "mean_daily_cash_opportunity_gap": 0.00035841850961538466,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "bollinger_20_2": {
+          "net_compounded_return": 0.07785153076780627,
+          "gross_compounded_return": 0.09524462678964674,
+          "cost_25bps_compounded_return": 0.052246769197660914,
+          "max_drawdown": -0.07711738686324643,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 416,
+            "mean": -0.0005459918269230765,
+            "lags": 5,
+            "long_run_variance": 7.01011343810039e-05,
+            "standard_error": 0.0004105025484233059,
+            "lower_95": -0.001350576821832756,
+            "upper_95": 0.00025859316798660303
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.01739309602184047,
+            "mean_daily_cash_opportunity_gap": 0.0005459918269230765,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "macd_12_26_9": {
+          "net_compounded_return": 0.0016271913387562176,
+          "gross_compounded_return": 0.038361386711816214,
+          "cost_25bps_compounded_return": -0.051116080818447096,
+          "max_drawdown": -0.1715628865413339,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 416,
+            "mean": -0.0007258942307692316,
+            "lags": 5,
+            "long_run_variance": 5.277862631716167e-05,
+            "standard_error": 0.00035619053591833753,
+            "lower_95": -0.0014240276811691732,
+            "upper_95": -2.7760780369290067e-05
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.03673419537306,
+            "mean_daily_cash_opportunity_gap": 0.0007258942307692316,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        },
+        "volatility_breakout_20_2": {
+          "net_compounded_return": 0.2124987003062555,
+          "gross_compounded_return": 0.22224248576284822,
+          "cost_25bps_compounded_return": 0.19801046235581743,
+          "max_drawdown": -0.03842623754174446,
+          "paired_daily_excess_vs_buyhold": {
+            "n": 416,
+            "mean": -0.000279438221153847,
+            "lags": 5,
+            "long_run_variance": 7.722447290549762e-05,
+            "standard_error": 0.00043085467640107723,
+            "lower_95": -0.0011239133868999583,
+            "upper_95": 0.0005650369445922643
+          },
+          "beat_buyhold_realized": false,
+          "beat_cash_realized": true,
+          "diagnostics": {
+            "cost_drag_compounded": 0.009743785456592713,
+            "mean_daily_cash_opportunity_gap": 0.000279438221153847,
+            "interpretation": "Descriptive attribution; losses may reflect regime mismatch, opportunity costs or noise. No causal diagnosis or historical retuning."
+          }
+        }
+      },
+      "multiple_rule_diagnostic": {
+        "n": 416,
+        "models": 5,
+        "best_candidate_index": 4,
+        "best_mean_loss_improvement": -0.000279438221153847,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    }
+  ],
+  "unsupported": {
+    "three_session": "Needs timezone/DST-aware intraday FX bars and explicit rules; session taxonomy is not a unique entry/exit algorithm.",
+    "orb": "Needs opening-range OHLCV and exchange calendar; daily index cannot test it.",
+    "breakout_retest": "Needs explicit retest/confirmation/fill rules and intraday OHLCV.",
+    "gap_earnings_news": "Needs point-in-time publication/catalyst times, premarket/open prices, universe incl. delisted symbols and spreads.",
+    "ml_ensemble": "Existing learner remains underperforming; frozen ensemble and independent adoption period required.",
+    "statistical_arbitrage": "Existing pairs experiment retained separately; requires executable paired instruments and borrow history for trading claims."
+  }
+}

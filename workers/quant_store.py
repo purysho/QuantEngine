@@ -128,6 +128,10 @@ class Store:
         value = dict(row)
         value["assets"] = json.loads(value.pop("assets_json"))
         value["metadata"] = json.loads(value.pop("metadata_json"))
+        # Legacy imports stored absolute paths. Never expose them in dataset APIs.
+        original_path = value["metadata"].pop("original_path", None)
+        if original_path is not None:
+            value["metadata"].setdefault("original_filename", Path(original_path).name)
         return value
 
     def add_dataset(self, dataset_id, name, kind, content, dates, assets, metadata, source_url=None):
@@ -166,7 +170,7 @@ class Store:
             raise ValueError("CSV must use UTF-8 text encoding.") from exc
         digest = hashlib.sha256(content).hexdigest()
         return self.add_dataset("csv-" + digest[:24], source.stem, "csv", content, dates, assets,
-                                {"original_path": str(source), "raw_sha256": digest,
+                                {"original_filename": source.name, "raw_sha256": digest,
                                  "adjustment_status": "Provided by importer; dividends/splits not inferred",
                                  "currency": "Provided by importer; no currency conversion"})
 

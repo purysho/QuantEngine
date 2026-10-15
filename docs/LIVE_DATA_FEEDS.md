@@ -1,0 +1,103 @@
+# Prospective market-data sources and collection — 2026-10-12
+
+## Evidence review
+
+Reviewed [bytewax/awesome-public-real-time-datasets](https://github.com/bytewax/awesome-public-real-time-datasets) and current vendor docs.
+
+| Source | Type | Practical use | Limitations |
+|---|---|---|---|
+| Coinbase Exchange | Public WebSocket ticker, heartbeat, matches, level2 | **First pilot**: actual arrival-time trade-price observations without placing orders or using API keys | Crypto-specific; tickers are batched and may omit trades; availability and geographical access differ; no completeness assurance |
+| Kraken Spot WebSocket v2 | Public trade/book streams | Alternate venue cross-check and alternative source | Venue semantics differ; verify timestamps, replay and update semantics before implementing |
+| Alpaca Markets | Stocks/crypto HTTP/WebSocket | Equities candidate for next phase | Entitlement, authentication, exchange coverage and data latency need specific verification |
+| SEC EDGAR | Current company filings | Publication-timestamped event study, earnings/filing features | Not a continuous price feed; filing processing, revisions and publication-time alignment essential |
+| Finnhub | API with free limits | Market and event coverage candidate | Rate, redistribution and timestamp constraints; verify actual entitlements |
+| FRED/ALFRED | Historical vintage economic series | Macro causality / PIT features | Published releases/revisions, not a tick-level live market feed |
+
+Official Coinbase schema: https://docs.cdp.coinbase.com/exchange/websocket-feed/channels . The ticker gives `sequence`, `trade_id`, `product_id`, `price`, `time` and other fields; the vendor warns that updates are batched, and match messages may be dropped. Heartbeats and the trades REST API are needed for complete recovery. Do not equate a ticker feed with complete trade history.
+
+## Implemented prototype
+
+`workers/quant_live_feed.py` strictly normalizes a ticker, validates timestamps, positive finite prices, product identity, monotonic IDs and event order. Tickers carry **both exchange event time and independent local receipt time** plus explicit `feed_is_complete: false`.
+
+`experiments/collect_coinbase.mjs` is an **opt-in research-only** Node 24 WebSocket collector:
+
+```bash
+node experiments/collect_coinbase.mjs BTC-USD ./btc-ticks.jsonl 25
+```
+
+It connects to the vendor's public WebSocket, subscribes to heartbeat and ticker, appends JSONL events, synchronously flushes each record, stops at the desired count, and fails on invalid, duplicated or out-of-order data. No API key, account, execution or brokerage operation is involved. Its finite ticker count prevents an unbounded continuous operation.
+
+**Important:** It does not automatically backfill missed trades, handle sequence-gap recovery, verify uninterrupted stream integrity, persist external receipts, supervise reconnects, ensure clock synchronization, or make predictions. It has no live feed service deployment or successful live-connection evidence yet.
+
+## Contract for a genuinely new-data experiment
+
+1. Before connecting: freeze code, model version, unit tests, feature schema, symbols, forecast horizon, allowed feeds and metrics; let an independent custodian record a signed code hash.
+2. Establish a timestamped, read-only public feed. On every valid new tick, retain the original message in a custodied append-only journal, with separate local receipt timestamp. Detect gaps/disconnects and mark intervals ineligible until repaired.
+3. A model reads only its latest **already received** values. The model submits its prediction with an independent receipt **before** the observation corresponding to its target arrives. Bar and tick prediction horizons must be explicit (e.g., one minute after receipt or next completed 1-minute bar), with non-trading-hour rules.
+4. On arrival of the target outcome, a separate process compares the frozen prediction against actual return and zero / historical-mean baselines; add fees, spread, available bid/ask and slippage for any profit claim.
+5. Keep previously scored windows retired. Aggregate only settled, complete pairs; report failed/missed/censored forecasts, reconnects, timestamps, missingness and uncertainty.
+6. Require at least one independent second provider before making claims of robustness across vendors or securities.
+
+## Status and next work
+
+This is **data-collection groundwork**, not a complete secure prospective pipeline or proven live-forecast advantage. Next steps are a mockable collector acceptance test, provider gap/recovery mechanisms, external immutable timestamp receipts, and an isolated service linking collection to `experiments/prospective.py`, with asynchronous settlement after actual future observations. Then run a live pilot with a frozen model and report all misses.
+
+## Connected live forecast pilot (opt-in)
+
+The collector can now stream each accepted observation to a **long-running** Python pilot process:
+
+```bash
+QUANT_MODEL_COMMIT=momentum-v1 node experiments/collect_coinbase.mjs BTC-USD ./btc-ticks.jsonl 25 ./pilot-run
+```
+
+The additional fourth argument is the pilot output directory. The producer journals the exchange message and passes it to `python -m experiments.live_pilot` on standard input. Once the required historical ticks have arrived, the pilot commits a *next-tick return* forecast (last observed return) along with **zero** and **past-only mean** baselines. For a *later* tick whose receipt time is strictly after the forecast's durable commitment, the pilot settles squared losses. If a tick was already received before commitment, the pilot **raises an error instead of pretending the forecast was prospective**.
+
+Files `000000000N.forecast.json`, `.receipt.json` and `.settled.json` record each numbered evaluation. The final forecast is deliberately left unsettled if no further ticker arrives. Existing forecast or settlement paths are never overwritten. A restart into the same directory is deliberately rejected rather than resuming with a missing prior history. No trading orders or simulated fees are involved.
+
+This is a limited research **next-received-ticker** experiment. Batched ticker updates, unequal tick intervals, connectivity gaps and feed latency mean it is not a fixed-horizon forecast, complete trade sample, or tradable P&L series. The same local user can still modify both receipt and labels, so a third-party immutable timestamp and genuinely isolated evaluator remain mandatory for externally credible unseen-data claims. Never present a run of archived JSONL rows as a new live prospective run.
+
+## Inspect settled predictions (operational audit)
+
+```bash
+python -m experiments.audit_live_pilot ./pilot-run --hac-lags 1
+```
+
+The tool verifies every forecast against its recorded SHA-256 receipt and matches any settlement. It reports **all** missing settlements, the mean squared errors for candidate and both predeclared baselines, and a nominal HAC comparison if at least three paired forecasts exist. No positive performance claims are justified from a few trades or from an archive replay. The file scanner is local and does not prove timestamps were independently sealed.
+
+**Model policy:** the pilot's candidate is a fixed momentum reference, deliberately not a deployed quant optimizer. It is not selected or tuned on these outcomes. To change the predictor for a genuine unseen test, freeze a new model identifier, start an entirely new custodied run, and include transaction costs / bid-ask in any tradability claim.
+
+
+## Second provider and local integration verification
+
+Kraken Spot WebSocket v2 is independently ingested (research archive only), using the official ticker update format with best bid, best ask and the last traded price. Snapshot messages do **not** enter the prospective forecast pilot. Use a separate JSONL output file and run both collectors independently:
+
+```bash
+node experiments/collect_kraken.mjs BTC/USD ./kraken-ticks.jsonl 25
+node experiments/collect_coinbase.mjs BTC-USD ./coinbase-ticks.jsonl 25 ./pilot-run
+python -m experiments.reconcile_feeds ./coinbase-ticks.jsonl ./kraken-ticks.jsonl
+python -m experiments.audit_live_pilot ./pilot-run --hac-lags 1
+```
+
+Reconciliation chooses the most recent *previously received* Kraken quote for each Coinbase ticker, applies an explicit age limit, and reports stale observations and basis-price deviations. It **does not** represent a synchronous tradable spread or benchmark expected returns across exchanges.
+
+The synthetic, network-free multi-process integration test is run in Linux and Windows CI:
+
+```bash
+node tests/live_pipeline_smoke.mjs
+```
+
+It creates six artificial exchange ticks at controlled intervals, asserts that the live collector journals them, and checks that the Python process committed three future forecasts with two later settlements. Acknowledgements are required before the collector accepts another tick, so an overwhelmed pilot fails closed. Because this test uses a known synthetic stream and the same local machine, it proves only transport/software ordering, **not** real-market predictive accuracy or independent custody.
+
+## Software and release quality gates
+
+CI now verifies Node and Python numerical tests, the mock live pipeline, Windows packaging, a pinned Python dependency vulnerability audit, npm high-severity vulnerability audit, and a CycloneDX npm dependency manifest. Code signing still requires an externally managed trusted signing identity. These checks must pass on the most recent head commit before merge.
+
+## Independently rechecked transport, 2026-10-12
+
+The continuation audit actually connected read-only to both public venues from the Linux host. Three Coinbase and three Kraken observations were collected, followed by a separate six-tick Coinbase/Python prospective pilot. The pilot received every final ACK and exited zero. Summary hashes, receipt ranges, missing-reference counts and the complete local pilot audit are retained in `experiments/results/live_transport_smoke.json`. This is not an independently operated custodian or market-performance experiment.
+
+The two initial short archives did not overlap causally: every Coinbase receipt preceded the Kraken references, so reconciliation reported **0 matched / 3 missing**. Later Kraken quotes were not used retrospectively. This is a negative coverage result, not a provider failure or arbitrage finding.
+
+Coinbase now requires a new output path and creates `<output>.status.jsonl` with received, processed (only after ACK), archived-only (without pilot), and terminal records. A crash may leave received-but-unacknowledged rows; exclude them and preserve evidence. Never append a fresh run to that file or restart the pilot into an occupied directory. An interrupted process may lack a terminal record and must not qualify as a complete run. A missing final ACK or hung consumer fails rather than completing successfully. Raw local samples are not distributed as a complete vendor tape.
+
+Legacy settlement files containing losses but no outcome are explicitly **unverifiable** under the strengthened auditor. Do not manufacture an outcome to retrofit them. New settlements allow arithmetic consistency checks, but a user controlling both outcomes and receipts can still rewrite everything: external custody remains necessary.

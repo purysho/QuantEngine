@@ -1,0 +1,805 @@
+{
+  "status": "exposed_historical_diagnostics",
+  "sources": {
+    "broad_market": {
+      "name": "french-F-F_Research_Data_Factors_daily",
+      "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip",
+      "sha256": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "bytes": 178184,
+      "retrieved_at": "2026-10-12T13:50:21+00:00",
+      "file": "french-F-F_Research_Data_Factors_daily-2f29e22546069914.zip"
+    },
+    "nasdaq_total_return": {
+      "name": "fred-NASDAQXNDX",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=NASDAQXNDX",
+      "sha256": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe",
+      "bytes": 136636,
+      "retrieved_at": "2026-10-12T14:47:15+00:00",
+      "file": "fred-NASDAQXNDX-e4a3f645aa8ae8d5.csv"
+    },
+    "common_closes": 6916,
+    "raw_nasdaq_missing": 258
+  },
+  "frozen": {
+    "protocol": {
+      "status": "exposed_historical_diagnostics",
+      "evaluation_start": "2015-01-01",
+      "cost_bps": 10,
+      "attribution_order": [
+        "participation",
+        "risk_sizing",
+        "asset_choice",
+        "strategy_cost",
+        "benchmark_cost_credit"
+      ],
+      "horizons_closes": [
+        1,
+        5,
+        20
+      ],
+      "classifier_family_comparisons": 18,
+      "hac_lags": "max(5,horizon); original time grid; Bonferroni for 9 conditional edges and 9 state contrasts",
+      "source_pins": {
+        "broad_market": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+        "nasdaq_total_return": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe"
+      },
+      "notice": "No signal, model, threshold, execution or adoption change. Outcome labels for diagnosis only. Local freeze is not independent custody."
+    },
+    "source_sha256": {
+      "experiments/trade_audit.py": "9404e86e224a9e80159c5d1a448fdb9ad10a4e32657ee54e07f878eddf2cecbf",
+      "workers/quant_trade_audit.py": "1291b8ef19a869c4e97e6eff6e1de6288321038ea671252fb50128a3800e4b45",
+      "workers/quant_competitive.py": "7ec8b47c84b396a9899257a6c5181f7d1d77e136e1ce91ebfd022d4c05ea3c40",
+      "experiments/competitive_test.py": "3c7fc342add644b6ef33cbadbfc2d2fbe8cfaf2551d53e9f85a0a6b932a3b947"
+    }
+  },
+  "first": "2015-01-02",
+  "last": "2026-08-31",
+  "years": 11.665982203969884,
+  "attribution": {
+    "situation_router": {
+      "components_log_wealth": {
+        "participation": -0.49395620387767813,
+        "risk_sizing": 0.0,
+        "asset_choice": -0.10486295868036312,
+        "strategy_cost": -0.260000086666719,
+        "benchmark_cost_credit": 0.00200000066667075
+      },
+      "components_annual_log_percentage_points": {
+        "participation": -4.23415872955461,
+        "risk_sizing": 0.0,
+        "asset_choice": -0.8988780957052951,
+        "strategy_cost": -2.2287029254874233,
+        "benchmark_cost_credit": 0.017143868657627116
+      },
+      "net_log_gap_vs_nasdaq": -0.8568192485580894,
+      "reconciliation_error": 3.469446951953614e-18,
+      "mean_risky_exposure": 0.5859481582537517,
+      "cash_days": 1214,
+      "observations": 2932,
+      "transaction_rows_by_kind": {
+        "entry": 84,
+        "asset_switch": 46,
+        "exit": 83,
+        "terminal_exit": 1
+      },
+      "fees_by_kind_initial_capital_units": {
+        "entry": 0.1513100862157015,
+        "asset_switch": 0.14191946575844624,
+        "exit": 0.15040007727629617,
+        "terminal_exit": 0.00329600815368541
+      },
+      "by_five_year_window_log": {
+        "2015-01-01": {
+          "participation": -0.3208698879318378,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.0686211095181622,
+          "strategy_cost": -0.12099954033310943,
+          "benchmark_cost_credit": 0.0009995003330853067
+        },
+        "2020-01-01": {
+          "participation": 0.007265056159270686,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.034252888073988796,
+          "strategy_cost": -0.10800003600002138,
+          "benchmark_cost_credit": 1.3565605344774412e-15
+        },
+        "2025-01-01": {
+          "participation": -0.1803513721051111,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.0019889610882121295,
+          "strategy_cost": -0.03100051033358817,
+          "benchmark_cost_credit": 0.0010005003335840867
+        }
+      },
+      "by_holding_signal_state_log": {
+        "trend": {
+          "participation": -0.14585618338511305,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.06688378025603971,
+          "strategy_cost": -0.09798503265918627,
+          "benchmark_cost_credit": 0.0010005003335841025
+        },
+        "range": {
+          "participation": -0.0406577186170677,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.03797917842432344,
+          "strategy_cost": -0.16101555367444909,
+          "benchmark_cost_credit": 0.0009995003330869944
+        },
+        "stress": {
+          "participation": -0.3074423018754976,
+          "risk_sizing": 0.0,
+          "asset_choice": 0.0,
+          "strategy_cost": -0.0009995003330836103,
+          "benchmark_cost_credit": -3.470937729940782e-16
+        }
+      }
+    },
+    "router_vol15": {
+      "components_log_wealth": {
+        "participation": -0.49395620387767813,
+        "risk_sizing": -0.118691603489984,
+        "asset_choice": -0.12375118664738985,
+        "strategy_cost": -0.24491507502263749,
+        "benchmark_cost_credit": 0.00200000066667075
+      },
+      "components_annual_log_percentage_points": {
+        "participation": -4.23415872955461,
+        "risk_sizing": -1.01741629135688,
+        "asset_choice": -1.0607866914564454,
+        "strategy_cost": -2.099395239427795,
+        "benchmark_cost_credit": 0.017143868657627116
+      },
+      "net_log_gap_vs_nasdaq": -0.9793140683710188,
+      "reconciliation_error": 3.469446951953614e-18,
+      "mean_risky_exposure": 0.5264212762286424,
+      "cash_days": 1214,
+      "observations": 2932,
+      "transaction_rows_by_kind": {
+        "entry": 84,
+        "drift_rebalance": 526,
+        "risk_adjustment": 232,
+        "asset_switch": 46,
+        "exit": 83,
+        "terminal_exit": 1
+      },
+      "fees_by_kind_initial_capital_units": {
+        "entry": 0.12248726994215145,
+        "drift_rebalance": 0.0013974991996418388,
+        "risk_adjustment": 0.026432307267261593,
+        "asset_switch": 0.11382051875755624,
+        "exit": 0.12130438119618225,
+        "terminal_exit": 0.002452630365569718
+      },
+      "by_five_year_window_log": {
+        "2015-01-01": {
+          "participation": -0.3208698879318378,
+          "risk_sizing": -0.03787459060075174,
+          "asset_choice": -0.0635405072565787,
+          "strategy_cost": -0.11476677510872753,
+          "benchmark_cost_credit": 0.0009995003330853067
+        },
+        "2020-01-01": {
+          "participation": 0.007265056159270686,
+          "risk_sizing": -0.08528975945453643,
+          "asset_choice": -0.05946286767314274,
+          "strategy_cost": -0.09946880962264454,
+          "benchmark_cost_credit": 1.3565605344774412e-15
+        },
+        "2025-01-01": {
+          "participation": -0.1803513721051111,
+          "risk_sizing": 0.004472746565304185,
+          "asset_choice": -0.0007478117176684604,
+          "strategy_cost": -0.03067949029126543,
+          "benchmark_cost_credit": 0.0010005003335840867
+        }
+      },
+      "by_holding_signal_state_log": {
+        "trend": {
+          "participation": -0.14585618338511305,
+          "risk_sizing": -0.04398126169738462,
+          "asset_choice": -0.0681023810333801,
+          "strategy_cost": -0.09970656345733858,
+          "benchmark_cost_credit": 0.0010005003335841025
+        },
+        "range": {
+          "participation": -0.0406577186170677,
+          "risk_sizing": -0.07471034179259939,
+          "asset_choice": -0.05564880561400982,
+          "strategy_cost": -0.1446064670992312,
+          "benchmark_cost_credit": 0.0009995003330869944
+        },
+        "stress": {
+          "participation": -0.3074423018754976,
+          "risk_sizing": 0.0,
+          "asset_choice": 0.0,
+          "strategy_cost": -0.0006020444660677377,
+          "benchmark_cost_credit": -3.470937729940782e-16
+        }
+      }
+    },
+    "momentum_rotation": {
+      "components_log_wealth": {
+        "participation": -0.4313398339334439,
+        "risk_sizing": 0.0,
+        "asset_choice": -0.25653679118740724,
+        "strategy_cost": -0.05200001733334564,
+        "benchmark_cost_credit": 0.00200000066667075
+      },
+      "components_annual_log_percentage_points": {
+        "participation": -3.6974154973994455,
+        "risk_sizing": 0.0,
+        "asset_choice": -2.1990157939732575,
+        "strategy_cost": -0.4457405850975005,
+        "benchmark_cost_credit": 0.017143868657627116
+      },
+      "net_log_gap_vs_nasdaq": -0.737876641787526,
+      "reconciliation_error": 1.734723475976807e-18,
+      "mean_risky_exposure": 0.8492496589358799,
+      "cash_days": 442,
+      "observations": 2932,
+      "transaction_rows_by_kind": {
+        "entry": 10,
+        "exit": 9,
+        "asset_switch": 16,
+        "terminal_exit": 1
+      },
+      "fees_by_kind_initial_capital_units": {
+        "entry": 0.01985783260486747,
+        "exit": 0.018824393842389205,
+        "asset_switch": 0.07224209820112018,
+        "terminal_exit": 0.0037123113670920814
+      },
+      "by_five_year_window_log": {
+        "2015-01-01": {
+          "participation": -0.18793830728797448,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.08630152799152384,
+          "strategy_cost": -0.01699950566641971,
+          "benchmark_cost_credit": 0.0009995003330853067
+        },
+        "2020-01-01": {
+          "participation": 0.05781969337053118,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.16194169683123363,
+          "strategy_cost": -0.024000008000007254,
+          "benchmark_cost_credit": 1.3565605344774412e-15
+        },
+        "2025-01-01": {
+          "participation": -0.3012212200160006,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.008293566364649724,
+          "strategy_cost": -0.011000503666918668,
+          "benchmark_cost_credit": 0.0010005003335840867
+        }
+      },
+      "by_holding_signal_state_log": {
+        "trend": {
+          "participation": 0.0270668725368745,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.1780139143800243,
+          "strategy_cost": -0.01299850433258487,
+          "benchmark_cost_credit": 0.0010005003335841025
+        },
+        "range": {
+          "participation": -0.1340138577068904,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.07588792957355375,
+          "strategy_cost": -0.035001511667426766,
+          "benchmark_cost_credit": 0.0009995003330869944
+        },
+        "stress": {
+          "participation": -0.3243928487634281,
+          "risk_sizing": 0.0,
+          "asset_choice": -0.0026349472338291604,
+          "strategy_cost": -0.004000001333333999,
+          "benchmark_cost_credit": -3.470937729940782e-16
+        }
+      }
+    },
+    "broad_dynamic_vol15": {
+      "components_log_wealth": {
+        "participation": 1.2273507405714812e-16,
+        "risk_sizing": -0.2844565240504161,
+        "asset_choice": -0.48816741995948393,
+        "strategy_cost": -0.026604746761350495,
+        "benchmark_cost_credit": 0.00200000066667075
+      },
+      "components_annual_log_percentage_points": {
+        "participation": 1.0520766439655797e-15,
+        "risk_sizing": -2.4383418307771527,
+        "asset_choice": -4.184537670504612,
+        "strategy_cost": -0.228054066054524,
+        "benchmark_cost_credit": 0.017143868657627116
+      },
+      "net_log_gap_vs_nasdaq": -0.7972286901045796,
+      "reconciliation_error": 1.3877787807814457e-17,
+      "mean_risky_exposure": 0.8902707529371183,
+      "cash_days": 1,
+      "observations": 2932,
+      "transaction_rows_by_kind": {
+        "entry": 1,
+        "drift_rebalance": 762,
+        "risk_adjustment": 400,
+        "terminal_exit": 1
+      },
+      "fees_by_kind_initial_capital_units": {
+        "entry": 0.0009294787025392504,
+        "drift_rebalance": 0.002549479533944597,
+        "risk_adjustment": 0.0418293178582743,
+        "terminal_exit": 0.0034983892361164174
+      },
+      "by_five_year_window_log": {
+        "2015-01-01": {
+          "participation": -1.1197877206655521e-15,
+          "risk_sizing": -0.08742534945980832,
+          "asset_choice": -0.22513254624679901,
+          "strategy_cost": -0.009082468079391264,
+          "benchmark_cost_credit": 0.0009995003330853067
+        },
+        "2020-01-01": {
+          "participation": 7.92199422380846e-16,
+          "risk_sizing": -0.09725034919296285,
+          "asset_choice": -0.22475264071251638,
+          "strategy_cost": -0.012873197776676972,
+          "benchmark_cost_credit": 1.3565605344774412e-15
+        },
+        "2025-01-01": {
+          "participation": 4.503233723418543e-16,
+          "risk_sizing": -0.09978082539764496,
+          "asset_choice": -0.0382822330001685,
+          "strategy_cost": -0.0046490809052822605,
+          "benchmark_cost_credit": 0.0010005003335840867
+        }
+      },
+      "by_holding_signal_state_log": {
+        "trend": {
+          "participation": -1.7719929256559963e-17,
+          "risk_sizing": -0.001995026940503554,
+          "asset_choice": -0.4135786462543739,
+          "strategy_cost": -0.004716896106142184,
+          "benchmark_cost_credit": 0.0010005003335841025
+        },
+        "range": {
+          "participation": -4.266504955319911e-16,
+          "risk_sizing": -0.09994742942190459,
+          "asset_choice": -0.025184300318900524,
+          "strategy_cost": -0.017826746450178777,
+          "benchmark_cost_credit": 0.0009995003330869944
+        },
+        "stress": {
+          "participation": 5.671054988456992e-16,
+          "risk_sizing": -0.18251406768800804,
+          "asset_choice": -0.04940447338620948,
+          "strategy_cost": -0.004061104205029534,
+          "benchmark_cost_credit": -3.470937729940782e-16
+        }
+      }
+    },
+    "nasdaq_dynamic_vol15": {
+      "components_log_wealth": {
+        "participation": 1.2273507405714812e-16,
+        "risk_sizing": -0.36973883869266394,
+        "asset_choice": -2.0022478209387636e-15,
+        "strategy_cost": -0.040426345871576175,
+        "benchmark_cost_credit": 0.00200000066667075
+      },
+      "components_annual_log_percentage_points": {
+        "participation": 1.0520766439655797e-15,
+        "risk_sizing": -3.1693759876201715,
+        "asset_choice": -1.7163131110018383e-14,
+        "strategy_cost": -0.3465318664537244,
+        "benchmark_cost_credit": 0.017143868657627116
+      },
+      "net_log_gap_vs_nasdaq": -0.4081651838975712,
+      "reconciliation_error": 1.3877787807814457e-17,
+      "mean_risky_exposure": 0.802936301902081,
+      "cash_days": 1,
+      "observations": 2932,
+      "transaction_rows_by_kind": {
+        "entry": 1,
+        "drift_rebalance": 1173,
+        "risk_adjustment": 641,
+        "terminal_exit": 1
+      },
+      "fees_by_kind_initial_capital_units": {
+        "entry": 0.0009089758681405535,
+        "drift_rebalance": 0.006960813197942937,
+        "risk_adjustment": 0.09279368477472702,
+        "terminal_exit": 0.004341890931448357
+      },
+      "by_five_year_window_log": {
+        "2015-01-01": {
+          "participation": -1.1197877206655521e-15,
+          "risk_sizing": -0.13083536876634902,
+          "asset_choice": 9.585219648707531e-16,
+          "strategy_cost": -0.013096142165804136,
+          "benchmark_cost_credit": 0.0009995003330853067
+        },
+        "2020-01-01": {
+          "participation": 7.92199422380846e-16,
+          "risk_sizing": -0.13713238592818508,
+          "asset_choice": -4.005337592627098e-15,
+          "strategy_cost": -0.019611261813200387,
+          "benchmark_cost_credit": 1.3565605344774412e-15
+        },
+        "2025-01-01": {
+          "participation": 4.503233723418543e-16,
+          "risk_sizing": -0.10177108399812984,
+          "asset_choice": 1.0445678068175812e-15,
+          "strategy_cost": -0.007718941892571656,
+          "benchmark_cost_credit": 0.0010005003335840867
+        }
+      },
+      "by_holding_signal_state_log": {
+        "trend": {
+          "participation": -1.7719929256559963e-17,
+          "risk_sizing": -0.0388651846102881,
+          "asset_choice": 3.127279522580767e-16,
+          "strategy_cost": -0.01264797658773003,
+          "benchmark_cost_credit": 0.0010005003335841025
+        },
+        "range": {
+          "participation": -4.266504955319911e-16,
+          "risk_sizing": -0.12875249018581214,
+          "asset_choice": 8.001276507671462e-16,
+          "strategy_cost": -0.024514337315490617,
+          "benchmark_cost_credit": 0.0009995003330869944
+        },
+        "stress": {
+          "participation": 5.671054988456992e-16,
+          "risk_sizing": -0.20212116389656362,
+          "asset_choice": -3.1151034239639865e-15,
+          "strategy_cost": -0.0032640319683555304,
+          "benchmark_cost_credit": -3.470937729940782e-16
+        }
+      }
+    },
+    "core80_tactical20": {
+      "components_log_wealth": {
+        "participation": 1.2273507405714812e-16,
+        "risk_sizing": -0.4668360336671345,
+        "asset_choice": -0.023289405688118006,
+        "strategy_cost": -0.026802100041942854,
+        "benchmark_cost_credit": 0.00200000066667075
+      },
+      "components_annual_log_percentage_points": {
+        "participation": 1.0520766439655797e-15,
+        "risk_sizing": -4.001686489014806,
+        "asset_choice": -0.1996351895701737,
+        "strategy_cost": -0.22974576485143458,
+        "benchmark_cost_credit": 0.017143868657627116
+      },
+      "net_log_gap_vs_nasdaq": -0.5149275387305244,
+      "reconciliation_error": 1.3877787807814457e-17,
+      "mean_risky_exposure": 0.8107176580627726,
+      "cash_days": 1,
+      "observations": 2932,
+      "transaction_rows_by_kind": {
+        "entry": 1,
+        "drift_rebalance": 1896,
+        "risk_adjustment": 92,
+        "asset_switch": 6,
+        "terminal_exit": 1
+      },
+      "fees_by_kind_initial_capital_units": {
+        "entry": 0.0008980940391753668,
+        "drift_rebalance": 0.00906463592195705,
+        "risk_adjustment": 0.04683355586448339,
+        "asset_switch": 0.003925033975679448,
+        "terminal_exit": 0.003902227706604463
+      },
+      "by_five_year_window_log": {
+        "2015-01-01": {
+          "participation": -1.1197877206655521e-15,
+          "risk_sizing": -0.0963969700505654,
+          "asset_choice": -0.011399343151162492,
+          "strategy_cost": -0.008563596450440601,
+          "benchmark_cost_credit": 0.0009995003330853067
+        },
+        "2020-01-01": {
+          "participation": 7.92199422380846e-16,
+          "risk_sizing": -0.2563726080834011,
+          "asset_choice": -0.011890062536955574,
+          "strategy_cost": -0.012897872336693424,
+          "benchmark_cost_credit": 1.3565605344774412e-15
+        },
+        "2025-01-01": {
+          "participation": 4.503233723418543e-16,
+          "risk_sizing": -0.11406645553316803,
+          "asset_choice": 5.623621143410751e-17,
+          "strategy_cost": -0.005340631254808828,
+          "benchmark_cost_credit": 0.0010005003335840867
+        }
+      },
+      "by_holding_signal_state_log": {
+        "trend": {
+          "participation": -1.7719929256559963e-17,
+          "risk_sizing": -0.08735819617054424,
+          "asset_choice": -0.013896208181349099,
+          "strategy_cost": -0.009307984147502304,
+          "benchmark_cost_credit": 0.0010005003335841025
+        },
+        "range": {
+          "participation": -4.266504955319911e-16,
+          "risk_sizing": -0.06732040798161595,
+          "asset_choice": -0.01380830498030853,
+          "strategy_cost": -0.014271976887376189,
+          "benchmark_cost_credit": 0.0009995003330869944
+        },
+        "stress": {
+          "participation": 5.671054988456992e-16,
+          "risk_sizing": -0.3121574295149743,
+          "asset_choice": 0.004415107473539623,
+          "strategy_cost": -0.00322213900706436,
+          "benchmark_cost_credit": -3.470937729940782e-16
+        }
+      }
+    },
+    "nasdaq_slow_vol15": {
+      "components_log_wealth": {
+        "participation": 1.2273507405714812e-16,
+        "risk_sizing": -0.4813901623862049,
+        "asset_choice": -8.368050244162047e-16,
+        "strategy_cost": -0.02478748406963882,
+        "benchmark_cost_credit": 0.00200000066667075
+      },
+      "components_annual_log_percentage_points": {
+        "participation": 1.0520766439655797e-15,
+        "risk_sizing": -4.126443483021857,
+        "asset_choice": -7.173035324290512e-15,
+        "strategy_cost": -0.21247661479548413,
+        "benchmark_cost_credit": 0.017143868657627116
+      },
+      "net_log_gap_vs_nasdaq": -0.5041776457891737,
+      "reconciliation_error": 1.3877787807814457e-17,
+      "mean_risky_exposure": 0.8073676521109474,
+      "cash_days": 1,
+      "observations": 2932,
+      "transaction_rows_by_kind": {
+        "entry": 1,
+        "drift_rebalance": 1776,
+        "risk_adjustment": 92,
+        "terminal_exit": 1
+      },
+      "fees_by_kind_initial_capital_units": {
+        "entry": 0.0008980940391753668,
+        "drift_rebalance": 0.008960534194182137,
+        "risk_adjustment": 0.0476594401766328,
+        "terminal_exit": 0.003944402517892977
+      },
+      "by_five_year_window_log": {
+        "2015-01-01": {
+          "participation": -1.1197877206655521e-15,
+          "risk_sizing": -0.09832113171396198,
+          "asset_choice": 1.9368128316974743e-15,
+          "strategy_cost": -0.00772559669773844,
+          "benchmark_cost_credit": 0.0009995003330853067
+        },
+        "2020-01-01": {
+          "participation": 7.92199422380846e-16,
+          "risk_sizing": -0.269002575139075,
+          "asset_choice": -9.335844678706393e-16,
+          "strategy_cost": -0.011721256117091877,
+          "benchmark_cost_credit": 1.3565605344774412e-15
+        },
+        "2025-01-01": {
+          "participation": 4.503233723418543e-16,
+          "risk_sizing": -0.11406645553316803,
+          "asset_choice": -1.8400333882430397e-15,
+          "strategy_cost": -0.005340631254808503,
+          "benchmark_cost_credit": 0.0010005003335840867
+        }
+      },
+      "by_holding_signal_state_log": {
+        "trend": {
+          "participation": -1.7719929256559963e-17,
+          "risk_sizing": -0.08400492727545777,
+          "asset_choice": -1.5783942281986062e-15,
+          "strategy_cost": -0.008549617577779882,
+          "benchmark_cost_credit": 0.0010005003335841025
+        },
+        "range": {
+          "participation": -4.266504955319911e-16,
+          "risk_sizing": -0.07746340776727849,
+          "asset_choice": 2.234481385186317e-15,
+          "strategy_cost": -0.013179632664743743,
+          "benchmark_cost_credit": 0.0009995003330869944
+        },
+        "stress": {
+          "participation": 5.671054988456992e-16,
+          "risk_sizing": -0.3199218273434687,
+          "asset_choice": -1.4928921814039153e-15,
+          "strategy_cost": -0.003058233827115197,
+          "benchmark_cost_credit": -3.470937729940782e-16
+        }
+      }
+    }
+  },
+  "classifier_checks": {
+    "1": {
+      "trend": {
+        "observations": 1032,
+        "mean": 0.0004236600158694088,
+        "lower_95": 0.00016144267471870135,
+        "upper_95": 0.0006858773570201163,
+        "family_lower": 2.3468710632289192e-05,
+        "family_upper": 0.0008238513211065283,
+        "mean_outside_state": -9.5343779321877e-05,
+        "state_minus_outside": 0.0005190037951912857,
+        "contrast_family_lower": -0.00024945609011418543,
+        "contrast_family_upper": 0.001287463680496757,
+        "hac_lags": 5,
+        "family_comparisons": 18,
+        "notice": "Original-grid ratio-mean HAC; overlapping horizons, exposed development and bandwidth uncertainty remain.",
+        "broad_mean_forward_return": 0.00048536821705426304,
+        "broad_negative_fraction": 0.438953488372093,
+        "gross_rule_vs_broad_notice": "Fixed cash/all-in recommendation held from execution close for horizon; no fees, no intrahorizon switches, not traded strategy P&L."
+      },
+      "range": {
+        "observations": 1662,
+        "mean": -0.00011967971607190998,
+        "lower_95": -0.0004516944531428702,
+        "upper_95": 0.00021233502099905028,
+        "family_lower": -0.0006263945290713331,
+        "family_upper": 0.00038703509692751315,
+        "mean_outside_state": -0.0002855016773370828,
+        "state_minus_outside": 0.00016582196126517284,
+        "contrast_family_lower": -0.0005517969523949481,
+        "contrast_family_upper": 0.0008834408749252938,
+        "hac_lags": 5,
+        "family_comparisons": 18,
+        "notice": "Original-grid ratio-mean HAC; overlapping horizons, exposed development and bandwidth uncertainty remain.",
+        "broad_mean_forward_return": 0.0005618531889290002,
+        "broad_negative_fraction": 0.45306859205776173,
+        "gross_rule_vs_broad_notice": "Fixed cash/all-in recommendation held from execution close for horizon; no fees, no intrahorizon switches, not traded strategy P&L."
+      },
+      "stress": {
+        "observations": 238,
+        "mean": -0.0007461227456727926,
+        "lower_95": -0.0034434218155933597,
+        "upper_95": 0.0019511763242477742,
+        "family_lower": -0.004862691202470556,
+        "family_upper": 0.0033704457111249702,
+        "mean_outside_state": -0.0004025002365079825,
+        "state_minus_outside": -0.0003436225091648101,
+        "contrast_family_lower": -0.004516536704406815,
+        "contrast_family_upper": 0.0038292916860771945,
+        "hac_lags": 5,
+        "family_comparisons": 18,
+        "notice": "Original-grid ratio-mean HAC; overlapping horizons, exposed development and bandwidth uncertainty remain.",
+        "broad_mean_forward_return": 0.0011000000000000044,
+        "broad_negative_fraction": 0.47478991596638653,
+        "gross_rule_vs_broad_notice": "Fixed cash/all-in recommendation held from execution close for horizon; no fees, no intrahorizon switches, not traded strategy P&L."
+      }
+    },
+    "5": {
+      "trend": {
+        "observations": 1028,
+        "mean": 0.0008185111964243206,
+        "lower_95": -0.0001744051575319213,
+        "upper_95": 0.0018114275503805623,
+        "family_lower": -0.0006968595640954905,
+        "family_upper": 0.0023338819569441315,
+        "mean_outside_state": -0.00044175696797317364,
+        "state_minus_outside": 0.0012602681643974943,
+        "contrast_family_lower": -0.0013619599323925781,
+        "contrast_family_upper": 0.0038824962611875664,
+        "hac_lags": 5,
+        "family_comparisons": 18,
+        "notice": "Original-grid ratio-mean HAC; overlapping horizons, exposed development and bandwidth uncertainty remain.",
+        "broad_mean_forward_return": 0.002900774633904652,
+        "broad_negative_fraction": 0.3784046692607004,
+        "gross_rule_vs_broad_notice": "Fixed cash/all-in recommendation held from execution close for horizon; no fees, no intrahorizon switches, not traded strategy P&L."
+      },
+      "range": {
+        "observations": 1662,
+        "mean": -0.0006585810363989753,
+        "lower_95": -0.0019475210877437099,
+        "upper_95": 0.0006303590149457593,
+        "family_lower": -0.002625737744099646,
+        "family_upper": 0.0013085756713016956,
+        "mean_outside_state": -0.0017668898610078265,
+        "state_minus_outside": 0.0011083088246088512,
+        "contrast_family_lower": -0.001473259790342868,
+        "contrast_family_upper": 0.0036898774395605705,
+        "hac_lags": 5,
+        "family_comparisons": 18,
+        "notice": "Original-grid ratio-mean HAC; overlapping horizons, exposed development and bandwidth uncertainty remain.",
+        "broad_mean_forward_return": 0.0024529023824207932,
+        "broad_negative_fraction": 0.401323706377858,
+        "gross_rule_vs_broad_notice": "Fixed cash/all-in recommendation held from execution close for horizon; no fees, no intrahorizon switches, not traded strategy P&L."
+      },
+      "stress": {
+        "observations": 238,
+        "mean": -0.004494322641828683,
+        "lower_95": -0.014482478342834108,
+        "upper_95": 0.0054938330591767425,
+        "family_lower": -0.01973806300375842,
+        "family_upper": 0.010749417720101056,
+        "mean_outside_state": -0.001977323263107754,
+        "state_minus_outside": -0.0025169993787209294,
+        "contrast_family_lower": -0.017790843795096104,
+        "contrast_family_upper": 0.012756845037654244,
+        "hac_lags": 5,
+        "family_comparisons": 18,
+        "notice": "Original-grid ratio-mean HAC; overlapping horizons, exposed development and bandwidth uncertainty remain.",
+        "broad_mean_forward_return": 0.005775272045652089,
+        "broad_negative_fraction": 0.3907563025210084,
+        "gross_rule_vs_broad_notice": "Fixed cash/all-in recommendation held from execution close for horizon; no fees, no intrahorizon switches, not traded strategy P&L."
+      }
+    },
+    "20": {
+      "trend": {
+        "observations": 1023,
+        "mean": 0.0029787037536961013,
+        "lower_95": -0.0003609256309363815,
+        "upper_95": 0.006318333138328584,
+        "family_lower": -0.002118177469259225,
+        "family_upper": 0.008075584976651427,
+        "mean_outside_state": -0.002693642523436541,
+        "state_minus_outside": 0.005672346277132642,
+        "contrast_family_lower": -0.0027444304298408035,
+        "contrast_family_upper": 0.014089122984106087,
+        "hac_lags": 20,
+        "family_comparisons": 18,
+        "notice": "Original-grid ratio-mean HAC; overlapping horizons, exposed development and bandwidth uncertainty remain.",
+        "broad_mean_forward_return": 0.010828928126917544,
+        "broad_negative_fraction": 0.31378299120234604,
+        "gross_rule_vs_broad_notice": "Fixed cash/all-in recommendation held from execution close for horizon; no fees, no intrahorizon switches, not traded strategy P&L."
+      },
+      "range": {
+        "observations": 1652,
+        "mean": -0.002785571112946953,
+        "lower_95": -0.008427339580787738,
+        "upper_95": 0.0028561973548938313,
+        "family_lower": -0.011395934855797896,
+        "family_upper": 0.005824792629903991,
+        "mean_outside_state": -0.006472608523258224,
+        "state_minus_outside": 0.0036870374103112713,
+        "contrast_family_lower": -0.005979014470013857,
+        "contrast_family_upper": 0.0133530892906364,
+        "hac_lags": 20,
+        "family_comparisons": 18,
+        "notice": "Original-grid ratio-mean HAC; overlapping horizons, exposed development and bandwidth uncertainty remain.",
+        "broad_mean_forward_return": 0.008529367843946343,
+        "broad_negative_fraction": 0.33595641646489105,
+        "gross_rule_vs_broad_notice": "Fixed cash/all-in recommendation held from execution close for horizon; no fees, no intrahorizon switches, not traded strategy P&L."
+      },
+      "stress": {
+        "observations": 238,
+        "mean": -0.031941524729893304,
+        "lower_95": -0.055619442517333806,
+        "upper_95": -0.008263606942452803,
+        "family_lower": -0.06807832934803998,
+        "family_upper": 0.004195279888253363,
+        "mean_outside_state": -0.006745705011221447,
+        "state_minus_outside": -0.02519581971867186,
+        "contrast_family_lower": -0.06142688876329665,
+        "contrast_family_upper": 0.011035249325952928,
+        "hac_lags": 20,
+        "family_comparisons": 18,
+        "notice": "Original-grid ratio-mean HAC; overlapping horizons, exposed development and bandwidth uncertainty remain.",
+        "broad_mean_forward_return": 0.03585214391796198,
+        "broad_negative_fraction": 0.3025210084033613,
+        "gross_rule_vs_broad_notice": "Fixed cash/all-in recommendation held from execution close for horizon; no fees, no intrahorizon switches, not traded strategy P&L."
+      }
+    }
+  },
+  "private_ledger_sha256": {
+    "situation_router": "326b5a93704e0a28fa8fe4408e56826842276b6c0d86fede192895c915a5cc4d",
+    "router_vol15": "e05076a93fe98edffaa544df76e635ad1e2386a1ea4e1230ebdd7c8dcbe927a4",
+    "momentum_rotation": "8df24a01de0e8c0c511a1cad63ffa666d3f143b5098c07b4522509d3b1ee5c69",
+    "broad_dynamic_vol15": "66beca7ad32270515bf1ae3cb68ed64c5c472ad63f4eecd260822d93c32c5177",
+    "nasdaq_dynamic_vol15": "62c61a0655ad0551e8e34c845154bc038a191505cfb0e08f5c5f28fc54ca2ea6",
+    "core80_tactical20": "67549a4f2a37d2bc60c2963751f9d1176a0670974acdb2c9de85072911fd20d2",
+    "nasdaq_slow_vol15": "3a4c138bfc332a21138edfa860b84b5b2002eb29febb1ece6f00083817dcb479"
+  },
+  "limits": [
+    "Telescoping attribution is order-dependent counterfactual accounting, not causal identification.",
+    "Classifier labels are hypotheses, not objectively observed market regimes.",
+    "All observations are already exposed development; no forecasting-superiority claim.",
+    "HAC intervals are nominal; bandwidth sensitivity, finite samples, repeated earlier research remain.",
+    "Private ledgers can reveal vendor return paths and must not be publicly uploaded. Public output is aggregate only."
+  ]
+}

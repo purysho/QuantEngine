@@ -1,0 +1,65 @@
+"""Fail closed when a required research experiment is missing or failed."""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+
+def verify(paths: list[str]) -> list[str]:
+    failures: list[str] = []
+    if not paths:
+        return ["No experiment results supplied."]
+    for name in paths:
+        path = Path(name)
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            failures.append(f"{name}: cannot load result: {exc}")
+            continue
+        checks = data.get("acceptance")
+        if not isinstance(checks, dict) or not checks:
+            failures.append(f"{name}: missing/nonempty acceptance object required")
+            continue
+        unresolved = data.get("unresolved_reference_discrepancies", {})
+        if not isinstance(unresolved, dict):
+            failures.append(f"{name}: unresolved_reference_discrepancies must be a map")
+        else:
+            for key, finding in unresolved.items():
+                if not isinstance(finding, dict) or type(finding.get("observed_pass")) is not bool or finding.get("investigation_required") is not True or not isinstance(finding.get("reason"), str) or not finding["reason"]:
+                    failures.append(f"{name}: malformed unresolved discrepancy {key}")
+                else:
+                    print(f"UNRESOLVED: {name}: {key}: observed_pass={finding['observed_pass']} — {finding['reason']}")
+        findings = data.get("unresolved_research_findings", {})
+        if not isinstance(findings, dict):
+            failures.append(f"{name}: unresolved_research_findings must be a map")
+        else:
+            for key, finding in findings.items():
+                if (not isinstance(finding, dict)
+                        or type(finding.get("observed_pass")) is not bool
+                        or finding.get("requires_fresh_holdout") is not True
+                        or not isinstance(finding.get("reason"), str)
+                        or not finding["reason"]):
+                    failures.append(f"{name}: malformed unresolved research finding {key}")
+                else:
+                    print(f"UNRESOLVED RESEARCH: {name}: {key}: observed_pass={finding['observed_pass']}: {finding['reason']}")
+        for key, value in checks.items():
+            if type(value) is not bool:
+                failures.append(f"{name}: {key} must be a JSON boolean, got {value!r}")
+            elif not value:
+                failures.append(f"{name}: {key} = false")
+    return failures
+
+
+def main() -> int:
+    failures = verify(sys.argv[1:])
+    if failures:
+        for failure in failures:
+            print("FAIL:", failure, file=sys.stderr)
+        return 1
+    print(f"PASS: {len(sys.argv) - 1} experiment acceptance files verified")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

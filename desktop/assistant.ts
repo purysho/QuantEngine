@@ -271,7 +271,7 @@ export async function askLocalModel(endpoint: string, model: string, question: s
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetchImpl(target, {
-      method: 'POST', signal: controller.signal, headers: { 'content-type': 'application/json' },
+      method: 'POST', redirect: 'error', signal: controller.signal, headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ model: model || 'local', temperature: .2, max_tokens: 400, messages: [
         { role: 'system', content: 'You are the QuantEngine research assistant. Answer only from the JSON context; if the answer is not in it, say so. ' +
           'You cannot run calculations, change settings or trade. Be concise.\nContext: ' + JSON.stringify(context).slice(0, 12_000) },

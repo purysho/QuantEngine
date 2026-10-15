@@ -28,6 +28,16 @@ class QuantWorkerTests(unittest.TestCase):
         final = lines[-1] if lines else {"ok": False, "error": completed.stderr}
         return completed, final
 
+    def test_paper_campaign_is_persistent_and_never_places_broker_orders(self):
+        _, created = self.command('paper', paper={'operation':'create','mode':'recorded','source':'worker fixture'})
+        self.assertTrue(created['ok'],created.get('error'))
+        cid=created['result']['paper']['id']
+        _, reopened=self.command('paper',paper={'operation':'summary','id':cid})
+        self.assertEqual(len(reopened['result']['paper']['books']),9)
+        self.assertEqual(reopened['result']['paper']['custody'],'local_unverified')
+        _, failed=self.command('paper',paper={'operation':'buy-real','id':cid})
+        self.assertFalse(failed['ok'])
+
     def test_sample_is_labeled_and_has_persisted_snapshot_hash(self):
         _, message = self.command("inspect")
         self.assertTrue(message["ok"], message.get("error"))
@@ -80,7 +90,8 @@ class QuantWorkerTests(unittest.TestCase):
         self.assertTrue(imported["ok"], imported.get("error"))
         dataset = imported["result"]["dataset"]
         self.assertEqual(dataset["kind"], "csv")
-        self.assertEqual(dataset["metadata"]["original_path"], str(source.resolve()))  # Windows may hand out 8.3 short temp paths.
+        self.assertEqual(dataset["metadata"]["original_filename"], source.name)
+        self.assertNotIn("original_path", dataset["metadata"])
         self.assertNotEqual(dataset["path"], str(source))
         source.unlink()
         _, analysis = self.command("analyse", dataset_id=dataset["id"], parameters={"paths": 5000})

@@ -1,0 +1,96 @@
+"""Diagnose incumbent failures; test three frozen, bounded remedies.
+
+Public history and a first-use cross-market check are development evidence,
+not externally sealed future data. Never overwrite prior evidence or auto-deploy.
+"""
+from __future__ import annotations
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import numpy as np
+from workers.quant_data import french,us_market_returns
+from workers.quant_strategies import signals,backtest,five_year_blocks
+from workers.quant_strategy_learning import attribute,remedies,sequential_choices
+from workers.quant_model_selection import newey_west_mean,white_reality_check
+
+PROTOCOL={'candidate_set':['ma_50_200','macd_every_5_closes','channel_breakout_20'],
+          'selection_years':10,'adoption_years':5,'deployment_years':5,
+          'cost_bps':10,'cash_yield':0,'hac_lags':5,'family_alpha':.05,
+          'bootstrap_mean_block':5,'bootstrap_repetitions':500,'seed':17,
+          'cross_market':'Europe_3_Factors_Daily',
+          'hypotheses':{'ma_50_200':'Longer trend horizon reduces whipsaw; may delay recovery entry.',
+                        'macd_every_5_closes':'Less frequent decisions reduce fees; may lose predictive timing.',
+                        'channel_breakout_20':'Removing rare two-sigma entry requirement broadens exposure; may add false breakouts.'},
+          'non_adoption_policy':'Use buyhold research baseline unless selection AND separate adoption gate pass. No desktop change; no economic-alpha claim.'}
+
+
+def evaluate(dates,returns,meta):
+    p=np.cumprod(1+returns);old=signals(p);new=remedies(p)
+    all_rules={**old,**new};base=backtest(p,np.ones(len(p)),cost_bps=10)
+    b=np.asarray(base['net_returns'])
+    summary={name:attribute(p,target) for name,target in all_rules.items()}
+    tests={name:np.asarray(backtest(p,target,cost_bps=10)['net_returns']) for name,target in new.items()}
+    decisions=sequential_choices(dates[1:],tests,b)
+    # Stitch targets, not standalone returns: real regime switches pay their costs.
+    deployed=np.ones(len(p))
+    for decision in decisions:
+        year=decision['deployment_start_year'];name=decision['deployed']
+        if name!='buyhold':
+            # At execution close t choose frozen policy, whose signal used close t-1.
+            for t,date in enumerate(dates):
+                if t>=1 and year<=date.year<year+5:deployed[t-1]=new[name][t-1]
+    deploy=backtest(p,deployed,cost_bps=10)
+    per_block=[]
+    for block in five_year_blocks(dates[1:]):
+        ix=block.pop('indices')
+        per_block.append({**block,'first_observed':str(dates[1:][ix[0]]),'last_observed':str(dates[1:][ix[-1]]),
+                         'attribution':{name:attribute(p,target,indices=ix) for name,target in old.items()},
+                         'remedy_net_compounded_returns':{name:float(np.prod(1+v[ix])-1) for name,v in tests.items()},
+                         'buyhold_net_compounded_return':float(np.prod(1+b[ix])-1),
+                         'learner_net_compounded_return':float(np.prod(1+np.asarray(deploy['net_returns'])[ix])-1)})
+    improved={n:{'reference':ref,'remedy_minus_reference_cagr':summary[n]['net_cagr']-summary[ref]['net_cagr'],
+                 'remedy_minus_buyhold_cagr':summary[n]['net_cagr']-summary[n]['buyhold_net_cagr']}
+              for n,ref in [('ma_50_200','ma_20_50'),('macd_every_5_closes','macd_12_26_9'),('channel_breakout_20','volatility_breakout_20_2')]}
+    return {'source':meta,'first':str(dates[0]),'last':str(dates[-1]),'summary':summary,
+            'remedy_comparisons':improved,'blocks':per_block,'decisions':decisions,
+            'deployed_remedy_blocks':sum(r['deployed']!='buyhold' for r in decisions),
+            'learner_attribution':attribute(p,deployed),
+            'learner_paired_excess':newey_west_mean(np.asarray(deploy['net_returns'])-b,lags=5),
+            'fixed_remedy_global_diagnostic':white_reality_check(-np.column_stack(list(tests.values())),-b,
+                expected_block=5,repetitions=500,seed=17),
+            'status':'exploratory_replay_not_independent_future_validation'}
+
+
+def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--offline',action='store_true')
+    parser.add_argument('--output-dir',required=True);args=parser.parse_args()
+    root=Path(__file__).resolve().parents[1];out=Path(args.output_dir)
+    out.mkdir(parents=True,exist_ok=False)  # preserve prior trials instead of replacing outcomes
+    manifest={'protocol':PROTOCOL,'source_sha256':{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest()
+              for p in [root/'workers/quant_strategy_learning.py',Path(__file__).resolve()]},
+              'custody':'Local freeze before cross-market fetch; not independently time-stamped.'}
+    (out/'frozen_protocol.json').write_text(json.dumps(manifest,indent=2)+'\n')
+    print('frozen protocol sha256',hashlib.sha256((out/'frozen_protocol.json').read_bytes()).hexdigest(),flush=True)
+    dates,r,meta=us_market_returns(root/'.cache/data',offline=args.offline)
+    us=evaluate(dates,r,meta)
+    (out/'us.json').write_text(json.dumps(us,indent=2,allow_nan=False)+'\n')
+    # First-use cross-market fetch occurs AFTER code/protocol freeze and US execution.
+    europe,em=french(PROTOCOL['cross_market'],root/'.cache/data',offline=args.offline)
+    er=europe['series']['Mkt-RF']+europe['series']['RF']
+    if not np.isfinite(er).all():raise ValueError('Missing European returns; no silent dropping.')
+    eu=evaluate(europe['dates'],er,em)
+    (out/'europe.json').write_text(json.dumps(eu,indent=2,allow_nan=False)+'\n')
+    result={'protocol':manifest,'markets':{},'notice':'No candidate deployed in desktop; exposed history and cross-market replay do not establish forecasting superiority.'}
+    for label,report in [('US',us),('Europe',eu)]:
+        result['markets'][label]={'source_sha256':report['source']['sha256'],'first':report['first'],'last':report['last'],
+                                  'incumbent':report['summary'],'remedies':report['remedy_comparisons'],
+                                  'learner':report['learner_attribution'],'deployed_remedy_blocks':report['deployed_remedy_blocks'],
+                                  'global_diagnostic':report['fixed_remedy_global_diagnostic']}
+    (out/'summary.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
+    for label,report in result['markets'].items():
+        print(label,'adopted blocks',report['deployed_remedy_blocks'])
+        for name,row in report['remedies'].items():print(name,row)
+    print('Evidence retained in',out)
+
+if __name__=='__main__':main()

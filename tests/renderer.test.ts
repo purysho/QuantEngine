@@ -40,6 +40,12 @@ test('accepted 60,000-observation histories render without argument overflow', a
   sandbox.fixture = { state: { phase: 'paused', busy: false, completed: 1 }, config: {}, datasets: [], runs: [], runtime: {}, report };
   assert.doesNotThrow(() => vm.runInContext('receive(fixture)', sandbox));
   assert.equal(elements.get('metric-vol')!.textContent, '10.00%');
+  sandbox.paperFixture = { ...sandbox.fixture as object, paper: { id:'a'.repeat(32), config:{source:'<img src=x onerror=alert(1)>',mode:'recorded',engine_sha256:'f'.repeat(64)}, campaigns:[], feed_status:'Awaiting quotes', books:[{key:'buyhold:100',strategy:'buyhold',initial:100,cash:100,shares:0,equity:100,fees:0,net_return:0,drawdown:0,excess_dollars:0}],curve:[],recent_fills:[],warmup_quotes:21,evidence_complete:true } };
+  vm.runInContext('receive(paperFixture)',sandbox);
+  assert.match(String(elements.get('paper-rows')?.innerHTML),/100/);
+  assert.match(String(elements.get('paper-source')?.textContent),/onerror/);
+  assert.doesNotMatch(String(elements.get('paper-rows')?.innerHTML),/<img/);
+
   assert.match(String(elements.get('chart-subtitle')!.textContent), /2000-01-01/);
 });
 

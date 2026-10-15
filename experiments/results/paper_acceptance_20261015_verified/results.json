@@ -1,0 +1,296 @@
+{
+  "status": "synthetic_software_acceptance_not_market_performance",
+  "observations": 35,
+  "books": [
+    {
+      "cash": 6.0895233685189355e-05,
+      "drawdown": -0.05663113886059273,
+      "equity": 111.09162029523368,
+      "fees": 0.09990003906570061,
+      "initial": 100.0,
+      "key": "buyhold:100",
+      "last_update": 35,
+      "peak": "111.0916202952336800509856798",
+      "pending": "1",
+      "shares": 1.027674,
+      "strategy": "buyhold",
+      "target": 1.0,
+      "unfilled": 1,
+      "net_return": 0.1109162029523368,
+      "excess_dollars": 0.0,
+      "cagr": null,
+      "calendar_returns": {
+        "2025": {
+          "end_equity": "111.0916202952336800509856798",
+          "end_session": "2025-02-04",
+          "start_equity": "100",
+          "start_session": "2025-01-01",
+          "return": 0.1109162029523368
+        }
+      },
+      "rolling_252_return": null
+    },
+    {
+      "cash": 85.40855467175993,
+      "drawdown": -0.009013121531094284,
+      "equity": 101.20801827175994,
+      "fees": 0.016589976365351464,
+      "initial": 100.0,
+      "key": "vol15_interval1:100",
+      "last_update": 21,
+      "peak": "101.2080182717599343336548411",
+      "pending": "0.15574051604589342",
+      "shares": 0.146156,
+      "strategy": "vol15_interval1",
+      "target": 0.15574051604589342,
+      "unfilled": 0,
+      "net_return": 0.012080182717599343,
+      "excess_dollars": -9.883602023473745,
+      "cagr": null,
+      "calendar_returns": {
+        "2025": {
+          "end_equity": "101.2080182717599343336548411",
+          "end_session": "2025-02-04",
+          "start_equity": "100",
+          "start_session": "2025-01-01",
+          "return": 0.012080182717599343
+        }
+      },
+      "rolling_252_return": null
+    },
+    {
+      "cash": 85.40855467175993,
+      "drawdown": -0.009013121531094284,
+      "equity": 101.20801827175994,
+      "fees": 0.016589976365351464,
+      "initial": 100.0,
+      "key": "vol15_interval5:100",
+      "last_update": 21,
+      "peak": "101.2080182717599343336548411",
+      "pending": "0.15574051604589342",
+      "shares": 0.146156,
+      "strategy": "vol15_interval5",
+      "target": 0.15574051604589342,
+      "unfilled": 0,
+      "net_return": 0.012080182717599343,
+      "excess_dollars": -9.883602023473745,
+      "cagr": null,
+      "calendar_returns": {
+        "2025": {
+          "end_equity": "101.2080182717599343336548411",
+          "end_session": "2025-02-04",
+          "start_equity": "100",
+          "start_session": "2025-01-01",
+          "return": 0.012080182717599343
+        }
+      },
+      "rolling_252_return": null
+    },
+    {
+      "cash": 6.178228696637406e-05,
+      "drawdown": -0.055980860909833466,
+      "equity": 10705.949595882286,
+      "fees": 9.990009928289423,
+      "initial": 10000.0,
+      "key": "buyhold:10000",
+      "last_update": 35,
+      "peak": "10705.94959588228647118674569",
+      "pending": "1",
+      "shares": 99.037461,
+      "strategy": "buyhold",
+      "target": 1.0,
+      "unfilled": 10,
+      "net_return": 0.07059495958822865,
+      "excess_dollars": 0.0,
+      "cagr": null,
+      "calendar_returns": {
+        "2025": {
+          "end_equity": "10705.94959588228647118674569",
+          "end_session": "2025-02-04",
+          "start_equity": "10000",
+          "start_session": "2025-01-01",
+          "return": 0.07059495958822865
+        }
+      },
+      "rolling_252_return": null
+    },
+    {
+      "cash": 8535.61061695224,
+      "drawdown": -0.008583018449070624,
+      "equity": 10110.197162752242,
+      "fees": 2.4200008715407293,
+      "initial": 10000.0,
+      "key": "vol15_interval1:10000",
+      "last_update": 21,
+      "peak": "10110.19716275224077622113159",
+      "pending": "0.15574051604589342",
+      "shares": 14.566018,
+      "strategy": "vol15_interval1",
+      "target": 0.15574051604589342,
+      "unfilled": 1,
+      "net_return": 0.011019716275224078,
+      "excess_dollars": -595.7524331300457,
+      "cagr": null,
+      "calendar_returns": {
+        "2025": {
+          "end_equity": "10110.19716275224077622113159",
+          "end_session": "2025-02-04",
+          "start_equity": "10000",
+          "start_session": "2025-01-01",
+          "return": 0.011019716275224078
+        }
+      },
+      "rolling_252_return": null
+    },
+    {
+      "cash": 8535.61061695224,
+      "drawdown": -0.008583018449070624,
+      "equity": 10110.197162752242,
+      "fees": 2.4200008715407293,
+      "initial": 10000.0,
+      "key": "vol15_interval5:10000",
+      "last_update": 21,
+      "peak": "10110.19716275224077622113159",
+      "pending": "0.15574051604589342",
+      "shares": 14.566018,
+      "strategy": "vol15_interval5",
+      "target": 0.15574051604589342,
+      "unfilled": 1,
+      "net_return": 0.011019716275224078,
+      "excess_dollars": -595.7524331300457,
+      "cagr": null,
+      "calendar_returns": {
+        "2025": {
+          "end_equity": "10110.19716275224077622113159",
+          "end_session": "2025-02-04",
+          "start_equity": "10000",
+          "start_session": "2025-01-01",
+          "return": 0.011019716275224078
+        }
+      },
+      "rolling_252_return": null
+    },
+    {
+      "cash": 965044.540107449,
+      "drawdown": -0.0018707658264749468,
+      "equity": 1001798.540107449,
+      "fees": 34.92053935319776,
+      "initial": 1000000.0,
+      "key": "buyhold:1000000",
+      "last_update": 35,
+      "peak": "1001798.540107449036432288709",
+      "pending": "1",
+      "shares": 340.0,
+      "strategy": "buyhold",
+      "target": 1.0,
+      "unfilled": 34,
+      "net_return": 0.0017985401074490364,
+      "excess_dollars": 0.0,
+      "cagr": null,
+      "calendar_returns": {
+        "2025": {
+          "end_equity": "1001798.540107449036432288709",
+          "end_session": "2025-02-04",
+          "start_equity": "1000000",
+          "start_session": "2025-01-01",
+          "return": 0.0017985401074490364
+        }
+      },
+      "rolling_252_return": null
+    },
+    {
+      "cash": 985396.2988641227,
+      "drawdown": -0.0007035357353863562,
+      "equity": 1000530.2988641227,
+      "fees": 14.589112023853472,
+      "initial": 1000000.0,
+      "key": "vol15_interval1:1000000",
+      "last_update": 21,
+      "peak": "1000530.298864122673554985372",
+      "pending": "0.15574051604589342",
+      "shares": 140.0,
+      "strategy": "vol15_interval1",
+      "target": 0.15574051604589342,
+      "unfilled": 14,
+      "net_return": 0.0005302988641226736,
+      "excess_dollars": -1268.2412433263628,
+      "cagr": null,
+      "calendar_returns": {
+        "2025": {
+          "end_equity": "1000530.298864122673554985372",
+          "end_session": "2025-02-04",
+          "start_equity": "1000000",
+          "start_session": "2025-01-01",
+          "return": 0.0005302988641226736
+        }
+      },
+      "rolling_252_return": null
+    },
+    {
+      "cash": 985396.2988641227,
+      "drawdown": -0.0007035357353863562,
+      "equity": 1000530.2988641227,
+      "fees": 14.589112023853472,
+      "initial": 1000000.0,
+      "key": "vol15_interval5:1000000",
+      "last_update": 21,
+      "peak": "1000530.298864122673554985372",
+      "pending": "0.15574051604589342",
+      "shares": 140.0,
+      "strategy": "vol15_interval5",
+      "target": 0.15574051604589342,
+      "unfilled": 14,
+      "net_return": 0.0005302988641226736,
+      "excess_dollars": -1268.2412433263628,
+      "cagr": null,
+      "calendar_returns": {
+        "2025": {
+          "end_equity": "1000530.298864122673554985372",
+          "end_session": "2025-02-04",
+          "start_equity": "1000000",
+          "start_session": "2025-01-01",
+          "return": 0.0005302988641226736
+        }
+      },
+      "rolling_252_return": null
+    }
+  ],
+  "config": {
+    "assumptions": {
+      "fee_bps": "10",
+      "fixed_fee": "0",
+      "impact_bps": "10",
+      "max_participation": "0.1",
+      "minimum_notional": "1",
+      "share_step": "0.000001"
+    },
+    "engine_sha256": "eea34aeee2ef4eeb73ecc8475d620fc3e0b4c2ffd8ce3bef0c9898bfb7d201ed",
+    "limitations": [
+      "Local source/clock and quotes are unverified; no independent custody.",
+      "Snapshot liquidity/impact are assumptions, not proven capacity.",
+      "Cash interest zero; personal taxes and data/runtime costs excluded.",
+      "Each book is an independent alternative portfolio, not simultaneous liquidity demand."
+    ],
+    "mode": "recorded",
+    "rules": "15%/20-close total-return volatility;10pp band;21 observed quotes warmup;next-session target execution",
+    "scales": [
+      100,
+      10000,
+      1000000
+    ],
+    "source": "Synthetic capacity and accounting acceptance",
+    "strategies": [
+      "buyhold",
+      "vol15_interval1",
+      "vol15_interval5"
+    ],
+    "symbol": "QQQ"
+  },
+  "receipt_count": 36,
+  "restart_exact_match": true,
+  "gap_failed_closed": true,
+  "real_quote_feed_connected": false,
+  "independent_custody": false,
+  "capacity_verified": false,
+  "notice": "Actual synthetic ledger outputs; no market superiority, live broker fills or supported capital range demonstrated."
+}

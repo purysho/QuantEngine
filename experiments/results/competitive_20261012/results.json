@@ -1,0 +1,1371 @@
+{
+  "status": "historical_development_competitive_replay",
+  "sources": {
+    "broad_market": {
+      "name": "french-F-F_Research_Data_Factors_daily",
+      "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip",
+      "sha256": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "bytes": 178184,
+      "retrieved_at": "2026-10-12T13:50:21+00:00",
+      "file": "french-F-F_Research_Data_Factors_daily-2f29e22546069914.zip"
+    },
+    "nasdaq_total_return": {
+      "name": "fred-NASDAQXNDX",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=NASDAQXNDX",
+      "sha256": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe",
+      "bytes": 136636,
+      "retrieved_at": "2026-10-12T14:47:15+00:00",
+      "file": "fred-NASDAQXNDX-e4a3f645aa8ae8d5.csv"
+    },
+    "common_closes": 6916,
+    "raw_nasdaq_missing": 258
+  },
+  "frozen": {
+    "protocol": {
+      "selection": [
+        "2000-01-01",
+        "2010-01-01"
+      ],
+      "adoption": [
+        "2010-01-01",
+        "2015-01-01"
+      ],
+      "evaluation_start": "2015-01-01",
+      "assets": [
+        "CRSP_US_total_market",
+        "NASDAQ100_total_return"
+      ],
+      "candidates": [
+        "situation_router",
+        "router_vol15",
+        "momentum_rotation"
+      ],
+      "parameters": {
+        "trend_sma": 200,
+        "efficiency_window": 20,
+        "efficiency_cutoff": 0.25,
+        "stress_volatility": 0.25,
+        "rsi_period": 14,
+        "range_entry": 40,
+        "range_exit": 60,
+        "momentum_window": 126,
+        "router_dispatch_closes": 5,
+        "rotation_closes": 21,
+        "risk_target": 0.15,
+        "risk_weight_band": 0.05
+      },
+      "cost_sensitivity_bps": [
+        0,
+        10,
+        25
+      ],
+      "fee_sensitivity": 0.0075,
+      "hac_lags": 5,
+      "bootstrap_repetitions": 500,
+      "bootstrap_expected_block": 5,
+      "seed": 17,
+      "cash": "French realized RF, compounded across any missing common dates",
+      "restriction": "Long/cash, no leverage/shorts; source data adjusted total-return research indices, not actual executable quotes.",
+      "notice": "Rules selected by author before this replay, but prior broad-market history is exposed. No independently sealed future period."
+    },
+    "source_sha256": {
+      "workers/quant_competitive.py": "10284b16e3497456f2f1af9c13df492accce371fb1961afd26068846725ae4e7",
+      "experiments/competitive_test.py": "3c8c12520912befb6e93beb0dfd1a5149ec16ae61f4dd7b78143efde4d24f581"
+    },
+    "custody": "Local source freeze; no trusted external timestamp or future-label isolation."
+  },
+  "evaluation_first": "2015-01-02",
+  "evaluation_last": "2026-08-31",
+  "years": 11.665982203969884,
+  "scores": {
+    "broad_buyhold": {
+      "observations": 2932,
+      "total_return": 3.4978211831954464,
+      "cagr": 0.13756153828567563,
+      "annualized_volatility": 0.1812496968711627,
+      "sharpe_vs_cash": 0.6891000235206015,
+      "max_drawdown": -0.3421628093489292,
+      "worst_day": -0.11999999999999988
+    },
+    "nasdaq_buyhold": {
+      "observations": 2932,
+      "total_return": 6.756497149942402,
+      "cagr": 0.1919595807121075,
+      "annualized_volatility": 0.2212249665473821,
+      "sharpe_vs_cash": 0.8127135819351333,
+      "max_drawdown": -0.35036724960824805,
+      "worst_day": -0.12191955423694512
+    },
+    "broad_risk15": {
+      "observations": 2932,
+      "total_return": 2.090077594403856,
+      "cagr": 0.10153890351194561,
+      "annualized_volatility": 0.12191006697665643,
+      "sharpe_vs_cash": 0.6856496425955633,
+      "max_drawdown": -0.23966872884119317,
+      "worst_day": -0.08070415536853337
+    },
+    "nasdaq_risk15": {
+      "observations": 2932,
+      "total_return": 1.9205908212234788,
+      "cagr": 0.09622532467115352,
+      "annualized_volatility": 0.09388591899898019,
+      "sharpe_vs_cash": 0.8063776940419959,
+      "max_drawdown": -0.15663024620009425,
+      "worst_day": -0.05170886114119255
+    },
+    "situation_router": {
+      "observations": 2932,
+      "total_return": 2.292712145531698,
+      "cagr": 0.107552582592358,
+      "annualized_volatility": 0.13090506316162193,
+      "sharpe_vs_cash": 0.6891938643616762,
+      "max_drawdown": -0.2130838571146516,
+      "worst_day": -0.05994100000000002
+    },
+    "router_vol15": {
+      "observations": 2932,
+      "total_return": 1.913096968779223,
+      "cagr": 0.09598393266184146,
+      "annualized_volatility": 0.10918413016486359,
+      "sharpe_vs_cash": 0.7058666764656502,
+      "max_drawdown": -0.15281430815883612,
+      "worst_day": -0.04556003258080121
+    },
+    "momentum_rotation": {
+      "observations": 2932,
+      "total_return": 2.7085990557249864,
+      "cagr": 0.11890259513492474,
+      "annualized_volatility": 0.18305067391023228,
+      "sharpe_vs_cash": 0.5935085249837287,
+      "max_drawdown": -0.2771311766702502,
+      "worst_day": -0.12191955423694512
+    }
+  },
+  "selection_and_adoption": {
+    "broad_buyhold": {
+      "selected": null,
+      "adopted": false,
+      "selection_evidence": {
+        "situation_router": {
+          "n": 2515,
+          "mean": -0.00015673946829300445,
+          "lags": 5,
+          "long_run_variance": 0.0001144567480032816,
+          "standard_error": 0.00021332988856040186,
+          "lower_95": -0.000574866049871392,
+          "upper_95": 0.00026138711328538316,
+          "adjusted_lower": -0.0006674469122041404
+        },
+        "router_vol15": {
+          "n": 2515,
+          "mean": -0.00013935546852143725,
+          "lags": 5,
+          "long_run_variance": 0.00011726673050461041,
+          "standard_error": 0.00021593269927951012,
+          "lower_95": -0.0005625835591092771,
+          "upper_95": 0.0002838726220664025,
+          "adjusted_lower": -0.0006562939887168694
+        },
+        "momentum_rotation": {
+          "n": 2515,
+          "mean": 0.0001231075633054374,
+          "lags": 5,
+          "long_run_variance": 0.0001366217400728623,
+          "standard_error": 0.00023307243396058456,
+          "lower_95": -0.0003337144072573083,
+          "upper_95": 0.0005799295338681831,
+          "adjusted_lower": -0.00043486313549073583
+        }
+      },
+      "adoption_evidence": null,
+      "notice": "Nominal net-return gate; repeated development, covariance and custody limits remain."
+    },
+    "nasdaq_buyhold": {
+      "selected": null,
+      "adopted": false,
+      "selection_evidence": {
+        "situation_router": {
+          "n": 2515,
+          "mean": -5.913441524522961e-05,
+          "lags": 5,
+          "long_run_variance": 0.0002901926958128608,
+          "standard_error": 0.0003396833373995594,
+          "lower_95": -0.000724913756548366,
+          "upper_95": 0.0006066449260579067,
+          "adjusted_lower": -0.0008723294633147103
+        },
+        "router_vol15": {
+          "n": 2515,
+          "mean": -4.175041547366243e-05,
+          "lags": 5,
+          "long_run_variance": 0.0003029630287298073,
+          "standard_error": 0.0003470769898317932,
+          "lower_95": -0.0007220213155439771,
+          "upper_95": 0.0006385204845966523,
+          "adjusted_lower": -0.00087264571811279
+        },
+        "momentum_rotation": {
+          "n": 2515,
+          "mean": 0.00022071261635321223,
+          "lags": 5,
+          "long_run_variance": 0.0002631895979489986,
+          "standard_error": 0.0003234933561462658,
+          "lower_95": -0.0004133343616934687,
+          "upper_95": 0.0008547595943998932,
+          "adjusted_lower": -0.0005537239436364433
+        }
+      },
+      "adoption_evidence": null,
+      "notice": "Nominal net-return gate; repeated development, covariance and custody limits remain."
+    }
+  },
+  "by_five_year_period": [
+    {
+      "start": "2015-01-01",
+      "end_exclusive": "2020-01-01",
+      "partial": false,
+      "scores": {
+        "broad_buyhold": {
+          "observations": 1258,
+          "total_return": 0.7278430919137615,
+          "cagr": 0.11573088469401216,
+          "annualized_volatility": 0.13741580202391648,
+          "sharpe_vs_cash": 0.7928691513299657,
+          "max_drawdown": -0.20446131952210556,
+          "worst_day": -0.040200000000000125
+        },
+        "nasdaq_buyhold": {
+          "observations": 1258,
+          "total_return": 1.184878070322751,
+          "cagr": 0.16941640342020525,
+          "annualized_volatility": 0.17126460873430388,
+          "sharpe_vs_cash": 0.9413601760744662,
+          "max_drawdown": -0.22720516409128555,
+          "worst_day": -0.04628915461405447
+        },
+        "broad_risk15": {
+          "observations": 1258,
+          "total_return": 0.48149642525892933,
+          "cagr": 0.08188782928055804,
+          "annualized_volatility": 0.09242716183101517,
+          "sharpe_vs_cash": 0.7892363223076184,
+          "max_drawdown": -0.13970416591387635,
+          "worst_day": -0.027014133733154755
+        },
+        "nasdaq_risk15": {
+          "observations": 1258,
+          "total_return": 0.4568251479669281,
+          "cagr": 0.07825579343868938,
+          "annualized_volatility": 0.07268199259591177,
+          "sharpe_vs_cash": 0.9349238100904675,
+          "max_drawdown": -0.09780064334348992,
+          "worst_day": -0.01959659113153167
+        },
+        "situation_router": {
+          "observations": 1258,
+          "total_return": 0.3126775551974297,
+          "cagr": 0.05599232744411786,
+          "annualized_volatility": 0.12433547212465876,
+          "sharpe_vs_cash": 0.41959943279411543,
+          "max_drawdown": -0.19860010957578578,
+          "worst_day": -0.04628915461405447
+        },
+        "router_vol15": {
+          "observations": 1258,
+          "total_return": 0.27827020723650797,
+          "cagr": 0.05039062839087971,
+          "annualized_volatility": 0.1041083559149919,
+          "sharpe_vs_cash": 0.4278042643656104,
+          "max_drawdown": -0.15281430815883612,
+          "worst_day": -0.039187860429321986
+        },
+        "momentum_rotation": {
+          "observations": 1258,
+          "total_return": 0.6344725996998357,
+          "cagr": 0.10338778396118409,
+          "annualized_volatility": 0.1525260217309933,
+          "sharpe_vs_cash": 0.6557980295201213,
+          "max_drawdown": -0.2051835360536699,
+          "worst_day": -0.04628915461405447
+        }
+      }
+    },
+    {
+      "start": "2020-01-01",
+      "end_exclusive": "2025-01-01",
+      "partial": false,
+      "scores": {
+        "broad_buyhold": {
+          "observations": 1258,
+          "total_return": 0.9516242250161109,
+          "cagr": 0.1431915886534767,
+          "annualized_volatility": 0.21866218019420092,
+          "sharpe_vs_cash": 0.6132045463244817,
+          "max_drawdown": -0.3421628093489292,
+          "worst_day": -0.11999999999999988
+        },
+        "nasdaq_buyhold": {
+          "observations": 1258,
+          "total_return": 1.506545844618417,
+          "cagr": 0.2019040493025741,
+          "annualized_volatility": 0.2604761436996112,
+          "sharpe_vs_cash": 0.7457550366020558,
+          "max_drawdown": -0.3503672496082475,
+          "worst_day": -0.12191955423694512
+        },
+        "broad_risk15": {
+          "observations": 1258,
+          "total_return": 0.6700136504381793,
+          "cagr": 0.10808866866442912,
+          "annualized_volatility": 0.14707039268087801,
+          "sharpe_vs_cash": 0.6097218346040253,
+          "max_drawdown": -0.23966872884119317,
+          "worst_day": -0.08070415536853337
+        },
+        "nasdaq_risk15": {
+          "observations": 1258,
+          "total_return": 0.6432901278611283,
+          "cagr": 0.10451698602558968,
+          "annualized_volatility": 0.11054176456314523,
+          "sharpe_vs_cash": 0.7392472625243499,
+          "max_drawdown": -0.15663024620009458,
+          "worst_day": -0.05170886114119255
+        },
+        "situation_router": {
+          "observations": 1258,
+          "total_return": 1.1900355573555683,
+          "cagr": 0.16986802345763663,
+          "annualized_volatility": 0.13360524619812192,
+          "sharpe_vs_cash": 1.0639792326116642,
+          "max_drawdown": -0.2130838571146515,
+          "worst_day": -0.05215435774324639
+        },
+        "router_vol15": {
+          "observations": 1258,
+          "total_return": 0.977729099913627,
+          "cagr": 0.14623570242054518,
+          "annualized_volatility": 0.10977716594939554,
+          "sharpe_vs_cash": 1.0822612234955193,
+          "max_drawdown": -0.13885767260061121,
+          "worst_day": -0.04556003258080121
+        },
+        "momentum_rotation": {
+          "observations": 1258,
+          "total_return": 1.2051237645826371,
+          "cagr": 0.17147665790412847,
+          "annualized_volatility": 0.2013842213978026,
+          "sharpe_vs_cash": 0.7695693698391094,
+          "max_drawdown": -0.2771311766702502,
+          "worst_day": -0.12191955423694512
+        }
+      }
+    },
+    {
+      "start": "2025-01-01",
+      "end_exclusive": "2100-01-01",
+      "partial": true,
+      "scores": {
+        "broad_buyhold": {
+          "observations": 416,
+          "total_return": 0.33383369493890513,
+          "cagr": 0.18960185833470566,
+          "annualized_volatility": 0.17315607139068,
+          "sharpe_vs_cash": 0.8393048878653678,
+          "max_drawdown": -0.19557597035866336,
+          "worst_day": -0.05900000000000016
+        },
+        "nasdaq_buyhold": {
+          "observations": 416,
+          "total_return": 0.4163245376971072,
+          "cagr": 0.23341506728068784,
+          "annualized_volatility": 0.22645588165599653,
+          "sharpe_vs_cash": 0.848760090302018,
+          "max_drawdown": -0.22818810728518368,
+          "worst_day": -0.060668002016407874
+        },
+        "broad_risk15": {
+          "observations": 416,
+          "total_return": 0.24896065148639246,
+          "cagr": 0.14338406150189442,
+          "annualized_volatility": 0.1164632823286436,
+          "sharpe_vs_cash": 0.8358711949123581,
+          "max_drawdown": -0.1331895895141746,
+          "worst_day": -0.039630191488902455
+        },
+        "nasdaq_risk15": {
+          "observations": 416,
+          "total_return": 0.21996968785656712,
+          "cagr": 0.12731304557056355,
+          "annualized_volatility": 0.096090047339877,
+          "sharpe_vs_cash": 0.8424833644404804,
+          "max_drawdown": -0.09897668268985282,
+          "worst_day": -0.02564423360772361
+        },
+        "situation_router": {
+          "observations": 416,
+          "total_return": 0.14536666720167224,
+          "cagr": 0.08524355801965622,
+          "annualized_volatility": 0.14166139999357213,
+          "sharpe_vs_cash": 0.34054881608423315,
+          "max_drawdown": -0.17363638375968782,
+          "worst_day": -0.05994100000000002
+        },
+        "router_vol15": {
+          "observations": 416,
+          "total_return": 0.15229975807082163,
+          "cagr": 0.08919819052438971,
+          "annualized_volatility": 0.12172817584355378,
+          "sharpe_vs_cash": 0.404444809248583,
+          "max_drawdown": -0.12917085763697833,
+          "worst_day": -0.044212935049803614
+        },
+        "momentum_rotation": {
+          "observations": 416,
+          "total_return": 0.0289618409976089,
+          "cagr": 0.01735686957185867,
+          "annualized_volatility": 0.20804008095136492,
+          "sharpe_vs_cash": -0.025988423168456225,
+          "max_drawdown": -0.23067987800677203,
+          "worst_day": -0.06066800201640765
+        }
+      }
+    }
+  ],
+  "by_pretrade_state": {
+    "situation_router": {
+      "broad_buyhold": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": 0.00013232531223466803,
+          "lower_95": -0.00016156411292677923,
+          "upper_95": 0.00042621473739611526,
+          "standard_error": 0.00014994358426604452,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": -0.00017567261961821558,
+          "lower_95": -0.0005200961383950067,
+          "upper_95": 0.00016875089915857549,
+          "standard_error": 0.0001757262850901995,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0010432731134411898,
+          "lower_95": -0.0036706012897518353,
+          "upper_95": 0.0015840550628694555,
+          "standard_error": 0.001340473559342166,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      },
+      "nasdaq_buyhold": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": -0.0003128653396420413,
+          "lower_95": -0.0005907276404621371,
+          "upper_95": -3.500303882194547e-05,
+          "standard_error": 0.00014176648001025297,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": -0.0001980838437248449,
+          "lower_95": -0.0006424163495076856,
+          "upper_95": 0.0002462486620579959,
+          "standard_error": 0.00022670025805246978,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.001639698520895783,
+          "lower_95": -0.0043082539879125414,
+          "upper_95": 0.0010288569461209755,
+          "standard_error": 0.001361507891335081,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      },
+      "broad_risk15": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": 0.00026082703343009413,
+          "lower_95": -5.383933193106453e-05,
+          "upper_95": 0.0005754933987912528,
+          "standard_error": 0.00016054406395977483,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": -1.548296938759888e-05,
+          "lower_95": -0.0002963879708555077,
+          "upper_95": 0.00026542203208030995,
+          "standard_error": 0.0001433188782999535,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0006994610157481439,
+          "lower_95": -0.002466697640817109,
+          "upper_95": 0.001067775609320821,
+          "standard_error": 0.0009016513393209004,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      },
+      "nasdaq_risk15": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": 0.00016900843207655325,
+          "lower_95": -0.0001408594372891531,
+          "upper_95": 0.0004788763014422596,
+          "standard_error": 0.00015809585171719712,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": 9.592055804615225e-05,
+          "lower_95": -0.00019451355237408928,
+          "upper_95": 0.0003863546684663938,
+          "standard_error": 0.00014818066858175588,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0006937183010609903,
+          "lower_95": -0.0018261129380780679,
+          "upper_95": 0.0004386763359560871,
+          "standard_error": 0.0005777523658250395,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      }
+    },
+    "router_vol15": {
+      "broad_buyhold": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": 8.050534092046078e-05,
+          "lower_95": -0.00020014308944054542,
+          "upper_95": 0.000361153771281467,
+          "standard_error": 0.00014318797467398277,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": -0.0002358177309796585,
+          "lower_95": -0.0005849269294808822,
+          "upper_95": 0.0001132914675215652,
+          "standard_error": 0.00017811693801082843,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0010416044675364035,
+          "lower_95": -0.003669107499342618,
+          "upper_95": 0.001585898564269811,
+          "standard_error": 0.0013405627713297013,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      },
+      "nasdaq_buyhold": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": -0.0003646853109562485,
+          "lower_95": -0.0006570978997053575,
+          "upper_95": -7.227272220713954e-05,
+          "standard_error": 0.0001491900963005658,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": -0.00025822895508628783,
+          "lower_95": -0.0007216394632577996,
+          "upper_95": 0.00020518155308522397,
+          "standard_error": 0.00023643393274056724,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0016380298749909968,
+          "lower_95": -0.004306746514722617,
+          "upper_95": 0.001030686764740623,
+          "standard_error": 0.001361590122312051,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      },
+      "broad_risk15": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": 0.0002090070621158869,
+          "lower_95": -7.340244102935054e-05,
+          "upper_95": 0.0004914165652611243,
+          "standard_error": 0.00014408648119654973,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": -7.562808074904183e-05,
+          "lower_95": -0.00032305889762491367,
+          "upper_95": 0.00017180273612683,
+          "standard_error": 0.00012624021269177135,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0006977923698433577,
+          "lower_95": -0.002465199758388514,
+          "upper_95": 0.0010696150187017982,
+          "standard_error": 0.000901738463543447,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      },
+      "nasdaq_risk15": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": 0.000117188460762346,
+          "lower_95": -0.00015607336153814662,
+          "upper_95": 0.00039045028306283866,
+          "standard_error": 0.00013941929709208807,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": 3.5775446684709304e-05,
+          "lower_95": -0.0002024775235185716,
+          "upper_95": 0.0002740284168879902,
+          "standard_error": 0.00012155763785881679,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0006920496551562042,
+          "lower_95": -0.001824594326292893,
+          "upper_95": 0.0004404950159804847,
+          "standard_error": 0.0005778289138452494,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      }
+    },
+    "momentum_rotation": {
+      "broad_buyhold": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": 0.00028155138665545445,
+          "lower_95": 1.3601443635315896e-05,
+          "upper_95": 0.000549501329675593,
+          "standard_error": 0.00013670915460211152,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": -0.00015021437192810902,
+          "lower_95": -0.00046053324040569064,
+          "upper_95": 0.00016010449654947262,
+          "standard_error": 0.0001583259533048886,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0009666238591284209,
+          "lower_95": -0.0030709865561360018,
+          "upper_95": 0.0011377388378791598,
+          "standard_error": 0.0010736544372487657,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      },
+      "nasdaq_buyhold": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": -0.00016363926522125483,
+          "lower_95": -0.0003389521135684155,
+          "upper_95": 1.1673583125905847e-05,
+          "standard_error": 8.94453307893677e-05,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": -0.00017262559603473834,
+          "lower_95": -0.00048582583204373735,
+          "upper_95": 0.0001405746399742607,
+          "standard_error": 0.00015979603878010155,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.001563049266583014,
+          "lower_95": -0.003752335046513678,
+          "upper_95": 0.0006262365133476498,
+          "standard_error": 0.001116982540780951,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      },
+      "broad_risk15": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": 0.0004100531078508806,
+          "lower_95": 9.02613585041476e-05,
+          "upper_95": 0.0007298448571976136,
+          "standard_error": 0.0001631590557891495,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": 9.975278302507674e-06,
+          "lower_95": -0.00031174991054330384,
+          "upper_95": 0.0003317004671483192,
+          "standard_error": 0.00016414550451316915,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0006228117614353751,
+          "lower_95": -0.002104284982100138,
+          "upper_95": 0.0008586614592293875,
+          "standard_error": 0.000755853684012634,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      },
+      "nasdaq_risk15": {
+        "trend": {
+          "observations": 1032,
+          "mean_excess": 0.0003182345064973397,
+          "lower_95": 3.198334070022397e-06,
+          "upper_95": 0.000633270678924657,
+          "standard_error": 0.00016073274103434556,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "range": {
+          "observations": 1662,
+          "mean_excess": 0.0001213788057362588,
+          "lower_95": -0.00021307645844106926,
+          "upper_95": 0.00045583406991358687,
+          "standard_error": 0.00017064044090680004,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        },
+        "stress": {
+          "observations": 238,
+          "mean_excess": -0.0006170690467482215,
+          "lower_95": -0.0018776273917402143,
+          "upper_95": 0.0006434892982437711,
+          "standard_error": 0.0006431420127510167,
+          "notice": "Exploratory state analysis with original-grid HAC; no across-state/model selection correction."
+        }
+      }
+    }
+  },
+  "cost_sensitivity": {
+    "0": {
+      "situation_router": {
+        "observations": 2932,
+        "total_return": 3.2704178183729793,
+        "cagr": 0.13251376146324878,
+        "annualized_volatility": 0.1308090813818571,
+        "sharpe_vs_cash": 0.8605331022185716,
+        "max_drawdown": -0.20676327725500387,
+        "worst_day": -0.05900000000000005
+      },
+      "router_vol15": {
+        "observations": 2932,
+        "total_return": 2.721518711431936,
+        "cagr": 0.11923619155502974,
+        "annualized_volatility": 0.10910351180561866,
+        "sharpe_vs_cash": 0.8993649210393274,
+        "max_drawdown": -0.14146659355574864,
+        "worst_day": -0.04555427276129376
+      },
+      "momentum_rotation": {
+        "observations": 2932,
+        "total_return": 2.906548351722234,
+        "cagr": 0.12390113008251191,
+        "annualized_volatility": 0.18301838084156807,
+        "sharpe_vs_cash": 0.618008722729441,
+        "max_drawdown": -0.27713117667025,
+        "worst_day": -0.12191955423694512
+      }
+    },
+    "10": {
+      "situation_router": {
+        "observations": 2932,
+        "total_return": 2.292712145531698,
+        "cagr": 0.107552582592358,
+        "annualized_volatility": 0.13090506316162193,
+        "sharpe_vs_cash": 0.6891938643616762,
+        "max_drawdown": -0.2130838571146516,
+        "worst_day": -0.05994100000000002
+      },
+      "router_vol15": {
+        "observations": 2932,
+        "total_return": 1.913096968779223,
+        "cagr": 0.09598393266184146,
+        "annualized_volatility": 0.10918413016486359,
+        "sharpe_vs_cash": 0.7058666764656502,
+        "max_drawdown": -0.15281430815883612,
+        "worst_day": -0.04556003258080121
+      },
+      "momentum_rotation": {
+        "observations": 2932,
+        "total_return": 2.7085990557249864,
+        "cagr": 0.11890259513492474,
+        "annualized_volatility": 0.18305067391023228,
+        "sharpe_vs_cash": 0.5935085249837287,
+        "max_drawdown": -0.2771311766702502,
+        "worst_day": -0.12191955423694512
+      }
+    },
+    "25": {
+      "situation_router": {
+        "observations": 2932,
+        "total_return": 1.2293505681609593,
+        "cagr": 0.07113845454258194,
+        "annualized_volatility": 0.13145100053378278,
+        "sharpe_vs_cash": 0.43175984699320497,
+        "max_drawdown": -0.24311176559697434,
+        "worst_day": -0.06135250000000014
+      },
+      "router_vol15": {
+        "observations": 2932,
+        "total_return": 1.0174671850572485,
+        "cagr": 0.062008034935127965,
+        "annualized_volatility": 0.10968662802947396,
+        "sharpe_vs_cash": 0.41511525392939486,
+        "max_drawdown": -0.19600796481940364,
+        "worst_day": -0.04556865348521966
+      },
+      "momentum_rotation": {
+        "observations": 2932,
+        "total_return": 2.430321329268553,
+        "cagr": 0.11144642309188013,
+        "annualized_volatility": 0.18317148809050052,
+        "sharpe_vs_cash": 0.5566279129669549,
+        "max_drawdown": -0.2771311766702502,
+        "worst_day": -0.12191955423694512
+      }
+    }
+  },
+  "fee_075pct_sensitivity": {
+    "situation_router": {
+      "observations": 2932,
+      "total_return": 2.0175633885984885,
+      "cagr": 0.09929896244727865,
+      "annualized_volatility": 0.13090116723557466,
+      "sharpe_vs_cash": 0.6318842823833805,
+      "max_drawdown": -0.2149786023396585,
+      "worst_day": -0.059968977530094336
+    },
+    "router_vol15": {
+      "observations": 2932,
+      "total_return": 1.6696699777884434,
+      "cagr": 0.08781652354061587,
+      "annualized_volatility": 0.10918088068553568,
+      "sharpe_vs_cash": 0.6371501277234985,
+      "max_drawdown": -0.16129387110768134,
+      "worst_day": -0.04558843810950908
+    },
+    "momentum_rotation": {
+      "observations": 2932,
+      "total_return": 2.3986975596190616,
+      "cagr": 0.11056439327910694,
+      "annualized_volatility": 0.18304522605457843,
+      "sharpe_vs_cash": 0.5525325838804841,
+      "max_drawdown": -0.2775183241161382,
+      "worst_day": -0.12194568719465992
+    }
+  },
+  "matched_published_intervals": {
+    "aieq_1yr": {
+      "start": "2024-10-01",
+      "end_exclusive": "2025-10-01",
+      "model_scores": {
+        "broad_buyhold": {
+          "observations": 250,
+          "total_return": 0.19295405627950202,
+          "cagr": 0.19295405627950202,
+          "annualized_volatility": 0.19375521572894175,
+          "sharpe_vs_cash": 0.7538336423641766,
+          "max_drawdown": -0.19557597035866336,
+          "worst_day": -0.05900000000000016
+        },
+        "nasdaq_buyhold": {
+          "observations": 250,
+          "total_return": 0.2392926375822051,
+          "cagr": 0.2392926375822051,
+          "annualized_volatility": 0.23530114065489674,
+          "sharpe_vs_cash": 0.8210389008803096,
+          "max_drawdown": -0.22818810728518357,
+          "worst_day": -0.060668002016407874
+        },
+        "broad_risk15": {
+          "observations": 250,
+          "total_return": 0.14873191501977168,
+          "cagr": 0.14873191501977168,
+          "annualized_volatility": 0.13031473310507263,
+          "sharpe_vs_cash": 0.7506221931910424,
+          "max_drawdown": -0.13318958951417414,
+          "worst_day": -0.039630191488902455
+        },
+        "nasdaq_risk15": {
+          "observations": 250,
+          "total_return": 0.1340845988576158,
+          "cagr": 0.1340845988576158,
+          "annualized_volatility": 0.09984579730096788,
+          "sharpe_vs_cash": 0.8152650676547872,
+          "max_drawdown": -0.09897668268985249,
+          "worst_day": -0.02564423360772361
+        },
+        "situation_router": {
+          "observations": 250,
+          "total_return": -0.03273910920581702,
+          "cagr": -0.03273910920581702,
+          "annualized_volatility": 0.13884395731031463,
+          "sharpe_vs_cash": -0.5344654826334433,
+          "max_drawdown": -0.17363638375968837,
+          "worst_day": -0.05994100000000002
+        },
+        "router_vol15": {
+          "observations": 250,
+          "total_return": 0.0005995106355125568,
+          "cagr": 0.0005995106355125568,
+          "annualized_volatility": 0.11452202646372923,
+          "sharpe_vs_cash": -0.3773454218383208,
+          "max_drawdown": -0.129170857636978,
+          "worst_day": -0.041956638953764225
+        },
+        "momentum_rotation": {
+          "observations": 250,
+          "total_return": -0.00860709727284159,
+          "cagr": -0.00860709727284159,
+          "annualized_volatility": 0.21266843166149252,
+          "sharpe_vs_cash": -0.1736042528355032,
+          "max_drawdown": -0.23067987800677203,
+          "worst_day": -0.06066800201640765
+        }
+      },
+      "model_fee_sensitivity": {
+        "situation_router": {
+          "observations": 250,
+          "total_return": -0.039909283001271834,
+          "cagr": -0.039909283001271834,
+          "annualized_volatility": 0.13883982511117185,
+          "sharpe_vs_cash": -0.5884945651797772,
+          "max_drawdown": -0.17515981540557946,
+          "worst_day": -0.059968977530094336
+        },
+        "router_vol15": {
+          "observations": 250,
+          "total_return": -0.00681779782716041,
+          "cagr": -0.00681779782716041,
+          "annualized_volatility": 0.11451861812080413,
+          "sharpe_vs_cash": -0.44284907962551334,
+          "max_drawdown": -0.13077626311171886,
+          "worst_day": -0.04198515172473427
+        },
+        "momentum_rotation": {
+          "observations": 250,
+          "total_return": -0.015956158399768272,
+          "cagr": -0.015956158399768272,
+          "annualized_volatility": 0.21266210233807042,
+          "sharpe_vs_cash": -0.20887799596686063,
+          "max_drawdown": -0.23145796296131815,
+          "worst_day": -0.060695957909859266
+        }
+      },
+      "reference_return": 0.1968,
+      "reference_type": "NAV total return net fund expenses",
+      "source": "https://amplifyetfs.com/wp-content/uploads/files/AIEQ_Annual_Report.pdf"
+    },
+    "aieq_5yr": {
+      "start": "2020-10-01",
+      "end_exclusive": "2025-10-01",
+      "model_scores": {
+        "broad_buyhold": {
+          "observations": 1255,
+          "total_return": 1.0879508686271588,
+          "cagr": 0.15862809430296743,
+          "annualized_volatility": 0.17860738818546185,
+          "sharpe_vs_cash": 0.7480138403998933,
+          "max_drawdown": -0.25555942874444104,
+          "worst_day": -0.05900000000000016
+        },
+        "nasdaq_buyhold": {
+          "observations": 1255,
+          "total_return": 1.2486655932388961,
+          "cagr": 0.17593949005982368,
+          "annualized_volatility": 0.23113708678691036,
+          "sharpe_vs_cash": 0.6889134003941906,
+          "max_drawdown": -0.3503672496082474,
+          "worst_day": -0.060668002016407874
+        },
+        "broad_risk15": {
+          "observations": 1255,
+          "total_return": 0.7500335209243032,
+          "cagr": 0.11843119933919599,
+          "annualized_volatility": 0.12013672583686726,
+          "sharpe_vs_cash": 0.7442890650961022,
+          "max_drawdown": -0.17452748166869203,
+          "worst_day": -0.039630191488902455
+        },
+        "nasdaq_risk15": {
+          "observations": 1255,
+          "total_return": 0.5834671656852644,
+          "cagr": 0.09628081119282061,
+          "annualized_volatility": 0.09810760128856415,
+          "sharpe_vs_cash": 0.6822803432061584,
+          "max_drawdown": -0.1566302462000938,
+          "worst_day": -0.02564423360772361
+        },
+        "situation_router": {
+          "observations": 1255,
+          "total_return": 0.6577998408796739,
+          "cagr": 0.10638535564277474,
+          "annualized_volatility": 0.1315551522553735,
+          "sharpe_vs_cash": 0.6083428225149445,
+          "max_drawdown": -0.2130838571146516,
+          "worst_day": -0.05994100000000002
+        },
+        "router_vol15": {
+          "observations": 1255,
+          "total_return": 0.6564686438098415,
+          "cagr": 0.10620761521859334,
+          "annualized_volatility": 0.11014651001400977,
+          "sharpe_vs_cash": 0.7014194180152923,
+          "max_drawdown": -0.13885767260061055,
+          "worst_day": -0.041956638953764225
+        },
+        "momentum_rotation": {
+          "observations": 1255,
+          "total_return": 0.8854337139733317,
+          "cagr": 0.13522580273174256,
+          "annualized_volatility": 0.17340099108355986,
+          "sharpe_vs_cash": 0.6467493220061142,
+          "max_drawdown": -0.23067987800677192,
+          "worst_day": -0.06066800201640765
+        }
+      },
+      "model_fee_sensitivity": {
+        "situation_router": {
+          "observations": 1255,
+          "total_return": 0.5970211867144766,
+          "cagr": 0.09815118750120444,
+          "annualized_volatility": 0.1315512369817244,
+          "sharpe_vs_cash": 0.5513097246485188,
+          "max_drawdown": -0.21497860233965882,
+          "worst_day": -0.059968977530094336
+        },
+        "router_vol15": {
+          "observations": 1255,
+          "total_return": 0.5957387943099324,
+          "cagr": 0.09797476989328446,
+          "annualized_volatility": 0.11014323189285066,
+          "sharpe_vs_cash": 0.6332990296085511,
+          "max_drawdown": -0.14093114043786814,
+          "worst_day": -0.04198515172473427
+        },
+        "momentum_rotation": {
+          "observations": 1255,
+          "total_return": 0.8163094923229333,
+          "cagr": 0.1267769922963322,
+          "annualized_volatility": 0.1733958304165736,
+          "sharpe_vs_cash": 0.6034865050940327,
+          "max_drawdown": -0.23145796296131815,
+          "worst_day": -0.060695957909859266
+        }
+      },
+      "reference_cagr": 0.0871,
+      "reference_type": "NAV annualized total return net fund expenses",
+      "source": "https://amplifyetfs.com/wp-content/uploads/files/AIEQ_Annual_Report.pdf"
+    },
+    "hfr_private_2025": {
+      "start": "2025-01-01",
+      "end_exclusive": "2026-01-01",
+      "model_scores": {
+        "broad_buyhold": {
+          "observations": 250,
+          "total_return": 0.18592825314048267,
+          "cagr": 0.18592825314048267,
+          "annualized_volatility": 0.19327797577831762,
+          "sharpe_vs_cash": 0.7244032820407464,
+          "max_drawdown": -0.19557597035866336,
+          "worst_day": -0.05900000000000016
+        },
+        "nasdaq_buyhold": {
+          "observations": 250,
+          "total_return": 0.21024683739343408,
+          "cagr": 0.21024683739343408,
+          "annualized_volatility": 0.23668795147232746,
+          "sharpe_vs_cash": 0.7165147672836552,
+          "max_drawdown": -0.22818810728518368,
+          "worst_day": -0.060668002016407874
+        },
+        "broad_risk15": {
+          "observations": 250,
+          "total_return": 0.14415290723623864,
+          "cagr": 0.14415290723623864,
+          "annualized_volatility": 0.1299940761767439,
+          "sharpe_vs_cash": 0.7211712644438651,
+          "max_drawdown": -0.1331895895141746,
+          "worst_day": -0.039630191488902455
+        },
+        "nasdaq_risk15": {
+          "observations": 250,
+          "total_return": 0.12280654351169562,
+          "cagr": 0.12280654351169562,
+          "annualized_volatility": 0.10043453887122394,
+          "sharpe_vs_cash": 0.7107132620620185,
+          "max_drawdown": -0.09897668268985282,
+          "worst_day": -0.02564423360772361
+        },
+        "situation_router": {
+          "observations": 250,
+          "total_return": -0.008547025161097732,
+          "cagr": -0.008547025161097732,
+          "annualized_volatility": 0.14304275691711485,
+          "sharpe_vs_cash": -0.340533227208902,
+          "max_drawdown": -0.17363638375968782,
+          "worst_day": -0.05994100000000002
+        },
+        "router_vol15": {
+          "observations": 250,
+          "total_return": 0.024682509819585308,
+          "cagr": 0.024682509819585308,
+          "annualized_volatility": 0.11953060254534782,
+          "sharpe_vs_cash": -0.15600621730244063,
+          "max_drawdown": -0.12917085763697833,
+          "worst_day": -0.041956638953764225
+        },
+        "momentum_rotation": {
+          "observations": 250,
+          "total_return": -0.017296792352207047,
+          "cagr": -0.017296792352207047,
+          "annualized_volatility": 0.22127507361160764,
+          "sharpe_vs_cash": -0.1985038473093463,
+          "max_drawdown": -0.23067987800677203,
+          "worst_day": -0.06066800201640765
+        }
+      },
+      "model_fee_sensitivity": {
+        "situation_router": {
+          "observations": 250,
+          "total_return": -0.01589653159444515,
+          "cagr": -0.01589653159444515,
+          "annualized_volatility": 0.14303849975555757,
+          "sharpe_vs_cash": -0.39297636933126157,
+          "max_drawdown": -0.17515981540557923,
+          "worst_day": -0.059968977530094336
+        },
+        "router_vol15": {
+          "observations": 250,
+          "total_return": 0.01708667735029623,
+          "cagr": 0.01708667735029623,
+          "annualized_volatility": 0.11952704513987658,
+          "sharpe_vs_cash": -0.2187651382049774,
+          "max_drawdown": -0.13077626311171875,
+          "worst_day": -0.04198515172473427
+        },
+        "momentum_rotation": {
+          "observations": 250,
+          "total_return": -0.024581437948079876,
+          "cagr": -0.024581437948079876,
+          "annualized_volatility": 0.22126848814193922,
+          "sharpe_vs_cash": -0.2324055946148054,
+          "max_drawdown": -0.23145796296131826,
+          "worst_day": -0.060695957909859266
+        }
+      },
+      "notice": "Model interval computed; HFR numerical benchmark not bundled or publicly republished. Licensed full history unavailable. Private source comparison only, no hedge-fund population ranking."
+    }
+  },
+  "diagnostics": {
+    "broad_buyhold": {
+      "paired": {
+        "situation_router": {
+          "n": 2932,
+          "mean": -0.00013769003157513643,
+          "lags": 5,
+          "long_run_variance": 7.223091221200196e-05,
+          "standard_error": 0.00015695659436393668,
+          "lower_95": -0.00044532495652845235,
+          "upper_95": 0.00016994489337817948
+        },
+        "router_vol15": {
+          "n": 2932,
+          "mean": -0.00018988725113640553,
+          "lags": 5,
+          "long_run_variance": 7.031542935146816e-05,
+          "standard_error": 0.00015486145433263177,
+          "lower_95": -0.0004934157016283638,
+          "upper_95": 0.00011364119935555273
+        },
+        "momentum_rotation": {
+          "n": 2932,
+          "mean": -6.451286957321021e-05,
+          "lags": 5,
+          "long_run_variance": 5.1625578023081643e-05,
+          "standard_error": 0.0001326937539628407,
+          "lower_95": -0.000324592627340378,
+          "upper_95": 0.00019556688819395755
+        }
+      },
+      "global": {
+        "n": 2932,
+        "models": 3,
+        "best_candidate_index": 2,
+        "best_mean_loss_improvement": -6.451286957321021e-05,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    "nasdaq_buyhold": {
+      "paired": {
+        "situation_router": {
+          "n": 2932,
+          "mean": -0.00035550498866114436,
+          "lags": 5,
+          "long_run_variance": 8.80073335197449e-05,
+          "standard_error": 0.00017325167752509896,
+          "lower_95": -0.0006950782766103384,
+          "upper_95": -1.5931700711950385e-05
+        },
+        "router_vol15": {
+          "n": 2932,
+          "mean": -0.0004077022082224134,
+          "lags": 5,
+          "long_run_variance": 9.118440828211257e-05,
+          "standard_error": 0.000176351155293736,
+          "lower_95": -0.000753350472598136,
+          "upper_95": -6.205394384669081e-05
+        },
+        "momentum_rotation": {
+          "n": 2932,
+          "mean": -0.0002823278266592181,
+          "lags": 5,
+          "long_run_variance": 5.073784947674645e-05,
+          "standard_error": 0.00013154793797413842,
+          "lower_95": -0.0005401617850885294,
+          "upper_95": -2.4493868229906804e-05
+        }
+      },
+      "global": {
+        "n": 2932,
+        "models": 3,
+        "best_candidate_index": 2,
+        "best_mean_loss_improvement": -0.0002823278266592181,
+        "global_max_mean_improvement": 0.0,
+        "one_sided_p_value": 1.0,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    "broad_risk15": {
+      "paired": {
+        "situation_router": {
+          "n": 2932,
+          "mean": 2.625139209741118e-05,
+          "lags": 5,
+          "long_run_variance": 4.5734921065549595e-05,
+          "standard_error": 0.00012489411759161,
+          "lower_95": -0.00021854107838214438,
+          "upper_95": 0.0002710438625769667
+        },
+        "router_vol15": {
+          "n": 2932,
+          "mean": -2.59458274638579e-05,
+          "lags": 5,
+          "long_run_variance": 3.800981406863415e-05,
+          "standard_error": 0.00011385861315138408,
+          "lower_95": -0.0002491087092405707,
+          "upper_95": 0.0001972170543128549
+        },
+        "momentum_rotation": {
+          "n": 2932,
+          "mean": 9.94285540993374e-05,
+          "lags": 5,
+          "long_run_variance": 4.384143393839383e-05,
+          "standard_error": 0.0001222813971466178,
+          "lower_95": -0.00014024298430803347,
+          "upper_95": 0.0003391000925067083
+        }
+      },
+      "global": {
+        "n": 2932,
+        "models": 3,
+        "best_candidate_index": 2,
+        "best_mean_loss_improvement": 9.94285540993374e-05,
+        "global_max_mean_improvement": 9.94285540993374e-05,
+        "one_sided_p_value": 0.36926147704590817,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    },
+    "nasdaq_risk15": {
+      "paired": {
+        "situation_router": {
+          "n": 2932,
+          "mean": 5.754833346630023e-05,
+          "lags": 5,
+          "long_run_variance": 3.697271134313576e-05,
+          "standard_error": 0.00011229454688576034,
+          "lower_95": -0.00016254897842979003,
+          "upper_95": 0.0002776456453623905
+        },
+        "router_vol15": {
+          "n": 2932,
+          "mean": 5.351113905031153e-06,
+          "lags": 5,
+          "long_run_variance": 2.7004051231387464e-05,
+          "standard_error": 9.596933349326596e-05,
+          "lower_95": -0.00018274877974177014,
+          "upper_95": 0.00019345100755183242
+        },
+        "momentum_rotation": {
+          "n": 2932,
+          "mean": 0.00013072549546822647,
+          "lags": 5,
+          "long_run_variance": 4.219979212830132e-05,
+          "standard_error": 0.0001199701419884334,
+          "lower_95": -0.000104415982829103,
+          "upper_95": 0.00036586697376555594
+        }
+      },
+      "global": {
+        "n": 2932,
+        "models": 3,
+        "best_candidate_index": 2,
+        "best_mean_loss_improvement": 0.00013072549546822647,
+        "global_max_mean_improvement": 0.00013072549546822647,
+        "one_sided_p_value": 0.22954091816367264,
+        "bootstrap_repetitions": 500,
+        "expected_block_length": 5,
+        "note": "Conservative multiple-model reality check, prespecified models only; not proof of economic alpha."
+      }
+    }
+  },
+  "benchmark_risk_weights": {
+    "broad_buyhold": [
+      1.0,
+      0.0
+    ],
+    "nasdaq_buyhold": [
+      0.0,
+      1.0
+    ],
+    "broad_risk15": [
+      0.6725872230267794,
+      0.0
+    ],
+    "nasdaq_risk15": [
+      0.0,
+      0.4243505683779431
+    ]
+  },
+  "limits": [
+    "Revised, publicly exposed historical sources, no independent unseen-label custody.",
+    "Index-level adjusted closes, no actual quotes, ETF tracking/expenses, trade tape or executable fill proof.",
+    "AIEQ only published 1/5yr NAV intervals; no daily paired risk inference; not representative of all AI bots.",
+    "No licensed full HFR histories; annual private comparison cannot establish hedge-fund superiority.",
+    "Regimes and capital risk controls use historical closes; no earnings/news prediction or foresight."
+  ]
+}

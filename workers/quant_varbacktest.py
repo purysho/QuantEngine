@@ -105,8 +105,11 @@ def fit_garch_t(returns, start: dict | None = None, asymmetric: bool = False) ->
     best = None
     for x0 in starts:
         result = optimize.minimize(negative_log_likelihood, x0, method="L-BFGS-B")
-        if best is None or result.fun < best.fun:
+        # An attractive likelihood does not make a failed optimization reliable.
+        if result.success and np.isfinite(result.fun) and (best is None or result.fun < best.fun):
             best = result
+    if best is None:
+        raise ArithmeticError("GARCH fit did not converge from any independent start.")
     omega, alpha, beta, nu, mu, gamma = unpack(best.x)
     return {"_x": [float(v) for v in best.x], "gamma": gamma, "asymmetric": asymmetric,"omega": omega * var0, "alpha": alpha, "beta": beta, "nu": nu, "mu": mu0 + mu * scale,
             "persistence": alpha + beta + gamma / 2, "log_likelihood": -best.fun - len(r) * math.log(scale),

@@ -1,0 +1,31 @@
+{
+  "protocol": {
+    "status": "exposed_adverse_window_examination",
+    "window": [
+      "2015-01-01",
+      "2020-01-01"
+    ],
+    "comparisons": [
+      1,
+      5
+    ],
+    "reference": 21,
+    "cost_bps": 10,
+    "source_pins": {
+      "broad_market": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "nasdaq_total_return": "e4a3f645aa8ae8d5e2e2c3b054c2111c322961770ba28c3662d3035f1bef3afe"
+    },
+    "partitions": "less/more held equity crossed with Nasdaq daily return above/below RF; equal/tied separately",
+    "intervals": "non-overlapping intervals between either arm changing its held target; signal s affects first return s+2",
+    "ranking": "top5 negative intervals per arm for descriptive concentration, never a signal or selection feature",
+    "notice": "Diagnostic chosen after observing the adverse window. No new inference, parameter change, model selection or independent validation."
+  },
+  "source_sha256": {
+    "experiments/sizing_window_audit.py": "f55062f54dc9ddd9a59ddd138c6330f3cbccb2061b1f63def3efe1cee619e2b2",
+    "workers/quant_sizing_latency.py": "387886d2ab424ed380ab45c5ebb7d3b1251915f6bef7649ed90fb0f4402b7724",
+    "workers/quant_trade_audit.py": "1291b8ef19a869c4e97e6eff6e1de6288321038ea671252fb50128a3800e4b45",
+    "workers/quant_competitive.py": "7ec8b47c84b396a9899257a6c5181f7d1d77e136e1ce91ebfd022d4c05ea3c40",
+    "experiments/competitive_test.py": "3c7fc342add644b6ef33cbadbfc2d2fbe8cfaf2551d53e9f85a0a6b932a3b947",
+    "experiments/sizing_latency.py": "d095390c0c3d934239d9238a052d81468765a517c5b49194aa32b990427688c7"
+  }
+}

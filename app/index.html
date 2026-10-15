@@ -15,6 +15,7 @@
       <button class="nav-item" data-page="datasets"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></svg>Datasets</button>
       <button class="nav-item" data-page="options"><svg viewBox="0 0 24 24"><path d="M3 20c4-1 6-8 9-8s5 7 9 8M12 4v16"/></svg>Options</button>
       <button class="nav-item" data-page="evolution"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="12" cy="13" r="2.5"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6.6 7.2 10.4 11.4M17.4 6.3 13.7 11.3M10.5 14.6 7.2 17.6M14.1 14.6 16.6 16.9"/></svg>Evolution</button>
+      <button class="nav-item" data-page="paper"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 17V9m7 8V3m7 14v-6"/></svg>Paper portfolios</button>
       <button class="nav-item" data-page="runs"><svg viewBox="0 0 24 24"><path d="m7 4 13 8-13 8Z"/></svg>Runs</button>
       <button class="nav-item" data-page="preferences"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z"/><circle cx="12" cy="12" r="3"/></svg>Preferences</button>
     </nav>
@@ -170,6 +171,17 @@
         <article class="panel preferences-card"><div class="panel-heading"><h2>Independent local storage</h2></div><div class="preferences-content"><label>Storage folder</label><code id="storage-path" class="path-display">D:\Quant-Engine</code><div class="inline-actions"><button id="choose-root" class="secondary">Choose folder…</button><button id="open-data-folder" class="secondary">Open folder ↗</button></div><p class="field-help">Snapshots, source caches, SQLite history and complete JSON reports live here. Choosing another folder opens its history; existing folders are retained.</p></div></article>
         <article class="panel preferences-card"><div class="panel-heading"><h2>Numerical runtime</h2><span class="tag">LOCAL</span></div><div id="runtime-details" class="preferences-content subtle">Checking the dedicated numerical runtime…</div></article>
       </div>
+    </section>
+    <section id="page-paper" class="page hidden">
+      <article class="panel paper-panel"><div class="panel-heading"><div><h2>Matched-capital paper portfolios</h2><p>$100 · $10,000 · $1,000,000 — each account has independent quantities, costs and liquidity limits.</p></div><span class="tag">SIMULATED</span></div>
+        <div class="paper-form"><label>Observation mode<select id="paper-mode"><option value="prospective">Forward observations</option><option value="recorded">Recorded / synthetic replay</option></select></label><label>Quote source label<input id="paper-label" maxlength="120" placeholder="Name the supplied quote source"></label><button id="paper-create" class="primary">Freeze new campaign</button></div>
+        <div class="paper-form"><label>Saved campaign<select id="paper-campaign"></select></label><button id="paper-refresh" class="secondary">Reload ledger</button><button id="paper-import" class="secondary">Import daily quote</button><button id="paper-halt" class="secondary">Halt paper execution</button><button id="paper-export" class="secondary">Export journal</button></div>
+        <p id="paper-source" class="subtle"></p><p id="paper-health" role="status"></p><p id="paper-error" class="inline-error" role="alert"></p>
+        <p class="field-help">No quote feed is connected automatically. Imported source records and local timestamps are unverified. Forward mode rejects stale or pre-decision quotes. These results do not establish an investment advantage or real-money readiness.</p>
+      </article>
+      <article class="panel paper-panel"><div class="panel-heading"><h2>Equity after modeled trading costs</h2><label>Chart capital<select id="paper-scale"><option value="100">$100</option><option value="10000">$10,000</option><option value="1000000">$1,000,000</option></select></label></div><div id="paper-chart" aria-label="Paper portfolio equity comparison"></div><div class="table-scroll"><table><thead><tr><th>Capital</th><th>Policy</th><th>Equity</th><th>Cash</th><th>Shares</th><th>Return</th><th>Drawdown</th><th>Fees</th><th>Vs benchmark</th></tr></thead><tbody id="paper-rows"></tbody></table></div>
+        <p class="field-help">Buy-and-hold is the matched QQQ instrument comparator. Sizing challengers remain in cash during their 21-observation warmup. All books start on the same campaign. Quoted depth and adverse impact are modeled assumptions; no capital range is certified. Equity uses quote midpoints; future exit costs are not deducted. Cash interest, personal tax and operating/data costs are excluded.</p></article>
+      <article class="panel paper-panel"><div class="panel-heading"><h2>Recent execution outcomes</h2><span id="paper-freeze" class="subtle"></span></div><div id="paper-fills"></div></article>
     </section>
     <footer><span id="footer-message">Runs in the system tray while the computer is awake.</span><span id="footer-status">Engine status: <strong>Paused</strong></span></footer>
   </main>
