@@ -127,6 +127,7 @@ export function parseCommand(input: string): Intent {
     return { kind: 'price-option', parameters: { kind, spot, strike, time, volatility, rate, dividend }, assumed };
   }
   const nav: Array<[RegExp, string, string?]> = [
+    [/\b(terminal|markets?|watchlist|quotes?|news)\b/, 'terminal'],
     [/\b(vol(atility)? surface|3d|surface)\b/, 'monitor', 'surface'], [/\boptions?\b/, 'options'], [/\bdatasets?|data\b/, 'datasets'],
     [/\b(evolution|lineage|graph|second mind|learning)\b/, 'evolution'], [/\b(runs?|history)\b/, 'runs'], [/\b(preferences|settings)\b/, 'preferences'], [/\b(monitor|overview|home|dashboard)\b/, 'monitor'],
     [/\bequity\b/, 'monitor', 'equity'], [/\bcorrelations?\b/, 'monitor', 'correlation'], [/\b(risk distribution|histogram)\b/, 'monitor', 'risk'],

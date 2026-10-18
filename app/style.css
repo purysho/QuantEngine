@@ -110,3 +110,71 @@ button:focus-visible,input:focus-visible,select:focus-visible,canvas:focus-visib
 @media (forced-colors:active){h1{color:CanvasText!important;background:none!important}.metric::before,.panel::before,body::after{display:none}}
 .ask-panel{clip-path:none!important;border-radius:0!important}
 .maths-panel{margin-top:14px}.maths-steps{list-style:none;counter-reset:step;margin:0;padding:12px 16px 16px;display:grid;gap:10px}.maths-steps li.step{counter-increment:step;display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 12px;padding:10px 12px;border:1px solid #ff2a5526;background:#0a0710}.maths-steps li.step::before{content:counter(step,decimal-leading-zero);grid-row:span 4;font:700 13px "Cascadia Mono",Consolas,monospace;color:var(--neon);text-shadow:0 0 8px #ff2a5577}.step-title{font:700 12px "Cascadia Mono",Consolas,monospace;text-transform:uppercase;letter-spacing:1px;color:#ffe3ea}.step-formula{font:14px "Cambria Math","Cascadia Mono",Consolas,serif;color:#fff;overflow-wrap:anywhere}.step-sub{font:12px "Cascadia Mono",Consolas,monospace;color:var(--ink-muted);overflow-wrap:anywhere}.step-result{font:700 13px "Cascadia Mono",Consolas,monospace;color:var(--cyan);font-variant-numeric:tabular-nums}.step-note{grid-column:2;font-size:12px;color:var(--ink-muted)}.maths-sources{padding:0 16px 14px;font-size:12px;color:var(--ink-muted)}
+.source-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 17px 17px}.source-card{border:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:8px}.source-card h3{font-size:14px;font-weight:600;margin:0}.source-card p{margin:0;font-size:12px;color:var(--ink-muted,var(--muted));flex:1}.source-card .source-button{align-self:flex-start}
+/* ---- Market terminal ---- */
+#page-terminal{--up:#35e0a1;--down:#ff4d6d;--amber:#ffb347}
+.term-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.term-command{position:relative;flex:1 1 380px;display:flex;align-items:center;background:#05040a;border:1px solid #ff2a5566;box-shadow:0 0 12px #ff2a5522 inset}
+.term-prompt{font:700 20px "Cascadia Mono",Consolas,monospace;color:var(--amber);padding:0 6px 0 12px}
+#term-input{flex:1;background:transparent;border:0;color:var(--amber);font:600 16px "Cascadia Mono",Consolas,monospace;padding:10px 12px 10px 0;text-transform:uppercase;letter-spacing:.5px;min-width:0}
+#term-input::placeholder{color:#a8919b;text-transform:none;letter-spacing:0;font-weight:400}
+#term-input:focus{outline:none}.term-command:focus-within{border-color:var(--amber);box-shadow:0 0 0 2px #ffb34755}
+.term-suggest{position:absolute;left:0;right:0;top:100%;z-index:30;margin:2px 0 0;padding:4px 0;list-style:none;background:#0d0a12;border:1px solid #ffb34766;max-height:320px;overflow:auto}
+.term-suggest li{padding:7px 12px;cursor:pointer;font-size:13px;display:flex;gap:8px;align-items:baseline}
+.term-suggest li strong{font-family:"Cascadia Mono",Consolas,monospace;color:var(--amber);min-width:64px}
+.term-suggest li span{margin-left:auto;color:var(--ink-muted);font-size:12px}
+.term-suggest li:hover,.term-suggest li[aria-selected=true]{background:#ffb3471f}
+.term-keys{display:flex;gap:4px;flex-wrap:wrap}
+.term-key{font:700 12px "Cascadia Mono",Consolas,monospace;letter-spacing:1px;padding:8px 10px;min-height:36px;background:#1a0f05;color:var(--amber);border:1px solid #ffb34766;border-radius:0;cursor:pointer}
+.term-key:hover,.term-key:focus-visible{background:#ffb347;color:#120a02}
+.term-status{display:flex;gap:8px;align-items:center;margin-left:auto}
+.term-pill{font:700 12px "Cascadia Mono",Consolas,monospace;letter-spacing:1px;padding:6px 10px;border:1px solid currentColor;white-space:nowrap}
+.term-pill.live{color:var(--up)}.term-pill.warn{color:var(--amber)}.term-pill.error{color:var(--down)}.term-pill.off{color:var(--ink-muted)}
+.term-clock{font:12px "Cascadia Mono",Consolas,monospace;color:var(--ink-muted);white-space:nowrap}.term-clock.open{color:var(--up)}
+.term-help{margin-bottom:12px}.term-help-list{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;padding:12px 17px;margin:0}
+.term-help-list dt{font:700 13px "Cascadia Mono",Consolas,monospace;color:var(--amber)}.term-help-list dd{margin:0;font-size:13px}
+.term-grid{display:grid;gap:12px;grid-template-columns:372px minmax(0,1fr) 340px;grid-template-areas:"watch chart detail" "news news macro" "movers movers macro"}
+.term-watch{grid-area:watch;display:flex;flex-direction:column;min-height:520px;max-height:640px}.term-chart-panel{grid-area:chart;display:flex;flex-direction:column;min-width:0}
+.term-detail{grid-area:detail}.term-news{grid-area:news}.term-macro{grid-area:macro}.term-movers{grid-area:movers}
+@media (max-width:1360px){.term-grid{grid-template-columns:300px minmax(0,1fr);grid-template-areas:"watch chart" "detail chart" "news news" "macro macro" "movers movers"}.term-watch{max-height:420px;min-height:0}}
+.term-watch .table-scroll{flex:1;overflow:auto}
+.term-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.term-table th,.term-table td{padding:6px 8px;border-bottom:1px solid #ff2a5514;font-size:13px;text-align:left}
+.term-table thead th{font:700 12px "Cascadia Mono",Consolas,monospace;color:var(--ink-muted);position:sticky;top:0;background:#0d0a12;z-index:1}
+.term-table .num{text-align:right;font-family:"Cascadia Mono",Consolas,monospace}
+.term-table tbody tr{cursor:pointer}.term-table tbody tr:hover,.term-table tbody tr:focus-visible{background:#ff2a5512;outline:none}
+.term-table tbody tr.selected{background:#ffb3471a;box-shadow:inset 3px 0 0 var(--amber)}
+.term-table tbody th small{display:block;color:var(--ink-muted);font-size:12px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.term-sym{font:700 13px "Cascadia Mono",Consolas,monospace;color:#fff;background:none;border:0;padding:0;cursor:pointer}
+.up{color:var(--up)!important}.down{color:var(--down)!important}
+.flash-up{animation:term-flash-up .9s ease-out}.flash-down{animation:term-flash-down .9s ease-out}
+@keyframes term-flash-up{from{background:#35e0a155}to{background:transparent}}@keyframes term-flash-down{from{background:#ff4d6d55}to{background:transparent}}
+@media (prefers-reduced-motion:reduce){.flash-up,.flash-down{animation:none}}
+.term-chart-panel .panel-heading{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+#term-symbol{font:700 22px "Cascadia Mono",Consolas,monospace;color:var(--amber);margin:0}
+.term-quote{display:flex;gap:10px;align-items:baseline;margin-left:auto}
+.term-big{font:700 22px "Cascadia Mono",Consolas,monospace;color:#fff;font-variant-numeric:tabular-nums}
+.term-chg{font:600 14px "Cascadia Mono",Consolas,monospace}
+.term-chart{flex:1;min-height:420px;margin:0 8px;position:relative}
+.term-note{font-size:12px;color:var(--ink-muted);margin:6px 17px 12px}
+.term-des{padding:4px 17px 8px}.term-stats{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:7px 12px;margin:8px 0}
+.term-stats dt{font-size:12px;color:var(--ink-muted);white-space:nowrap}.term-stats dd{margin:0;text-align:right;font:13px "Cascadia Mono",Consolas,monospace;font-variant-numeric:tabular-nums}
+.term-news-list{list-style:none;margin:0;padding:0 17px 12px;max-height:420px;overflow:auto}
+.term-news-list li{padding:9px 0;border-bottom:1px solid #ff2a5514}
+.term-news-meta{font:12px "Cascadia Mono",Consolas,monospace;color:var(--amber)}
+.term-headline{display:block;text-align:left;background:none;border:0;padding:3px 0;color:#fff;font:600 14px/1.35 'Segoe UI',Inter,Arial,sans-serif;cursor:pointer}
+button.term-headline:hover,button.term-headline:focus-visible{color:var(--amber);text-decoration:underline}
+.term-news-list p{margin:2px 0 0;font-size:13px;color:var(--ink-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.term-macro-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 17px 14px}
+.term-tile{border:1px solid #ff2a5526;padding:8px 10px;display:flex;flex-direction:column;gap:2px;background:#07060a}
+.term-tile .label{font-size:12px;color:var(--ink-muted)}.term-tile .value{font:700 18px "Cascadia Mono",Consolas,monospace;color:#fff}
+.term-tile span:nth-child(3){font:12px "Cascadia Mono",Consolas,monospace}.term-tile small{font-size:12px;color:var(--ink-muted)}
+.spark{width:100%;height:30px}.spark polyline{fill:none;stroke:#2de2e6;stroke-width:1.5;vector-effect:non-scaling-stroke}
+.term-movers-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:6px 17px 14px}
+.term-movers-grid h3{font:700 12px "Cascadia Mono",Consolas,monospace;letter-spacing:1px;color:var(--amber);margin:6px 0}
+.term-movers-grid ol{list-style:none;margin:0;padding:0}.term-movers-grid li{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #ff2a5510;font:13px "Cascadia Mono",Consolas,monospace}
+.term-movers-grid>p{grid-column:1/-1}
+.term-connect{margin-top:12px;border:1px solid #ffb34766;background:#1a0f0599;padding:12px 17px;display:flex;gap:16px;align-items:center}.term-connect p{margin:0;flex:1;font-size:13px}
+.term-credits{font-size:12px;color:var(--ink-muted);margin:12px 0 4px}.term-credits .text-button{font-size:12px}
+body.market-demo #page-terminal .term-grid{outline:1px dashed #ffb34799;outline-offset:4px}body.market-demo .term-credits::before{content:"DEMO DATA: synthetic prices, news and option chains generated on this computer. ";color:var(--amber);font-weight:700}
+.term-watch .table-scroll{overflow-x:hidden}.term-table{table-layout:fixed}.term-table thead th:nth-child(1){width:38%}.term-table thead th:nth-child(2){width:24%}.term-table thead th:nth-child(3){width:20%}.term-table thead th:nth-child(4){width:18%}.term-table tbody th small{max-width:100%}

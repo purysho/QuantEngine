@@ -211,6 +211,54 @@ test('failed automatic ECB refresh retains cached data and attempts only once pe
   assert.match(engine.state.lastRefreshError || '', /saved snapshot.*Offline/);
 });
 
+test('automatic daily refresh asks the worker for the dataset\'s own official source', async () => {
+  const { Engine } = await engineModule();
+  const { defaultConfig } = await configModule();
+  const config = defaultConfig('/tmp/quant-fred');
+  config.datasetId = 'us-indices';
+  const sources: unknown[] = [];
+  const fresh = { id: 'us-indices', kind: 'fred', rows: 2600, retrieved_at: new Date().toISOString(), metadata: { source: 'us-indices' } };
+  const engine = new Engine(config, {
+    request: async (command: string, values: Record<string, unknown>) => {
+      if (command === 'refresh') { sources.push(values.source); return { dataset: fresh, datasets: [fresh] }; }
+      if (command === 'learn') return { learning: null };
+      return { report, runs: [], stats: { completed: 1 } };
+    }, cancel: async () => {},
+  }, async () => {});
+  engine.datasets = [{ id: 'us-indices', kind: 'fred', rows: 2500, retrieved_at: '2025-01-01', metadata: { source: 'us-indices' } }];
+  await engine.start();
+  await engine.runOnce();
+  await engine.pause();
+  assert.deepEqual(sources, ['us-indices']);
+  assert.equal(engine.datasets[0].rows, 2600);
+  assert.equal(engine.config.refreshAttempts['us-indices'], new Date().toISOString().slice(0, 10));
+});
+
+test('market datasets refresh through the main process at most hourly until the new close arrives', async () => {
+  const { Engine } = await engineModule();
+  const { defaultConfig } = await configModule();
+  const config = defaultConfig('/tmp/quant-alpaca');
+  config.datasetId = 'alpaca-spy-qqq';
+  const stale = { id: 'alpaca-spy-qqq', kind: 'alpaca', rows: 500, retrieved_at: '2026-01-01', observation_end: '2026-01-02',
+    metadata: { source: 'alpaca', symbols: ['SPY', 'QQQ'], years: 2 } };
+  let refreshes = 0, workerRefreshes = 0;
+  const engine = new Engine(config, {
+    request: async (command: string) => {
+      if (command === 'refresh') workerRefreshes++;
+      if (command === 'learn') return { learning: null };
+      return { report, runs: [], stats: { completed: 1 } };
+    }, cancel: async () => {},
+  }, async () => {});
+  engine.datasets = [stale];
+  engine.refreshExternal = async dataset => { refreshes++; return { ...dataset, rows: 501 }; };
+  await engine.start();
+  await engine.runOnce();
+  await engine.pause();
+  assert.equal(refreshes, 1, 'second cycle within the hour must not refresh again');
+  assert.equal(workerRefreshes, 0, 'market data never goes through the worker download path');
+  assert.match(engine.config.refreshAttempts['alpaca-spy-qqq'], /T.*Z$/);
+});
+
 test('shutdown drains an already authorized preference save before stopping the app', async () => {
   const { Engine } = await engineModule();
   const { defaultConfig } = await configModule();

@@ -38,6 +38,8 @@ test('accepted 60,000-observation histories render without argument overflow', a
     observations: 60000, date_range: { start: '2000-01-01', end: '2025-01-01' }, methodology: [], stress: [],
   };
   sandbox.fixture = { state: { phase: 'paused', busy: false, completed: 1 }, config: {}, datasets: [], runs: [], runtime: {}, report };
+  // The app opens on the Terminal; the research charts draw only while the Monitor is shown.
+  vm.runInContext("page = 'monitor'", sandbox);
   assert.doesNotThrow(() => vm.runInContext('receive(fixture)', sandbox));
   assert.equal(elements.get('metric-vol')!.textContent, '10.00%');
   assert.match(String(elements.get('chart-subtitle')!.textContent), /2000-01-01/);
@@ -66,6 +68,8 @@ test('options page and Student-t risk render from real worker reports', async ()
     'r["provenance"]={"kind":"synthetic","name":"<b>sample</b>","sha256":"a"*64}; print(json.dumps({"options":o,"report":r}))';
   const fixture = JSON.parse(execFileSync(PYTHON, ['-c', script], { encoding: 'utf8' }));
   sandbox.fixture = { state: { phase: 'paused', busy: false, completed: 1 }, config: {}, datasets: [], runs: [], runtime: {}, ...fixture };
+  // The app opens on the Terminal; the research charts draw only while the Monitor is shown.
+  vm.runInContext("page = 'monitor'", sandbox);
   assert.doesNotThrow(() => vm.runInContext('receive(fixture)', sandbox));
   const prices = String(elements.get('options-prices')!.innerHTML);
   assert.match(prices, /4\.7594/);
@@ -74,7 +78,7 @@ test('options page and Student-t risk render from real worker reports', async ()
   assert.match(String(elements.get('options-moves')!.innerHTML), /σ\/16/);
   assert.match(String(elements.get('options-surface-arbitrage')!.textContent), /no-arbitrage/);
   // Switching to the 3D tab renders the realised-volatility surface without throwing.
-  assert.doesNotThrow(() => vm.runInContext("chartMode = 'surface'; drawChart(); page = 'options'; syncSurfaceAnimation()", sandbox));
+  assert.doesNotThrow(() => vm.runInContext("page = 'monitor'; chartMode = 'surface'; drawChart(); page = 'options'; syncSurfaceAnimation()", sandbox));
   assert.match(String(elements.get('chart-title')!.textContent), /volatility surface/i);
   const risk = String(elements.get('risk-comparison')!.innerHTML);
   assert.match(risk, /Student-t/);

@@ -10,12 +10,14 @@
 
 1. Click the red **Download** button above. The file is `QuantEngine-win-x64.zip`, about **220 MB**. GitHub's green **Code → Download ZIP** gives only the source code (a few MB, with no `QuantEngine.exe`).
 2. Check it (optional): run `(Get-FileHash .\QuantEngine-win-x64.zip -Algorithm SHA256).Hash` in PowerShell and compare the result with the SHA-256 on the [release page](https://github.com/purysho/QuantEngine/releases/latest).
-3. Extract the whole zip into a new folder, for example `D:\QuantEngine-0.2.0`, and open `QuantEngine\QuantEngine.exe` from the extracted folder, not from inside the zip.
+3. Extract the whole zip into a new folder, for example `D:\QuantEngine-0.3.0`, and open `QuantEngine\QuantEngine.exe` from the extracted folder, not from inside the zip.
 4. To confirm everything works, run `.\QuantEngine.exe --self-test | Out-String` in that folder. It should print `QUANT_SELF_TEST_OK`.
 
 Research data is stored in `D:\Quant-Engine` by default. The app is not code-signed; if Windows SmartScreen says it is unrecognised, choose **More info, then Run anyway**. If the download is slow or stalls, see [Downloading](docs/USER_GUIDE.md#downloading-troubleshooting) in the user guide.
 
-![QuantEngine research monitor](docs/screenshots/cyber-monitor.png)
+![QuantEngine market terminal (offline demo data)](docs/screenshots/terminal.png)
+
+**Market terminal (new in 0.3):** a Bloomberg-style command line (`AAPL`, `AAPL N`, `AAPL OMON`, `MOST`, `ECO`, `HELP`), a live watchlist, candlestick charts, news, an economy panel and a live implied-volatility surface fitted to real option chains. Stock prices, news and option chains come from Alpaca with your own free keys (paper-trading keys work; QuantEngine only reads data and never trades). Crypto, the FRED economy panel and one-click official datasets (S&P 500/Nasdaq/Dow from FRED, US market and industries from the Ken French library, ECB rates) need no account.
 
 An independent local desktop application for continuous numerical research. It calculates covariance, constrained portfolios, Gaussian/block-bootstrap/Student-t risk with exact empirical tails, next-close costed momentum backtests, baselines, stress and parameter sensitivity, and prices options (Black–Scholes Greeks, CRR trees, Monte Carlo, implied volatility). Completed reports retain their source snapshots, seeds, parameters and software versions.
 
@@ -23,12 +25,12 @@ Python research modules, each with tests and a measured experiment in `experimen
 
 | Module | What it does |
 | --- | --- |
-| `quant_options` | BSM and Greeks, European/American CRR, antithetic Monte Carlo, implied volatility, SVI surface and static-arbitrage checks |
+| `quant_options` | BSM and Greeks, European/American CRR, antithetic Monte Carlo, implied volatility, SVI surface and static-arbitrage checks, and a market surface fitted to a live option chain |
 | `quant_validation` | Purged chronological ridge with information clocks; leaked features are rejected before scoring |
 | `quant_pairs` | ADF / Engle–Granger with MacKinnon inference (matches statsmodels to 1e-13), Holm pair selection, costed next-close pairs backtest |
 | `quant_lob` | Avellaneda–Stoikov market making with FIFO queue, partial fills, latency, fees and adverse selection |
 | `quant_varbacktest` | Kupiec/Christoffersen VaR backtests; GARCH-t and **GJR-GARCH filtered historical simulation** (best on 100 years of real data) |
-| `quant_data` | FRED and Kenneth French data library adapters with SHA-256-verified local caching (raw data never committed) |
+| `quant_data` / `quant_store` | FRED and Kenneth French data library adapters with SHA-256-verified local caching (raw data never committed); one-click refreshable datasets in the app |
 | `quant_evolve` / `quant_learning` | Prequential evolutionary model search (incl. a NumPy neural network) with experience memory; runs after every continuous cycle |
 | `quant_explain` | Step-by-step workings ("show the maths") for every reported number, verified against the engine and SymPy |
 

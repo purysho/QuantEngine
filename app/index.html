@@ -11,19 +11,20 @@
   <aside class="sidebar">
     <div class="brand"><img src="../assets/app.svg" alt=""><div>Quant Engine<span>LOCAL RESEARCH</span></div></div>
     <nav aria-label="Main navigation">
-      <button class="nav-item active" data-page="monitor"><svg viewBox="0 0 24 24"><path d="m3 18 5-6 4 3 7-10m-5 0h5v5"/></svg>Monitor</button>
+      <button class="nav-item active" data-page="terminal"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="m7 9 3 3-3 3M12 15h5"/></svg>Terminal</button>
+      <button class="nav-item" data-page="monitor"><svg viewBox="0 0 24 24"><path d="m3 18 5-6 4 3 7-10m-5 0h5v5"/></svg>Monitor</button>
       <button class="nav-item" data-page="datasets"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></svg>Datasets</button>
       <button class="nav-item" data-page="options"><svg viewBox="0 0 24 24"><path d="M3 20c4-1 6-8 9-8s5 7 9 8M12 4v16"/></svg>Options</button>
       <button class="nav-item" data-page="evolution"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="12" cy="13" r="2.5"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6.6 7.2 10.4 11.4M17.4 6.3 13.7 11.3M10.5 14.6 7.2 17.6M14.1 14.6 16.6 16.9"/></svg>Evolution</button>
       <button class="nav-item" data-page="runs"><svg viewBox="0 0 24 24"><path d="m7 4 13 8-13 8Z"/></svg>Runs</button>
       <button class="nav-item" data-page="preferences"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z"/><circle cx="12" cy="12" r="3"/></svg>Preferences</button>
     </nav>
-    <div class="sidebar-note"><span class="eyebrow">YOUR MACHINE. YOUR RESEARCH.</span><p>Numerical work stays on this computer.</p><span class="version">v0.2.0 · Windows x64</span></div>
+    <div class="sidebar-note"><span class="eyebrow">YOUR MACHINE. YOUR RESEARCH.</span><p>Numerical work stays on this computer.</p><span class="version">v0.3.0 · Windows x64</span></div>
     <div class="sidebar-status"><span id="status-dot" class="dot"></span><span id="sidebar-status">Engine paused</span></div>
   </aside>
   <main>
     <header class="topbar">
-      <div><div class="eyebrow" id="page-kicker">ENGINE / OVERVIEW</div><h1 id="page-title">Research monitor</h1></div>
+      <div><div class="eyebrow" id="page-kicker">MARKETS / TERMINAL</div><h1 id="page-title">Market terminal</h1></div>
       <div class="header-actions"><button id="open-ask" class="secondary ask-button" aria-haspopup="dialog" aria-controls="ask-panel" title="Ask or command the engine (Ctrl+K)"><span aria-hidden="true">◎</span>Ask<kbd>Ctrl K</kbd></button><span class="local-badge"><span class="tiny-dot"></span>LOCAL ENGINE</span><button id="toggle-engine" class="primary"><span class="play-icon">▶</span>Start engine</button><button id="run-once" class="secondary">Run once</button></div>
     </header>
     <div id="error-banner" class="banner error hidden" role="alert"></div>
@@ -38,7 +39,52 @@
   </section>
   <div id="toast" class="toast hidden" role="status"></div>
 
-    <section id="page-monitor" class="page">
+    <section id="page-terminal" class="page">
+      <div class="term-bar">
+        <form id="term-form" class="term-command" autocomplete="off" role="search">
+          <label for="term-input" class="visually-hidden">Command or symbol</label>
+          <span class="term-prompt" aria-hidden="true">›</span>
+          <input id="term-input" type="text" maxlength="60" spellcheck="false" placeholder="Symbol or command: AAPL · AAPL GP · NEWS · MOST · ECO · HELP" aria-autocomplete="list" aria-controls="term-suggest" aria-describedby="term-hint">
+          <ul id="term-suggest" class="term-suggest hidden" role="listbox" aria-label="Matching symbols"></ul>
+        </form>
+        <div class="term-keys" role="toolbar" aria-label="Terminal functions">
+          <button type="button" class="term-key" data-cmd="GP" title="Price chart">GP</button><button type="button" class="term-key" data-cmd="DES" title="Description and statistics">DES</button><button type="button" class="term-key" data-cmd="N" title="News">N</button><button type="button" class="term-key" data-cmd="OMON" title="Market implied-volatility surface">OMON</button><button type="button" class="term-key" data-cmd="MOST" title="Most active, gainers and losers">MOST</button><button type="button" class="term-key" data-cmd="ECO" title="Rates, VIX, dollar and oil">ECO</button><button type="button" class="term-key" data-cmd="HELP" title="All commands">HELP</button>
+        </div>
+        <div class="term-status"><span id="term-stream" class="term-pill off">NOT CONNECTED</span><span id="term-clock" class="term-clock">US market —</span></div>
+      </div>
+      <p id="term-hint" class="visually-hidden">Type a ticker and press Enter. Add a function after the ticker, for example AAPL N for Apple news.</p>
+      <div id="term-help" class="panel term-help hidden" role="region" aria-label="Terminal commands">
+        <div class="panel-heading"><h2>Commands</h2><button type="button" id="term-help-close" class="text-button">Close ✕</button></div>
+        <dl class="term-help-list">
+          <dt>AAPL</dt><dd>Load a symbol: chart, description and news. Crypto works too: BTC/USD</dd>
+          <dt>AAPL GP · 1D 5D 1M 6M 1Y 5Y MAX</dt><dd>Price chart and range</dd>
+          <dt>AAPL DES</dt><dd>Description: day range, 52-week range, volume, realised volatility</dd>
+          <dt>N · AAPL N</dt><dd>Market news, or news for one symbol (Benzinga via Alpaca)</dd>
+          <dt>AAPL OMON</dt><dd>Fit a live implied-volatility surface to the option chain (opens Options)</dd>
+          <dt>MOST</dt><dd>Most active stocks, top gainers and losers</dd>
+          <dt>ECO</dt><dd>VIX, Treasury yields, curve, Fed funds, dollar, Brent (FRED)</dd>
+          <dt>ADD AAPL · DEL AAPL</dt><dd>Add or remove a watchlist symbol (up to 40)</dd>
+          <dt>RESEARCH SPY QQQ TLT</dt><dd>Turn symbols into a 5-year research dataset and analyse it</dd>
+        </dl>
+      </div>
+      <div class="term-grid">
+        <article class="panel term-watch"><div class="panel-heading"><h2>Watchlist</h2><button type="button" id="term-research" class="text-button" title="Analyse the watchlist's stocks in the research engine">Research these ↗</button></div>
+          <div class="table-scroll"><table class="term-table"><thead><tr><th scope="col">Symbol</th><th scope="col" class="num">Last</th><th scope="col" class="num">Chg %</th><th scope="col" class="num">Volume</th></tr></thead><tbody id="term-quotes"></tbody></table></div>
+          <p id="term-watch-note" class="term-note"></p></article>
+        <article class="panel term-chart-panel"><div class="panel-heading"><div><h2 id="term-symbol">—</h2><p id="term-name">Choose a symbol</p></div>
+          <div class="term-quote"><span id="term-last" class="term-big">—</span><span id="term-change" class="term-chg">—</span></div>
+          <div class="segmented" role="radiogroup" aria-label="Chart range" id="term-ranges"><button type="button" class="seg" data-range="1D" role="radio">1D</button><button type="button" class="seg" data-range="5D" role="radio">5D</button><button type="button" class="seg" data-range="1M" role="radio">1M</button><button type="button" class="seg active" data-range="6M" role="radio" aria-checked="true">6M</button><button type="button" class="seg" data-range="1Y" role="radio">1Y</button><button type="button" class="seg" data-range="5Y" role="radio">5Y</button><button type="button" class="seg" data-range="MAX" role="radio">MAX</button></div></div>
+          <div id="term-chart" class="term-chart" aria-label="Price chart"></div><p id="term-chart-note" class="term-note"></p></article>
+        <article class="panel term-detail"><div class="panel-heading"><h2>Description</h2><button type="button" id="term-surface" class="text-button" title="Fit the live option chain">Vol surface ↗</button></div><div id="term-des" class="term-des"><p class="term-note">Load a symbol to see its statistics.</p></div></article>
+        <article class="panel term-news"><div class="panel-heading"><h2 id="term-news-title">News</h2><span class="subtle">Benzinga via Alpaca</span></div><ol id="term-news" class="term-news-list"></ol></article>
+        <article class="panel term-macro"><div class="panel-heading"><h2>Economy</h2><span id="term-macro-date" class="subtle">FRED</span></div><div id="term-macro" class="term-macro-grid"></div></article>
+        <article class="panel term-movers"><div class="panel-heading"><h2>Movers</h2><span id="term-movers-time" class="subtle"></span></div><div id="term-movers" class="term-movers-grid"></div></article>
+      </div>
+      <div id="term-connect" class="term-connect hidden"><p><strong>Connect Alpaca for live US stock prices, news and option chains.</strong> Free paper-trading keys work. Crypto, the economy panel and official datasets already work without keys.</p><button type="button" id="term-connect-open" class="primary">Add API keys</button></div>
+      <p class="term-credits">Market data: Alpaca (not warranted as to completeness or accuracy) · Economic data: FRED, Federal Reserve Bank of St. Louis · Charts: TradingView Lightweight Charts™, Copyright © TradingView, Inc. <button type="button" class="text-button" id="term-tv-link">tradingview.com ↗</button></p>
+    </section>
+
+    <section id="page-monitor" class="page hidden">
       <div class="metrics">
         <article class="metric"><div class="metric-name">Portfolio volatility<span>01</span></div><div class="metric-value" id="metric-vol">—</div><div class="metric-detail">Annualized · optimized portfolio</div></article>
         <article class="metric"><div class="metric-name">Monte Carlo VaR 95%<span>02</span></div><div class="metric-value" id="metric-var">—</div><div class="metric-detail" id="metric-var-detail">Gaussian · 20 observations</div></article>
@@ -83,7 +129,13 @@
     </section>
 
     <section id="page-datasets" class="page hidden">
-      <div class="page-intro"><p>Immutable price snapshots with source details and content hashes.</p><div class="inline-actions"><button id="datasets-import" class="primary">＋ Import CSV</button><button id="datasets-refresh" class="secondary">Refresh ECB rates</button></div></div>
+      <div class="page-intro"><p>Immutable price snapshots with source details and content hashes.</p><div class="inline-actions"><button id="datasets-import" class="primary">＋ Import CSV</button></div></div>
+      <article class="panel"><div class="panel-heading"><div><h2>Free official data</h2><p>One click downloads a fresh copy, saves it with its hash and selects it. While the engine runs, it updates itself once a day. No account or key needed.</p></div></div>
+        <div class="source-grid">
+          <div class="source-card"><h3>US stock indices</h3><p>S&amp;P 500, Nasdaq Composite and Dow Jones, daily for about ten years (FRED).</p><button class="secondary source-button" data-source="us-indices">Download</button></div>
+          <div class="source-card"><h3>US market and 12 industries</h3><p>Total-return indexes since 2000 from the Kenneth R. French Data Library. Updated monthly by the source.</p><button class="secondary source-button" data-source="us-industries">Download</button></div>
+          <div class="source-card"><h3>Exchange rates</h3><p>ECB reference rates for 8 major currencies per euro, last 90 days.</p><button class="secondary source-button" data-source="ecb">Download</button></div>
+        </div></article>
       <article class="panel"><div class="panel-heading"><h2>Available datasets</h2><span id="dataset-count" class="subtle"></span></div><div id="dataset-cards" class="dataset-cards"></div></article>
       <article class="panel format-panel"><h2>CSV format</h2><p>UTF-8 wide format: <code>date,A,B,...</code>. Dates must be unique, strictly increasing and use YYYY-MM-DD. Every price must be positive and finite; missing values are rejected. Include at least 40 observations, up to 64 assets and a file smaller than 32 MB.</p><pre>date,Asset A,Asset B
 2026-01-02,100.00,80.00
@@ -92,7 +144,7 @@
     </section>
 
     <section id="page-options" class="page hidden">
-      <div class="page-intro"><p>Hypothetical European/American contracts priced locally: Black–Scholes–Merton, CRR trees and risk-neutral Monte Carlo. No live option chain or market surface is used, and stored research is never changed.</p></div>
+      <div class="page-intro"><p>Hypothetical European/American contracts priced locally: Black–Scholes–Merton, CRR trees and risk-neutral Monte Carlo. The Market surface (Terminal: AAPL OMON) is fitted to a live option chain. Stored research is never changed.</p></div>
       <div class="preferences-grid">
         <article class="panel preferences-card"><div class="panel-heading"><h2>Contract</h2><span class="tag neutral">HYPOTHETICAL</span></div><div class="preferences-content">
           <div class="form-grid">
@@ -113,7 +165,7 @@
         </div></article>
         <article class="panel preferences-card"><div class="panel-heading"><h2>Prices & cross-checks</h2><span id="options-badge" class="subtle"></span></div><div id="options-prices" class="details-empty">Enter a contract and calculate.</div></article>
       </div>
-        <article class="panel surface-panel"><div class="panel-heading"><div><h2>Implied volatility surface</h2><p id="options-surface-note">SSVI model surface around the contract's volatility · drag to rotate</p></div><div class="surface-controls"><label for="opt-surface-rho">Skew ρ</label><input id="opt-surface-rho" class="option-field" type="number" min="-0.99" max="0.99" step="0.05" value="-0.4"><label for="opt-surface-eta">Curvature η</label><input id="opt-surface-eta" class="option-field" type="number" min="0.05" max="4" step="0.05" value="1"></div></div>
+        <article class="panel surface-panel"><div class="panel-heading"><div><h2>Implied volatility surface</h2><p id="options-surface-note">SSVI model surface around the contract's volatility · drag to rotate</p></div><div class="surface-controls"><div class="segmented" role="radiogroup" aria-label="Surface source"><button type="button" class="seg surface-source active" data-source="model" role="radio" aria-checked="true">Model</button><button type="button" class="seg surface-source" data-source="market" role="radio" aria-checked="false" disabled title="Type a symbol and OMON in the Terminal">Market</button></div><label for="opt-surface-rho">Skew ρ</label><input id="opt-surface-rho" class="option-field" type="number" min="-0.99" max="0.99" step="0.05" value="-0.4"><label for="opt-surface-eta">Curvature η</label><input id="opt-surface-eta" class="option-field" type="number" min="0.05" max="4" step="0.05" value="1"></div></div>
           <div class="surface-wrap"><canvas id="options-surface" tabindex="0" class="surface-canvas" aria-label="3D model implied volatility surface by moneyness and expiry; drag to rotate"></canvas><div id="options-surface-hover" class="chart-hover hidden"></div><div id="options-surface-toolbar" class="surface-toolbar" role="toolbar" aria-label="3D view controls"><button type="button" data-surface="left" aria-label="Rotate left">⟲</button><button type="button" data-surface="right" aria-label="Rotate right">⟳</button><button type="button" data-surface="play" aria-pressed="false" aria-label="Pause animation">Ⅱ</button><button type="button" data-surface="reset" aria-label="Reset view">Reset</button></div></div>
           <div class="chart-legend"><span><i class="ramp"></i>Implied volatility · lower → higher</span><span id="options-surface-arbitrage"></span></div>
         </article>
@@ -150,6 +202,16 @@
     <section id="page-preferences" class="page hidden">
       <div class="page-intro"><p>Control computation, storage and background behavior on this computer.</p></div>
       <div class="preferences-grid">
+        <article class="panel preferences-card" id="market-card"><div class="panel-heading"><h2>Market data (Alpaca)</h2><span id="alpaca-badge" class="tag neutral">NOT CONNECTED</span></div><div class="preferences-content">
+          <p class="field-help">Live US stock and ETF prices, news and option chains. Create a free account at alpaca.markets, open the <strong>paper trading</strong> dashboard and generate API keys. Paper keys cannot move real money; QuantEngine only reads market data and never places orders. Keys are encrypted by Windows and never shown again. The free IEX feed is real-time but covers about 2.5% of US volume, so its volume figures are partial.</p>
+          <form id="alpaca-form" class="form-grid" autocomplete="off">
+            <div><label for="alpaca-key-id">API key ID</label><input id="alpaca-key-id" class="text-field" type="text" spellcheck="false" autocomplete="off" placeholder="PK…"></div>
+            <div><label for="alpaca-secret">Secret key</label><input id="alpaca-secret" class="text-field" type="password" spellcheck="false" autocomplete="off"></div>
+            <div><label for="alpaca-feed">Stock feed</label><select id="alpaca-feed"><option value="iex">IEX · real-time (free)</option><option value="delayed_sip">All exchanges · 15 min delay (free)</option><option value="sip">All exchanges · real-time (paid)</option></select></div>
+            <div class="inline-actions"><button type="submit" id="alpaca-save" class="primary">Save and test</button><button type="button" id="alpaca-clear" class="secondary">Remove keys</button><button type="button" id="alpaca-help" class="text-button">alpaca.markets ↗</button></div>
+          </form>
+          <p id="alpaca-status" class="field-help" role="status"></p>
+        </div></article>
         <article class="panel preferences-card"><div class="panel-heading"><h2>Research parameters</h2></div><div class="preferences-content">
           <div class="form-grid"><div><label for="seed-input">Base random seed</label><input id="seed-input" class="config-field" data-key="seed" type="number" min="0" max="4294967295" value="17"></div><div><label for="lookback-input">Momentum lookback</label><div class="input-wrap"><input id="lookback-input" class="config-field" data-key="lookback" type="number" min="5" max="2520" value="20"><span>observations</span></div></div><div><label for="rebalance-input">Rebalance interval</label><div class="input-wrap"><input id="rebalance-input" class="config-field" data-key="rebalance" type="number" min="1" max="63" value="5"><span>observations</span></div></div><div><label for="cost-input">Trading cost</label><div class="input-wrap"><input id="cost-input" class="config-field" data-key="costBps" type="number" min="0" max="500" step="0.5" value="10"><span>bps / notional</span></div></div><div><label for="shrinkage-input">Diagonal shrinkage</label><input id="shrinkage-input" class="config-field" data-key="shrinkage" type="number" min="0" max="1" step="0.01" value="0.1"></div></div>
           <label class="checkbox-row"><input class="config-field" data-key="rotateVariants" type="checkbox" checked><span>Rotate research lookbacks<small>Compare the chosen lookback with 20, 40 and 60 observations where the dataset permits. Each run records its parameter and seed.</small></span></label>
@@ -164,7 +226,7 @@
           <label class="checkbox-row"><input class="config-field" data-key="lowCpu" type="checkbox"><span>Low CPU mode<small>One numerical thread and lower worker priority. Standard mode caps numerical threads at two.</small></span></label>
           <label class="checkbox-row"><input class="config-field" data-key="startAtLogin" type="checkbox"><span>Open at Windows sign-in<small>Starts in the system tray. This setting is off by default.</small></span></label>
           <label class="checkbox-row"><input class="config-field" data-key="resumeOnLaunch" type="checkbox"><span>Resume engine when the app opens<small>Continuous calculations begin automatically only when you enable this setting.</small></span></label>
-          <label class="checkbox-row"><input class="config-field" data-key="autoRefreshEcb" type="checkbox" checked><span>Daily ECB refresh in continuous mode<small>Applies only when an ECB dataset is selected. A failed refresh retains the cached snapshot and displays the error.</small></span></label>
+          <label class="checkbox-row"><input class="config-field" data-key="autoRefreshEcb" type="checkbox" checked><span>Keep datasets up to date in continuous mode<small>ECB, FRED and French-library datasets refresh once a day; Alpaca datasets hourly until the latest close arrives. A failed refresh retains the cached snapshot and displays the error.</small></span></label>
           <div class="info-box">Closing the window keeps Quant Engine in the system tray. Choose <strong>Quit Quant Engine</strong> from the tray menu to stop it. Calculations run while the computer is awake.</div>
         </div></article>
         <article class="panel preferences-card"><div class="panel-heading"><h2>Independent local storage</h2></div><div class="preferences-content"><label>Storage folder</label><code id="storage-path" class="path-display">D:\Quant-Engine</code><div class="inline-actions"><button id="choose-root" class="secondary">Choose folder…</button><button id="open-data-folder" class="secondary">Open folder ↗</button></div><p class="field-help">Snapshots, source caches, SQLite history and complete JSON reports live here. Choosing another folder opens its history; existing folders are retained.</p></div></article>
@@ -173,6 +235,7 @@
     </section>
     <footer><span id="footer-message">Runs in the system tray while the computer is awake.</span><span id="footer-status">Engine status: <strong>Paused</strong></span></footer>
   </main>
+  <script src="terminal.bundle.js"></script>
   <script src="ui.js"></script>
 </body>
 </html>

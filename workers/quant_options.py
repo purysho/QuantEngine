@@ -339,6 +339,90 @@ def ssvi_surface(atm_volatility, *, rho=-.4, eta=1.0, gamma=.5, expiries=None, l
             "note": "Model surface from the contract's volatility and the chosen skew/curvature; not market quotes."}
 
 
+def market_surface(chain: dict, rate: float, *, as_of: str, max_expiries: int = 8, max_strikes: int = 50,
+                   log_moneyness=None) -> dict:
+    """Implied-volatility surface from a live option chain (out-of-the-money mids), SVI per expiry.
+
+    ``chain`` = {"spot": S, "points": [{strike, expiry (YYYY-MM-DD), type, bid, ask, iv?}]}. Quotes with no
+    two-sided market, a spread wider than half the mid, or under 7 days to expiry are skipped. Out-of-the-money
+    options are used because their early-exercise premium (US options are American) is smallest.
+    """
+    import datetime as dt
+    spot = _finite("Spot", chain.get("spot"), 0, 1e9, low_open=True)
+    today = dt.date.fromisoformat(as_of[:10])
+    by_expiry: dict[str, list] = {}
+    skipped = 0
+    for point in chain.get("points", [])[:20_000]:
+        try:
+            strike, bid, ask = float(point["strike"]), float(point.get("bid") or 0), float(point.get("ask") or 0)
+            days = (dt.date.fromisoformat(point["expiry"]) - today).days
+            kind = point["type"]
+        except (KeyError, TypeError, ValueError):
+            skipped += 1
+            continue
+        mid = (bid + ask) / 2
+        otm = (kind == "put" and strike < spot) or (kind == "call" and strike >= spot)
+        if not otm or days < 7 or bid <= 0 or ask <= bid or (ask - bid) > .5 * mid or not .6 * spot <= strike <= 1.4 * spot:
+            skipped += 1
+            continue
+        by_expiry.setdefault(point["expiry"], []).append({"strike": strike, "expiry": days / 365.0, "price": mid, "kind": kind,
+                                                          "alpaca_iv": point.get("iv"), "date": point["expiry"]})
+    usable = sorted(e for e, rows in by_expiry.items() if len(rows) >= 5)
+    if len(usable) < 2:
+        raise ValueError("Not enough liquid out-of-the-money quotes for a surface (need two expiries with five or more).")
+    if len(usable) > max_expiries:  # Spread the chosen expiries across the available horizon.
+        usable = [usable[round(i * (len(usable) - 1) / (max_expiries - 1))] for i in range(max_expiries)]
+        usable = sorted(set(usable))
+    quotes = []
+    for expiry in usable:
+        rows = sorted(by_expiry[expiry], key=lambda q: abs(math.log(q["strike"] / spot)))[:max_strikes]
+        quotes.extend(sorted(rows, key=lambda q: q["strike"]))
+    surface = volatility_surface([{k: q[k] for k in ("strike", "expiry", "price", "kind")} for q in quotes], spot, rate)
+    # Display only where every shown expiry has quotes (no SVI extrapolation into unquoted wings);
+    # the shortest expiries are dropped if they would squeeze the common range below ±7.5%.
+    shown = list(surface["slices"])
+    def k_range(item):
+        ks = [p["log_moneyness"] for p in surface["points"] if p["expiry"] == item["expiry"]]
+        return min(ks), max(ks)
+    while len(shown) > 2:
+        lo, hi = max(k_range(s)[0] for s in shown), min(k_range(s)[1] for s in shown)
+        if hi - lo >= .15:
+            break
+        shown.pop(0)
+    lo, hi = max(k_range(s)[0] for s in shown), min(k_range(s)[1] for s in shown)
+    if hi <= lo:
+        raise ValueError("The quoted strikes of different expiries do not overlap.")
+    k = np.asarray(log_moneyness if log_moneyness is not None else np.linspace(lo, hi, 36), dtype=np.float64)
+    expiries, grid, slices = [], [], []
+    for item in shown:
+        T = item["expiry"]
+        rows = sorted((p for p in surface["points"] if p["expiry"] == T), key=lambda p: p["log_moneyness"])
+        if item["svi"] and item["svi"]["converged"] and item["svi"]["minimum_total_variance"] >= 0:
+            w = svi_total_variance([item["svi"][n] for n in ("a", "b", "rho", "m", "sigma")], k)
+            iv = np.sqrt(np.maximum(w, 1e-12) / T)
+            method = "svi"
+        else:
+            iv = np.interp(k, [p["log_moneyness"] for p in rows], [p["implied_volatility"] for p in rows])
+            method = "interpolated"
+        expiries.append(T)
+        grid.append([float(v) for v in iv])
+        slices.append({"expiry_years": T, "days": round(T * 365), "quotes": item["quotes"], "method": method,
+                       "atm_implied_volatility": item["atm_implied_volatility"],
+                       "rmse_total_variance": item["svi"]["rmse_total_variance"] if item["svi"] else None})
+    # Cross-check our implied volatilities against Alpaca's own figures where both exist (points keep the quote index).
+    diffs = [abs(p["implied_volatility"] - quotes[p["index"]]["alpaca_iv"]) for p in surface["points"]
+             if isinstance(quotes[p["index"]]["alpaca_iv"], (int, float)) and quotes[p["index"]]["alpaca_iv"] > 0]
+    return {"model": "Market: raw SVI per expiry (out-of-the-money mids)", "symbol": str(chain.get("symbol", ""))[:12],
+            "spot": spot, "rate": rate, "as_of": as_of, "as_of_time": str(chain.get("asOf", as_of))[:40],
+            "expiries": expiries, "log_moneyness": k.tolist(), "implied_volatility": grid, "slices": slices,
+            "points": [{"strike": p["strike"], "expiry": p["expiry"], "implied_volatility": p["implied_volatility"],
+                        "log_moneyness": p["log_moneyness"]} for p in surface["points"]],
+            "quotes_used": len(surface["points"]), "quotes_skipped": skipped + len(surface["rejected"]),
+            "arbitrage_violations": surface["arbitrage_violations"][:50], "arbitrage_free": surface["arbitrage_free"],
+            "alpaca_iv_median_abs_difference": float(np.median(diffs)) if diffs else None,
+            "note": "Built from Alpaca's free indicative option quotes, which are derived from but are not actual OPRA quotes."}
+
+
 # --- Desktop report ---------------------------------------------------------
 
 OPTION_PARAMETERS = {"spot", "strike", "time", "rate", "volatility", "dividend", "kind",

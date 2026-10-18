@@ -23,6 +23,7 @@ export interface EngineConfig {
   lastError: string | null;
   lastRefreshError: string | null;
   lastEcbAttemptDate: string | null;
+  refreshAttempts: Record<string, string>;
   assistantEndpoint: string;
   assistantModel: string;
   learnContinuously: boolean;
@@ -33,7 +34,7 @@ export function defaultConfig(dataRoot: string): EngineConfig {
   return { version: 1, dataRoot, datasetId: 'sample', paths: 50_000, horizon: 20, seed: 17,
     lookback: 20, rebalance: 5, costBps: 10, shrinkage: .1, intervalSeconds: 60,
     lowCpu: false, rotateVariants: true, autoRefreshEcb: true, startAtLogin: false,
-    resumeOnLaunch: false, runSequence: 0, lastError: null, lastRefreshError: null, lastEcbAttemptDate: null,
+    resumeOnLaunch: false, runSequence: 0, lastError: null, lastRefreshError: null, lastEcbAttemptDate: null, refreshAttempts: {},
     assistantEndpoint: '', assistantModel: '', learnContinuously: true, learnBudgetSeconds: 20 };
 }
 
@@ -66,6 +67,12 @@ export function validatePatch(patch: unknown): Partial<EngineConfig> {
       if (typeof value !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(value)) throw new Error('Invalid dataset identifier.');
     } else if (key === 'lastEcbAttemptDate') {
       if (value !== null && (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value))) throw new Error('Invalid saved ECB attempt date.');
+    } else if (key === 'refreshAttempts') {
+      // Dataset id -> last automatic refresh attempt (date, or ISO time for hourly market data); bounded so the file cannot grow.
+      if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length > 50
+          || Object.entries(value).some(([id, date]) => !/^[a-zA-Z0-9_-]{1,80}$/.test(id) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}(T[\d:.]+Z)?$/.test(date))) {
+        throw new Error('Invalid saved refresh attempts.');
+      }
     } else if (key === 'lastError' || key === 'lastRefreshError') {
       if (value !== null && (typeof value !== 'string' || value.length > 4000)) throw new Error('Invalid saved error.');
     } else if (key === 'assistantEndpoint') {

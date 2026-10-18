@@ -502,3 +502,63 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 **Interactive test (user-reported, 2026-10-18): no issues.** The user ran the remaining checks on the laptop and reported no problems: first launch, Options reference prices with the 3D surface on integrated graphics, Run once, Learn now, the assistant (including refusing a trade), continuous running and restart persistence. I did not observe these runs; this is the user's report.
 
 **Next:** make the download instructions clearer (to-do above). Decide on code signing. Then the next roadmap items: Newey–West standard errors and a deflated Sharpe ratio, and desktop pages for pairs, market making and alpha.
+
+---
+
+## Task 22 — Download instructions (PR #3, merged)
+
+The README and user guide now cover the problems found on the first install: the source-code zip, PowerShell's silent download, `curl.exe` bypassing the Windows proxy, and extracting into a new folder. Documentation-only pushes no longer rebuild the release. PR #3 passed all 8 checks and was merged (`fce278b`). Because the workflow file itself changed, the release rebuilt once and succeeded, so the published zip's SHA-256 changed to `6b88c7a6…` (the copy already on the laptop is still the verified earlier build).
+
+---
+
+## Task 23 — Real data and a market terminal (QuantEngine 0.3)
+
+**Asked:** the data was not live ("I want it to be a real, usable app") and "our own mini-Bloomberg terminal", using Alpaca.
+
+**Built**
+- **Free official datasets, one click** (`quant_store.refresh`). The sources are:
+  - FRED S&P 500 / Nasdaq Composite / Dow Jones;
+  - Ken French US market plus 12 industries since 2000, as total-return indexes;
+  - ECB rates.
+
+  Every download keeps a hashed raw copy. In continuous mode the datasets refresh once a day (`refreshAttempts` per dataset); a failure keeps the snapshot. All three were downloaded live in this environment: indices 2,513 rows ending 2026-10-15, industries 6,705 rows ending 2026-08-31, ECB 65 rows.
+- **Alpaca market data** (`desktop/market/`), in the main process only:
+  - **Client:** a GET-only client with an explicit path allowlist, so trading endpoints are impossible. Tests check that `/v2/orders` and `/v2/positions` are blocked.
+  - **Rate limit and history:** a 180-request-per-minute token bucket. Full-market (SIP) history ends 16 minutes ago, which is the free-plan rule.
+  - **Errors:** messages are explained in plain words without parsing Alpaca's HTML error pages.
+  - **Live stream:** authenticates, subscribes and resubscribes as the watchlist changes. Back-off is exponential up to 60 s. Code 406 (another app using the one free connection) falls back to 15-second snapshots. Code 402/409 stops with a clear message.
+  - **Keys:** encrypted with Windows DPAPI (Electron `safeStorage`) and tested with Alpaca before saving. The window only ever sees `••••` plus the last 4 characters.
+  - **Economy panel:** FRED macro data (VIX, 2y/10y, the curve, Fed funds, the broad dollar, Brent).
+- **Terminal page** (now the start page). It has:
+  - a command line (`AAPL`, `GP`, `DES`, `N`, `OMON`, `MOST`, `ECO`, `ADD`/`DEL`, `RESEARCH`, ranges) with symbol search;
+  - a watchlist that flashes on each live tick;
+  - TradingView Lightweight Charts candles and volume, in New York time, with the latest candle moving with live trades;
+  - description statistics, news, the economy panel and movers.
+- **Market implied-volatility surface** (`quant_options.market_surface`):
+  - **Data:** out-of-the-money mids from Alpaca's free indicative option chain. Quotes are skipped when they have no two-sided market, a spread over 50% of the mid, or under 7 days to expiry.
+  - **Fit:** raw SVI per expiry, with static-arbitrage checks and the median gap to Alpaca's own IV.
+  - **Display:** the Options page has a Model/Market toggle.
+- **Market data → research:**
+  - `RESEARCH SPY QQQ TLT` saves 5 years of adjusted daily closes through the worker's new `ingest` command and analyses them.
+  - Large payloads (CSV, option chains) travel as files staged in `sources/`, because worker requests are limited to 64 KB.
+  - These datasets refresh hourly in continuous mode until the latest New York close is in.
+- **Offline demo market** (`--market-demo`, and the self-test) with synthetic prices, news, chains and a ticking stream, labelled **DEMO DATA** on screen. The packaged self-test now also checks the terminal: a chart, a description, a fitted market surface (7 expiries) and an Alpaca-style dataset (521 rows).
+
+**What did not work at first, and why**
+- **FRED zip files:** FRED returned a **zip file** for a multi-series request when the series had mixed frequencies (DFF is a 7-day series). Fix: one request per series.
+- **Chart logo blocked:** Lightweight Charts' attribution logo injects an inline `<style>` element, which the Content Security Policy (`style-src 'self'`) blocks. Fix: logo off, attribution and link in the terminal footer, and the licence plus NOTICE in `licenses/`.
+- **Renderer tests:** they execute `ui-source.js` as a plain script, so an ES `import` broke them. Fix: the terminal is bundled separately (`app/terminal.bundle.js`, `window.QuantTerminal`). The tests now open the Monitor explicitly, because the app opens on the Terminal.
+- **Surface extrapolation:** the first market surface extrapolated SVI into strikes a short expiry never quoted (118% IV at the wing). Fix: show only the log-moneyness range every displayed expiry quotes, dropping the shortest expiries if the common range would be under ±7.5%.
+- **Demo volatility:** the demo's daily bars used intraday scaling (38% instead of 18% volatility). Fixed in the demo generator.
+- **Watchlist overflow:** the watchlist overflowed horizontally. Fix: a fixed table layout.
+
+**Not verified yet (important)**
+- **No real Alpaca keys:** this environment has none, so the Alpaca client has been tested only against fakes and the demo market. The first real check is on the laptop.
+- **Endpoints written from the docs, still unconfirmed:**
+  - Paper keys are documented to use the Basic data plan, but no page says outright that they work for market data.
+  - The screener (most actives, movers) is documented as "based on SIP data". It may need a paid plan; the terminal shows Alpaca's error if so.
+
+**Next**
+- The laptop test with paper keys: watchlist ticking during US hours, `AAPL OMON`, `RESEARCH SPY QQQ TLT`.
+- A real symbol directory for crypto names.
+- Optional desktop pages for pairs, market making and the alpha protocol.

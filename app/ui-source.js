@@ -10,7 +10,10 @@ const shortTime = value => value ? new Date(value).toLocaleTimeString([], { hour
 const fullTime = value => value ? new Date(value).toLocaleString([], { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
 let current = { state: { phase: 'paused', busy: false, continuous: false, completed: 0 }, config: {}, datasets: [], runs: [], report: null, options: null, runtime: {} };
 let chartMode = 'equity';
-let page = 'monitor';
+let page = 'terminal';
+let surfaceSource = 'model';
+let previousMarketSurface;
+let terminal = { shown() {} };
 let operation = false;
 let previousReport;
 let previousRuns;
@@ -49,14 +52,15 @@ function receive(value) {
 
 function navigate(name) {
   page = name;
-  const labels = { monitor: 'Research monitor', datasets: 'Datasets', options: 'Options calculator', evolution: 'Evolution', runs: 'Research runs', preferences: 'Preferences' };
-  const kickers = { monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', options: 'DERIVATIVES / PRICING', evolution: 'LEARNING / SECOND MIND', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
+  const labels = { terminal: 'Market terminal', monitor: 'Research monitor', datasets: 'Datasets', options: 'Options calculator', evolution: 'Evolution', runs: 'Research runs', preferences: 'Preferences' };
+  const kickers = { terminal: 'MARKETS / TERMINAL', monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', options: 'DERIVATIVES / PRICING', evolution: 'LEARNING / SECOND MIND', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
   $('page-title').textContent = labels[name];
   $('page-kicker').textContent = kickers[name];
   document.querySelectorAll('.page').forEach(section => section.classList.toggle('hidden', section.id !== 'page-' + name));
   document.querySelectorAll('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.page === name));
   if (name === 'monitor') requestAnimationFrame(drawChart);
   if (name === 'evolution') requestAnimationFrame(renderEvolution);
+  if (name === 'terminal') void terminal.shown();
   syncSurfaceAnimation();
 }
 
@@ -73,7 +77,8 @@ function renderControls() {
     if (input.type === 'checkbox') input.checked = Boolean(value);
     else if (value !== undefined) input.value = value;
   });
-  ['import-csv', 'refresh-ecb', 'datasets-import', 'datasets-refresh', 'choose-root'].forEach(id => { $(id).disabled = locked || operation; });
+  ['import-csv', 'refresh-ecb', 'datasets-import', 'choose-root'].forEach(id => { $(id).disabled = locked || operation; });
+  document.querySelectorAll('.source-button').forEach(button => { button.disabled = locked || operation; });
   ['export-report', 'runs-export'].forEach(id => { $(id).disabled = !current.report; });
   $('calculate-options').disabled = state.busy || operation || state.settingsPending;
   $('learn-now').disabled = state.busy || operation || state.settingsPending;
@@ -108,10 +113,22 @@ function render() {
   if (previousReport !== report) { previousReport = report; renderReport(); drawChart(); updateSurfaces(); renderMaths('report'); }
   if (previousRuns !== current.runs) { previousRuns = current.runs; renderRuns(); }
   if (previousOptions !== current.options) { previousOptions = current.options; renderOptions(); updateSurfaces(); renderMaths('options'); }
+  if (previousMarketSurface !== current.marketSurface) { previousMarketSurface = current.marketSurface; if (current.marketSurface) surfaceSource = 'market'; updateSurfaces(); }
   if (previousLearning !== current.learning || previousLearningError !== current.learningError) {
     previousLearning = current.learning; previousLearningError = current.learningError; renderEvolution();
   }
 }
+
+// Human-readable labels for each kind of snapshot.
+const KIND = {
+  synthetic: { tag: 'SYNTHETIC EXAMPLE', status: 'Synthetic example data', badge: 'SYNTHETIC REPORT' },
+  ecb: { tag: 'ECB REFERENCE RATES', status: 'Official ECB reference rates', badge: 'ECB SNAPSHOT' },
+  fred: { tag: 'FRED · OFFICIAL', status: 'Official FRED index levels', badge: 'FRED SNAPSHOT' },
+  french: { tag: 'FRENCH LIBRARY', status: 'Academic US market data', badge: 'FRENCH SNAPSHOT' },
+  alpaca: { tag: 'ALPACA · MARKET', status: 'Market prices from Alpaca', badge: 'MARKET SNAPSHOT' },
+  csv: { tag: 'IMPORTED CSV', status: 'Imported price snapshot', badge: 'CSV SNAPSHOT' },
+};
+const kindOf = kind => KIND[kind] || KIND.csv;
 
 function renderDatasets() {
   const datasets = current.datasets || [];
@@ -124,19 +141,20 @@ function renderDatasets() {
     $('dataset-cards').innerHTML = datasets.map(dataset => {
       const synthetic = dataset.kind === 'synthetic';
       const source = dataset.source_url || dataset.metadata?.original_path || 'Deterministic offline generator · seed 2048';
-      return '<article class="dataset-card"><div class="dataset-card-top"><div><h3>' + esc(dataset.name) + '</h3><span class="tag ' + (synthetic ? 'synthetic' : '') + '">' + (synthetic ? 'SYNTHETIC EXAMPLE' : dataset.kind === 'ecb' ? 'ECB REFERENCE RATES' : 'IMPORTED CSV') + '</span></div><button class="secondary select-dataset" data-id="' + esc(dataset.id) + '">Use dataset</button></div>' +
+      return '<article class="dataset-card"><div class="dataset-card-top"><div><h3>' + esc(dataset.name) + '</h3><span class="tag ' + (synthetic ? 'synthetic' : '') + '">' + kindOf(dataset.kind).tag + '</span></div><button class="secondary select-dataset" data-id="' + esc(dataset.id) + '">Use dataset</button></div>' +
         '<div class="dataset-meta">' + integer(dataset.rows) + ' observations · ' + dataset.assets.length + ' assets · ends ' + esc(dataset.observation_end) + '<br>' + esc(dataset.assets.join(' · ')) + '</div>' +
-        '<div class="dataset-source">Source: ' + esc(source) + '<br>Retrieved: ' + esc(fullTime(dataset.retrieved_at)) + (dataset.kind === 'ecb' ? '<br>Currency units per EUR. Reference rates are information-only and are not executable quotes.' : '') + '</div>' +
+        '<div class="dataset-source">Source: ' + esc(source) + '<br>Retrieved: ' + esc(fullTime(dataset.retrieved_at)) + (dataset.metadata?.units ? '<br>' + esc(dataset.metadata.units) + '.' : dataset.kind === 'ecb' ? '<br>Currency units per EUR.' : '') + (dataset.metadata?.update_frequency ? '<br>Updates: ' + esc(dataset.metadata.update_frequency) + '.' : '') + (dataset.metadata?.notice ? '<br>' + esc(dataset.metadata.notice) : '') + (dataset.metadata?.citation ? '<br>Cite: ' + esc(dataset.metadata.citation) : '') + '</div>' +
         '<div class="dataset-hash">SHA-256 ' + esc(dataset.sha256) + '</div></article>';
     }).join('') || '<div class="large-empty">No readable datasets. Choose an accessible storage folder in Preferences.</div>';
     document.querySelectorAll('.select-dataset').forEach(button => button.addEventListener('click', () => action(() => window.quant.configure({ datasetId: button.dataset.id }), 'Dataset selected.')));
   }
   if (selected) {
     $('dataset-status').className = 'data-status' + (selected.kind === 'synthetic' ? ' synthetic' : '');
-    $('dataset-status').textContent = selected.kind === 'synthetic' ? 'Synthetic example data' : selected.kind === 'ecb' ? 'Official ECB reference rates' : 'Imported price snapshot';
+    $('dataset-status').textContent = kindOf(selected.kind).status;
     const age = Math.floor((Date.now() - Date.parse(selected.observation_end + 'T00:00:00Z')) / 86400000);
     $('dataset-description').textContent = selected.kind === 'synthetic' ? 'Offline sample · ' + selected.rows + ' observations. Not market data.' :
-      'Snapshot ends ' + selected.observation_end + (age > 5 ? ' · ' + age + ' days old.' : '.') + (selected.kind === 'ecb' ? ' Rates per EUR.' : ' Prices as supplied.');
+      'Snapshot ends ' + selected.observation_end + (age > 5 ? ' · ' + age + ' days old.' : '.') + (selected.kind === 'ecb' ? ' Rates per EUR.' : selected.metadata?.refreshable ? ' Updates itself daily while the engine runs.' : ' Prices as supplied.');
+    $('refresh-ecb').textContent = selected.metadata?.source ? 'Update this dataset' : 'Refresh ECB rates';
   } else { $('dataset-status').textContent = 'No dataset available'; $('dataset-description').textContent = 'Choose a storage folder or import a valid CSV.'; }
 }
 
@@ -161,7 +179,7 @@ function renderReport() {
   const report = current.report;
   $('chart-empty').classList.toggle('hidden', Boolean(report));
   const badge = $('report-badge');
-  badge.textContent = report ? report.provenance.kind === 'synthetic' ? 'SYNTHETIC REPORT' : report.provenance.kind === 'ecb' ? 'ECB SNAPSHOT' : 'CSV SNAPSHOT' : 'NO REPORT';
+  badge.textContent = report ? kindOf(report.provenance.kind).badge : 'NO REPORT';
   badge.className = 'tag ' + (report?.provenance.kind === 'synthetic' ? 'synthetic' : report ? '' : 'neutral');
   if (!report) return;
   const gaussian = report.monte_carlo;
@@ -514,7 +532,21 @@ function updateSurfaces() {
       xLabel: 'Date', yLabel: 'Lookback (days)', zLabel: 'Realised vol',
       xFormat: value => String(value), yFormat: value => String(value), zFormat: value => percent(value, 1) });
   }
-  const model = current.options?.surface;
+  const market = current.marketSurface;
+  if (!market && surfaceSource === 'market') surfaceSource = 'model';
+  const model = surfaceSource === 'market' ? market : current.options?.surface;
+  document.querySelectorAll('.surface-source').forEach(button => {
+    const on = button.dataset.source === surfaceSource;
+    button.classList.toggle('active', on); button.setAttribute('aria-checked', String(on));
+    if (button.dataset.source === 'market') button.disabled = !market;
+  });
+  $('opt-surface-rho').disabled = $('opt-surface-eta').disabled = surfaceSource === 'market';
+  if (surfaceSource === 'market' && market) {
+    const bad = market.arbitrage_violations.length;
+    $('options-surface-note').textContent = market.symbol + ' · ' + market.expiries.length + ' expiries · ' + market.quotes_used + ' quotes (Alpaca indicative, ' +
+      new Date(market.as_of_time || market.as_of).toLocaleString() + ') · ' + (bad ? bad + ' static-arbitrage flags' : 'no static-arbitrage flags') +
+      (Number.isFinite(market.alpaca_iv_median_abs_difference) ? ' · median gap to Alpaca IV ' + (market.alpaca_iv_median_abs_difference * 100).toFixed(2) + ' pts' : '') + ' · drag to rotate';
+  } else if (current.options?.surface) $('options-surface-note').textContent = "SSVI model surface around the contract's volatility · drag to rotate";
   if (model) {
     const [zMin, zMax, cMin, cMax] = surfaceRange(model.implied_volatility);
     optionsSurface.setData({ x: model.log_moneyness, y: model.expiries, z: model.implied_volatility, zMin, zMax, cMin, cMax,
@@ -527,7 +559,7 @@ function updateSurfaces() {
 function syncSurfaceAnimation() {
   const visible = !document.hidden;
   if (visible && page === 'monitor' && chartMode === 'surface' && current.report?.volatility_surface) monitorSurface.start(); else monitorSurface.stop();
-  if (visible && page === 'options' && current.options?.surface) optionsSurface.start(); else optionsSurface.stop();
+  if (visible && page === 'options' && (current.options?.surface || current.marketSurface)) optionsSurface.start(); else optionsSurface.stop();
   if (visible && page === 'evolution' && current.learning?.tasks) evolutionGraph.start(); else evolutionGraph.stop();
 }
 document.addEventListener('visibilitychange', syncSurfaceAnimation);
@@ -938,7 +970,15 @@ $('calculate-options').addEventListener('click', async () => {
   if (!result && current.state.lastError) $('options-error').textContent = current.state.lastError;
 });
 ['import-csv', 'datasets-import'].forEach(id => $(id).addEventListener('click', () => { void action(() => window.quant.importCSV(), 'Validated prices copied into an immutable local snapshot.'); }));
-['refresh-ecb', 'datasets-refresh'].forEach(id => $(id).addEventListener('click', () => { void action(() => window.quant.refreshECB(), 'Official ECB reference-rate snapshot saved.'); }));
+// The sidebar button updates the selected dataset from its own source, or fetches ECB rates.
+$('refresh-ecb').addEventListener('click', () => {
+  const selected = (current.datasets || []).find(dataset => dataset.id === current.config.datasetId);
+  const source = selected?.metadata?.source || 'ecb';
+  void action(() => window.quant.refreshSource(source), 'Fresh official data saved.');
+});
+document.querySelectorAll('.source-button').forEach(button => button.addEventListener('click', () => {
+  void action(() => window.quant.refreshSource(button.dataset.source), 'Fresh official data saved and selected.');
+}));
 ['export-report', 'runs-export'].forEach(id => $(id).addEventListener('click', () => { void action(() => window.quant.exportReport(), result => 'Exported ' + result.path); }));
 $('choose-root').addEventListener('click', () => { void action(() => window.quant.chooseRoot(), 'Storage folder opened.'); });
 $('open-data-folder').addEventListener('click', () => { void action(() => window.quant.openDataFolder()); });
@@ -950,6 +990,10 @@ new ResizeObserver(() => requestAnimationFrame(drawChart)).observe($('research-c
 
 document.body.classList.add('loading');
 if (window.quant) {
+  // Bundled separately (app/terminal.bundle.js) so this file stays a plain script.
+  if (window.QuantTerminal) terminal = window.QuantTerminal.initTerminal({ $, esc, toast, navigate, receive });
+  document.querySelectorAll('.surface-source').forEach(button => button.addEventListener('click', () => { surfaceSource = button.dataset.source; updateSurfaces(); }));
+  navigate('terminal');
   window.quant.onState(receive);
   window.quant.getState().then(value => { receive(value); document.body.dataset.transport = 'ready'; })
     .catch(error => { document.body.classList.remove('loading'); toast(error.message, true); });

@@ -60,6 +60,33 @@ Changing the storage root selects another workspace; it does not migrate existin
 
 Use **Win + Ctrl + D** to create a Windows desktop and **Win + Tab** to move this app's window there. Virtual desktops organise windows; they share CPU and RAM. Closing this app's window hides it in the notification tray and keeps the configured research schedule running.
 
+## Market terminal
+
+The app opens on the **Terminal**. Type in the command line at the top (press **/** to jump there) and press Enter:
+
+| Type | Shows |
+| --- | --- |
+| `AAPL` (or `BTC/USD`) | Chart, description and news for a symbol |
+| `AAPL GP`, `1D` `5D` `1M` `6M` `1Y` `5Y` `MAX` | Price chart and range |
+| `AAPL DES` | Day range, bid/ask and spread, 52-week range, 1-year return, average volume, realised volatility and the typical daily move (σ/√252, the same idea as VIX ÷ 16) |
+| `N`, `AAPL N` | Market news or news for one symbol (Benzinga via Alpaca) |
+| `AAPL OMON` | Fetches the option chain, fits an implied-volatility surface and opens it on the Options page (**Market** view) |
+| `MOST` | Most active stocks, gainers and losers |
+| `ECO` | VIX (with VIX ÷ 16), 2- and 10-year Treasury yields, the curve, Fed funds, the broad dollar and Brent, from FRED |
+| `ADD TLT`, `DEL TLT` | Change the watchlist (up to 40 symbols) |
+| `RESEARCH SPY QQQ TLT` | Downloads 5 years of adjusted daily closes, saves them as a research dataset and analyses it |
+
+**Connecting live US stock data.** Create a free account at alpaca.markets, open the **paper trading** dashboard and generate API keys. In **Preferences → Market data (Alpaca)**, paste the key ID and secret, choose a feed and press **Save and test**. The keys are tested with Alpaca before they are saved, are encrypted by Windows, and are never shown again. QuantEngine only reads market data; it cannot place orders. Never paste your keys into a chat or a file.
+
+- **Feeds.** *IEX* (free) is real-time but covers about 2.5% of US volume, so its volume figures are partial. *All exchanges, 15 min delay* (free) is complete but delayed. *All exchanges, real-time* needs Alpaca's paid plan. Charts of a day or longer always use complete, split- and dividend-adjusted history.
+- **Live updates.** The watchlist streams trades over one connection; the free plan allows one live connection and 30 streamed stock symbols. If another program uses the same keys, QuantEngine says so and shows 15-second snapshots instead.
+- **Without keys**, crypto prices, the economy panel and the official datasets still work.
+- **Option surfaces** use Alpaca's free *indicative* option feed: quotes derived from, but not identical to, the official OPRA quotes. The surface uses out-of-the-money mid prices (American options' early-exercise premium is smallest there), fits a raw SVI curve per expiry, shows only the strike range that every expiry actually quotes, and reports static-arbitrage flags and the gap to Alpaca's own implied volatilities.
+
+Data from Alpaca is "not warranted as to completeness or accuracy" (Alpaca's terms). Everything stays on this computer.
+
+**Official datasets.** On the **Datasets** page, **Free official data** downloads the S&P 500, Nasdaq Composite and Dow Jones (FRED, about ten years), the US market and 12 industries since 2000 (Ken French library, total-return indexes, updated monthly by the source) or ECB exchange rates. While the engine runs continuously, these refresh once a day and Alpaca datasets hourly until the latest close arrives; a failed refresh keeps the saved snapshot.
+
 ## Options calculator
 
 Open **Options** to price a hypothetical call or put. Enter spot, strike, years to expiry, and volatility, rate and dividend yield as annual percentages. The page shows the Black–Scholes price, CRR tree prices (European and American, with the early-exercise premium), a seeded Monte Carlo price with its standard error, the put–call parity gap, and Greeks with units. Enter a market price to get implied volatility; impossible quotes are rejected with the bound they violate. The implied-move panel explains the "VIX ÷ 16" rule: it is a one-standard-deviation daily move (√252 ≈ 15.87), and the expected absolute move is only about 0.8 of that.
@@ -84,7 +111,7 @@ Under the option results and the risk report, **The maths** shows each formula w
 
 ## Interpretation and next release
 
-Treat these calculations as research and scenario analysis. The initial release has no broker connection, order routing or live execution. Data import and the numerical methods are the first complete loop. An event-driven strategy framework, stronger out-of-sample experiment selection and paper execution are later milestones.
+Treat these calculations as research and scenario analysis. QuantEngine reads market data but has no order routing or execution, and the assistant refuses trading requests. Data import and the numerical methods are the first complete loop. An event-driven strategy framework, stronger out-of-sample experiment selection and paper execution are later milestones.
 
 ## Release status
 

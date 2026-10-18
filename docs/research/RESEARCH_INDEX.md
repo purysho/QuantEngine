@@ -31,7 +31,7 @@ Every topic from the supplied learning list is mapped to where it lives in Quant
 
 | Project | Status |
 | --- | --- |
-| Options pricing, Greeks, volatility surfaces | Done: analytic, tree and Monte Carlo pricing; IV; per-expiry raw SVI; vertical/butterfly/calendar arbitrage checks; desktop Options page. Surfaces are API-only (no surface page yet) |
+| Options pricing, Greeks, volatility surfaces | Done: analytic, tree and Monte Carlo pricing; IV; per-expiry raw SVI; vertical/butterfly/calendar arbitrage checks; desktop Options page with a model (SSVI) surface and, since 0.3, a market surface fitted to a live Alpaca option chain (`market_surface`) |
 | Pairs-trading backtester | Done as a module and experiment: formation-only fit, Holm selection, next-close execution, share-based legs, costs, borrow, stops, liquidation |
 | Limit-order-book market-making simulator | Done as a module and experiment: Avellaneda–Stoikov with FIFO queue, partial fills, latency, tick, fees, adverse selection and inventory limits |
 | Machine-learning alpha signal | Done for linear ridge with an information-clock protocol. Nonlinear models (gradient boosting) should reuse the same protocol |
@@ -69,3 +69,9 @@ AIA Macro (Bridgewater), Alpha-GPT, the Citadel AI assistant and Balyasny's tool
 - `experiments/results/real_world_backtest.json`: 100 years of CRSP US-market data, the VIX/16 rule, Black–Scholes priced at VIX vs realised payoffs, Brent–WTI cointegration through the 2020 negative price, and industry momentum since 1926. GJR-GARCH filtered historical simulation is the best VaR model on real data.
 - `experiments/results/evolution_real.json`: prequential evolutionary learning (v1 → v3) with an honest comparison against the best fixed choice in hindsight.
 - Additional references are triaged in `WORK_LOG.md` Task 17.
+
+## Live market data (0.3)
+
+- `desktop/market/`: a read-only Alpaca client (allowlisted GET paths only), a reconnecting stream, encrypted key storage, a FRED macro panel and an offline demo market used by the self-test. Tests in `tests/market.test.ts`.
+- `workers/quant_store.py`: one-click refreshable datasets (FRED indices, French-library industries since 2000, ECB) and `ingest` for Alpaca daily closes. Tests in `tests/test_quant_sources.py` and `tests/test_quant_market.py`.
+- Not yet verified against a real Alpaca account from this environment (no keys here); the client follows Alpaca's current documentation, and the first run on the user's laptop is the real test.

@@ -18,9 +18,9 @@ import numpy as np
 import scipy
 
 from quant_core import analyse
-from quant_options import options_report
+from quant_options import market_surface, options_report
 from quant_learning import learn
-from quant_store import Store
+from quant_store import SOURCES, Store
 
 
 def emit(value):
@@ -46,7 +46,25 @@ def main():
         elif command == "import":
             result = {"dataset": store.import_csv(request.get("path", "")), "datasets": store.datasets()}
         elif command == "refresh":
-            result = {"dataset": store.refresh_ecb(), "datasets": store.datasets()}
+            source = request.get("source", "ecb")
+            if source not in SOURCES:
+                raise ValueError("Unknown data source.")
+            result = {"dataset": store.refresh(source), "datasets": store.datasets()}
+        elif command == "ingest":
+            result = {"dataset": store.ingest(request.get("path", ""), request.get("dataset_id"), request.get("name", ""),
+                                              request.get("metadata", {}), request.get("source_url")),
+                      "datasets": store.datasets()}
+        elif command == "market-surface":
+            # The option chain is staged as a file in sources/ because it exceeds the 64 KB request limit.
+            staged = Path(request.get("path", "")).resolve()
+            if staged.parent != (store.root / "sources").resolve() or staged.suffix != ".json":
+                raise ValueError("Only option chains staged in the engine's sources folder can be read.")
+            chain = json.loads(staged.read_text(encoding="utf-8"))
+            staged.unlink(missing_ok=True)
+            rate = request.get("rate", 0.0)
+            if isinstance(rate, bool) or not isinstance(rate, (int, float)):
+                raise ValueError("Rate must be a number.")
+            result = {"surface": market_surface(chain, float(rate), as_of=str(chain.get("asOf", ""))[:10] or time.strftime("%Y-%m-%d"))}
         elif command == "history":
             if request.get("recover"):
                 store.recover()
