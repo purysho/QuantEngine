@@ -10,6 +10,19 @@
 
 The app includes Python, NumPy and SciPy. Ordinary use needs no development terminal, Docker, API subscription or paid data account. The example dataset works offline.
 
+## Downloading: troubleshooting
+
+These are the problems found during the first install on the target laptop.
+
+- **Wrong file.** The app is `QuantEngine-win-x64.zip`, about 220 MB. A zip of a few MB, named after the repository or a branch (for example `QuantEngine-main.zip`), is the source code from the green **Code** button. It has no `QuantEngine.exe`. Check the size in PowerShell with `(Get-Item .\QuantEngine-win-x64.zip).Length`.
+- **Checking the download.** `(Get-FileHash .\QuantEngine-win-x64.zip -Algorithm SHA256).Hash` must match the SHA-256 on the [release page](https://github.com/purysho/QuantEngine/releases/latest) (case does not matter). A mismatch almost always means an interrupted download; download it again.
+- **Use the browser.** It shows progress, can resume (Ctrl+J, then **Resume**) and uses the same network route that opens GitHub for you.
+- **PowerShell downloads.**
+  - With `$ProgressPreference = 'SilentlyContinue'`, `Invoke-WebRequest` shows nothing until it finishes, so a 220 MB download looks frozen. Leave it running, or use the browser.
+  - `curl.exe` does not use the Windows proxy settings. If you connect through a VPN or proxy app, it can fail with "Failed to connect to github.com:443" even though the browser works. Add `--proxy http://host:port`, using the `ProxyServer` value from `Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'`. Add `-C -` to resume a partial file.
+- **Extracting.** Extract into a new, empty folder (for example `D:\QuantEngine-0.2.0`), not over an older copy or a source-code folder. `Expand-Archive .\QuantEngine-win-x64.zip -DestinationPath D:\QuantEngine-0.2.0` takes a few minutes because the zip holds about 3,500 files.
+- **Self-test.** In the extracted `QuantEngine` folder, `.\QuantEngine.exe --self-test | Out-String` prints `QUANT_SELF_TEST_OK` followed by the runtime versions and a reference option price of 4.7594. It uses a temporary folder and does not touch your data.
+
 ## What each research cycle calculates
 
 - Sample covariance and correlation, configurable diagonal shrinkage, and a constrained long-only minimum-variance portfolio.
