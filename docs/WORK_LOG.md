@@ -486,3 +486,17 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 **Reproduced locally** with `python3 -I -c "from workers import quant_evolve"` → `ModuleNotFoundError`.
 **Fix:** the child inserts the project root (passed as an argument) into `sys.path` and runs with `-P`, so every platform tests the strict embedded-runtime condition. `-P` was chosen over `-I` because `-I` implies `-E`, which would silently ignore the `PYTHONHASHSEED` the test sets. On failure the assertion now shows the child's stderr.
 **Lesson:** subprocess tests must not depend on implicit `sys.path` entries; the shipped runtime is stricter than a developer's Python.
+
+---
+
+## Task 21 — First run on the target laptop (Windows 11 Home, Core 5 210H, 16 GB)
+
+**Result:** the released `v0.2.0` zip passed its packaged self-test on the target laptop on 2026-10-18. It was extracted to `D:\QuantEngine-0.2.0` and printed `QUANT_SELF_TEST_OK` with Python 3.13.16, NumPy 2.3.5 and SciPy 1.17.0; Hull option 4.759422; sandboxed renderer (`nodeUnavailable: true`); 504 rows; an assistant VaR answer; 14 learned models; 1 completed run. The checksum of the downloaded zip matched `SHA256SUMS.txt`.
+
+**What went wrong while downloading, and the lesson for the user guide:**
+- A branch's **Code → Download ZIP** (3.8 MB of source code) is easily mistaken for the app. The size check (220,250,190 bytes) caught it.
+- In Windows PowerShell, `$ProgressPreference = 'SilentlyContinue'` hides all progress, so a long `Invoke-WebRequest` looks frozen. The user stopped it at 72 MB.
+- `curl.exe` could not connect to github.com, while `Invoke-WebRequest` and the browser could. Windows PowerShell's `Invoke-WebRequest` uses the Windows (WinINET) proxy settings; `curl.exe` ignores them. The browser download worked.
+- **To do:** in the README and user guide, recommend the browser button with the hash check, warn that the green Code button downloads source code, and give the expected size.
+
+**Next:** the interactive part of the laptop test (Options reference prices, 3D surface on integrated graphics, Run once, Learn now, Ask/refusal, ECB refresh, 10 minutes of continuous running in Task Manager, restart persistence).
