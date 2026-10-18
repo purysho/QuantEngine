@@ -499,4 +499,6 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 - `curl.exe` could not connect to github.com, while `Invoke-WebRequest` and the browser could. Windows PowerShell's `Invoke-WebRequest` uses the Windows (WinINET) proxy settings; `curl.exe` ignores them. The browser download worked.
 - **To do:** in the README and user guide, recommend the browser button with the hash check, warn that the green Code button downloads source code, and give the expected size.
 
-**Next:** the interactive part of the laptop test (Options reference prices, 3D surface on integrated graphics, Run once, Learn now, Ask/refusal, ECB refresh, 10 minutes of continuous running in Task Manager, restart persistence).
+**Interactive test (user-reported, 2026-10-18): no issues.** The user ran the remaining checks on the laptop and reported no problems: first launch, Options reference prices with the 3D surface on integrated graphics, Run once, Learn now, the assistant (including refusing a trade), continuous running and restart persistence. I did not observe these runs; this is the user's report.
+
+**Next:** make the download instructions clearer (to-do above). Decide on code signing. Then the next roadmap items: Newey–West standard errors and a deflated Sharpe ratio, and desktop pages for pairs, market making and alpha.
