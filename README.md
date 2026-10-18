@@ -6,7 +6,14 @@
   <sub><a href="https://github.com/purysho/QuantEngine/releases/latest">Release notes and SHA-256</a> · Windows 10/11 64-bit · portable, no installer · Python, NumPy and SciPy included</sub>
 </p>
 
-**Getting started:** extract the whole zip and open `QuantEngine\QuantEngine.exe`. The app is not code-signed yet, so if Windows SmartScreen says it is unrecognised, choose **More info, then Run anyway**. Research data is stored in `D:\Quant-Engine` by default.
+**Getting started**
+
+1. Click the red **Download** button above. The file is `QuantEngine-win-x64.zip`, about **220 MB**. GitHub's green **Code → Download ZIP** gives only the source code (a few MB, with no `QuantEngine.exe`).
+2. Check it (optional): run `(Get-FileHash .\QuantEngine-win-x64.zip -Algorithm SHA256).Hash` in PowerShell and compare the result with the SHA-256 on the [release page](https://github.com/purysho/QuantEngine/releases/latest).
+3. Extract the whole zip into a new folder, for example `D:\QuantEngine-0.2.0`, and open `QuantEngine\QuantEngine.exe` from the extracted folder, not from inside the zip.
+4. To confirm everything works, run `.\QuantEngine.exe --self-test | Out-String` in that folder. It should print `QUANT_SELF_TEST_OK`.
+
+Research data is stored in `D:\Quant-Engine` by default. The app is not code-signed; if Windows SmartScreen says it is unrecognised, choose **More info, then Run anyway**. If the download is slow or stalls, see [Downloading](docs/USER_GUIDE.md#downloading-troubleshooting) in the user guide.
 
 ![QuantEngine research monitor](docs/screenshots/cyber-monitor.png)
 

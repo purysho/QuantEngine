@@ -474,6 +474,9 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 - The README has a download button at the top linking to the permanent URL `https://github.com/purysho/QuantEngine/releases/latest/download/QuantEngine-win-x64.zip`, plus quick-start steps and a screenshot. The user guide links to it too.
 - The repository is public, so downloads need no GitHub login; CI artifacts by contrast expire after 14 days and require a login.
 - **Pending:** the homepage shows `main`'s README, and the release workflow publishes on pushes to `main`. Both take effect when this branch is merged into `main`. No release existed before this.
+- **Outcome (2026-10-11):** all 8 CI checks on PR #1's head `ef87aa8` passed (Linux/Windows checks, real-data job, and the Windows package job on both the push and pull_request runs). PR #1 was merged into `main` as `4a441f0`. Release run 1 passed every step, including the embedded-runtime tests and the packaged executable self-test, and published **`v0.2.0` "QuantEngine 0.2.0 for Windows"** with `QuantEngine-win-x64.zip` (220 MB, 3,503 files) and `SHA256SUMS.txt`.
+- **Verified from outside GitHub Actions:** the homepage link `releases/latest/download/QuantEngine-win-x64.zip` downloads the zip without a login; it matches `SHA256SUMS.txt`, passes a zip integrity check, and contains `QuantEngine/QuantEngine.exe` and the bundled `resources/quant-python/python.exe`. `main`'s README shows the download button.
+- **Next:** run the zip on the target Windows 11 laptop, extracted to `D:\`, and note any SmartScreen or antivirus prompts. Then decide whether code signing is worth paying for. A future version bump in `package.json` creates a new release; pushes with the same version replace the assets of `v0.2.0`.
 
 ---
 
@@ -483,3 +486,19 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 **Reproduced locally** with `python3 -I -c "from workers import quant_evolve"` → `ModuleNotFoundError`.
 **Fix:** the child inserts the project root (passed as an argument) into `sys.path` and runs with `-P`, so every platform tests the strict embedded-runtime condition. `-P` was chosen over `-I` because `-I` implies `-E`, which would silently ignore the `PYTHONHASHSEED` the test sets. On failure the assertion now shows the child's stderr.
 **Lesson:** subprocess tests must not depend on implicit `sys.path` entries; the shipped runtime is stricter than a developer's Python.
+
+---
+
+## Task 21 — First run on the target laptop (Windows 11 Home, Core 5 210H, 16 GB)
+
+**Result:** the released `v0.2.0` zip passed its packaged self-test on the target laptop on 2026-10-18. It was extracted to `D:\QuantEngine-0.2.0` and printed `QUANT_SELF_TEST_OK` with Python 3.13.16, NumPy 2.3.5 and SciPy 1.17.0; Hull option 4.759422; sandboxed renderer (`nodeUnavailable: true`); 504 rows; an assistant VaR answer; 14 learned models; 1 completed run. The checksum of the downloaded zip matched `SHA256SUMS.txt`.
+
+**What went wrong while downloading, and the lesson for the user guide:**
+- A branch's **Code → Download ZIP** (3.8 MB of source code) is easily mistaken for the app. The size check (220,250,190 bytes) caught it.
+- In Windows PowerShell, `$ProgressPreference = 'SilentlyContinue'` hides all progress, so a long `Invoke-WebRequest` looks frozen. The user stopped it at 72 MB.
+- `curl.exe` could not connect to github.com, while `Invoke-WebRequest` and the browser could. Windows PowerShell's `Invoke-WebRequest` uses the Windows (WinINET) proxy settings; `curl.exe` ignores them. The browser download worked.
+- **Done (Task 22):** the README's getting-started steps now cover the right file and its size (warning about the green Code button), the hash check, extracting to a new folder and the self-test. The user guide has a "Downloading: troubleshooting" section with the PowerShell progress, `curl.exe` proxy and extraction lessons. The release workflow now ignores documentation-only pushes (`**.md`, `docs/**`), so editing docs no longer rebuilds and replaces the published zip, which would change its checksum. The zip's `START_HERE.md` (a copy of the user guide) is refreshed with the next code release; this merge rebuilds once because the workflow file itself changed.
+
+**Interactive test (user-reported, 2026-10-18): no issues.** The user ran the remaining checks on the laptop and reported no problems: first launch, Options reference prices with the 3D surface on integrated graphics, Run once, Learn now, the assistant (including refusing a trade), continuous running and restart persistence. I did not observe these runs; this is the user's report.
+
+**Next:** make the download instructions clearer (to-do above). Decide on code signing. Then the next roadmap items: Newey–West standard errors and a deflated Sharpe ratio, and desktop pages for pairs, market making and alpha.

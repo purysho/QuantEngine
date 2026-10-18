@@ -7,6 +7,8 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    # Documentation-only changes do not rebuild or replace the published download (paths are not checked for tags).
+    paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
 
 permissions:
