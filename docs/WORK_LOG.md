@@ -618,3 +618,11 @@ The README and user guide now cover the problems found on the first install: the
 **Next**
 - Run paper trading for at least 63 trading days if the user wants to learn from it, knowing neither strategy passed stage 2.
 - Look for better hypotheses with the same discipline, for example cross-asset trend across stocks, bonds and gold. Each new idea counts toward the deflated Sharpe ratio.
+
+---
+
+## Release 0.3.0 (PR #4 merged)
+
+PR #4 passed all 8 checks on `bd94928`, including the Windows packaged self-test with the terminal and the paper loop. It was merged as `4157a67`. The release run published **v0.3.0 "QuantEngine 0.3.0 for Windows"**: `QuantEngine-win-x64.zip`, 222,358,374 bytes, SHA-256 `7d03806e…7fb1`. I checked it from outside GitHub: the homepage link downloads it, the checksum matches `SHA256SUMS.txt`, the zip opens cleanly (3,518 files), and it contains the terminal bundle, the Lightweight Charts licence, the strategy modules, and `BUILD_INFO.json` with version 0.3.0.
+
+**Lesson recorded:** during Task 24, a chained `npm run build >/dev/null && …` hid a build failure (an apostrophe inside a single-quoted string), and a later step ran against a stale bundle. From now on, build output is never discarded: check with `node --check` and read the build's exit status.
