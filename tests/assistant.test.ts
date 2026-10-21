@@ -137,3 +137,10 @@ test('assistant settings accept only local endpoints', async () => {
   assert.doesNotThrow(() => validatePatch({ assistantEndpoint: '' }));
   assert.throws(() => validatePatch({ assistantEndpoint: 'https://api.openai.com/v1' }), /localhost/);
 });
+
+test('navigation reaches the market terminal', async () => {
+  const { parseCommand } = await import('../desktop/assistant.js');
+  assert.deepEqual(parseCommand('open the terminal'), { kind: 'navigate', page: 'terminal', chart: undefined });
+  assert.deepEqual(parseCommand('show market news'), { kind: 'navigate', page: 'terminal', chart: undefined });
+  assert.equal(parseCommand('show the vol surface').kind, 'navigate');
+});

@@ -97,7 +97,7 @@ export function parseCommand(input: string): Intent {
   if (!text) return { kind: 'unknown' };
   if (/\b(buy|sell|short|go long|place|submit|send)\b.*\b(order|shares?|stock|contracts?|position|it)\b|\b(trade|execute|broker(age)?)\b(?! cost)/.test(text)
       && !/\b(cost|costs|backtest)\b/.test(text)) {
-    return { kind: 'refuse', reason: 'QuantEngine is research-only: it has no brokerage connection and cannot place or send orders.' };
+    return { kind: 'refuse', reason: 'The assistant never places orders. QuantEngine cannot trade real money; simulated paper orders are sent only from the Strategies page after you approve the list.' };
   }
   if (/^(help|what can you do|commands|\?)/.test(text)) return { kind: 'help' };
   // Explanations of QuantEngine's own maths are answered from the report's step-by-step workings;
@@ -127,6 +127,7 @@ export function parseCommand(input: string): Intent {
     return { kind: 'price-option', parameters: { kind, spot, strike, time, volatility, rate, dividend }, assumed };
   }
   const nav: Array<[RegExp, string, string?]> = [
+    [/\b(terminal|markets?|watchlist|quotes?|news)\b/, 'terminal'],
     [/\b(vol(atility)? surface|3d|surface)\b/, 'monitor', 'surface'], [/\boptions?\b/, 'options'], [/\bdatasets?|data\b/, 'datasets'],
     [/\b(evolution|lineage|graph|second mind|learning)\b/, 'evolution'], [/\b(runs?|history)\b/, 'runs'], [/\b(preferences|settings)\b/, 'preferences'], [/\b(monitor|overview|home|dashboard)\b/, 'monitor'],
     [/\bequity\b/, 'monitor', 'equity'], [/\bcorrelations?\b/, 'monitor', 'correlation'], [/\b(risk distribution|histogram)\b/, 'monitor', 'risk'],

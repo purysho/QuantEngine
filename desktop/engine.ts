@@ -24,6 +24,9 @@ export class Engine {
   learningError: string | null = null;
   runtime: JsonRecord = {};
   onChange: () => void = () => {};
+  /** Refreshes datasets whose source needs the main process (Alpaca keys); returns the updated dataset. */
+  refreshExternal: ((dataset: Dataset) => Promise<Dataset | null>) | null = null;
+  marketSurface: JsonRecord | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private active: Promise<void> | null = null;
   private cancelled = false;
@@ -44,7 +47,7 @@ export class Engine {
   snapshot() {
     return { state: { ...this.state }, config: { ...this.config }, datasets: this.datasets,
       runs: this.runs, report: this.lastReport, options: this.optionsReport, runtime: this.runtime,
-      learning: this.learning, learningError: this.learningError };
+      learning: this.learning, learningError: this.learningError, marketSurface: this.marketSurface };
   }
   private publish() { this.onChange(); }
 
@@ -162,22 +165,33 @@ export class Engine {
       let dataset = this.datasets.find(d => d.id === this.config.datasetId);
       if (!dataset) throw new Error('Select an available dataset.');
       const today = new Date().toISOString().slice(0, 10);
-      if (dataset.kind === 'ecb' && this.config.autoRefreshEcb && this.state.continuous
-          && dataset.retrieved_at.slice(0, 10) !== today && this.config.lastEcbAttemptDate !== today) {
-        this.state.stage = 'Refreshing official ECB reference rates';
-        this.config.lastEcbAttemptDate = today;
+      const source = typeof dataset.metadata?.source === 'string' ? dataset.metadata.source : dataset.kind === 'ecb' ? 'ecb' : null;
+      const attempts = this.config.refreshAttempts ?? {};
+      // Market data is checked hourly once the day has a new close; official sources at most once a day.
+      const external = source === 'alpaca';
+      const due = external
+        ? (dataset.observation_end ?? '') < newYorkDate() && Date.now() - Date.parse(attempts[dataset.id] ?? '1970-01-01') > 3_600_000
+        : dataset.retrieved_at.slice(0, 10) !== today && (attempts[dataset.id] ?? '').slice(0, 10) !== today;
+      if (source && this.config.autoRefreshEcb && this.state.continuous && due && (!external || this.refreshExternal)) {
+        this.state.stage = `Refreshing ${dataset.name ?? dataset.id}`;
+        this.config.refreshAttempts = { ...attempts, [dataset.id]: external ? new Date().toISOString() : today };
         await this.persist(this.config);
         if (this.cancelled) return;
         this.publish();
         try {
-          const refreshed = await this.transport.request('refresh', {});
-          this.datasets = refreshed.datasets as Dataset[];
-          dataset = refreshed.dataset as Dataset;
+          if (external) {
+            const updated = await this.refreshExternal!(dataset);
+            if (updated) dataset = updated;
+          } else {
+            const refreshed = await this.transport.request('refresh', { source });
+            this.datasets = refreshed.datasets as Dataset[];
+            dataset = refreshed.dataset as Dataset;
+          }
           this.state.lastRefreshError = null;
           this.config.lastRefreshError = null;
         } catch (error) {
           if (this.cancelled) return;
-          this.state.lastRefreshError = `ECB refresh failed; using the saved snapshot. ${String((error as Error).message)}`;
+          this.state.lastRefreshError = `Refresh of ${dataset.name ?? dataset.id} failed; using the saved snapshot. ${String((error as Error).message)}`;
           this.config.lastRefreshError = this.state.lastRefreshError;
         }
       }
@@ -330,20 +344,20 @@ export class Engine {
     return pending;
   }
 
-  dataCommand(command: 'import' | 'refresh', values: JsonRecord = {}): Promise<Dataset> {
+  dataCommand(command: 'import' | 'refresh' | 'ingest', values: JsonRecord = {}, options: { whileRunning?: boolean } = {}): Promise<Dataset> {
     if (this.shuttingDown) return Promise.reject(new Error('Quant Engine is shutting down.'));
     if (this.state.settingsPending) return Promise.reject(new Error('Settings are still being saved. Wait before changing datasets.'));
-    if (this.state.busy || this.state.continuous) return Promise.reject(new Error('Pause the engine before changing datasets.'));
+    if (this.state.busy || (this.state.continuous && !options.whileRunning)) return Promise.reject(new Error('Pause the engine before changing datasets.'));
     this.state.busy = true;
     this.cancelled = false;
-    this.state.stage = command === 'import' ? 'Validating and copying CSV' : 'Refreshing official ECB reference rates';
+    this.state.stage = command === 'import' ? 'Validating and copying CSV' : command === 'ingest' ? 'Saving market prices' : 'Downloading official data';
     this.publish();
     const pending = this.dataJob(command, values);
     this.dataActive = pending;
     return pending.finally(() => { if (this.dataActive === pending) this.dataActive = null; });
   }
 
-  private async dataJob(command: 'import' | 'refresh', values: JsonRecord): Promise<Dataset> {
+  private async dataJob(command: 'import' | 'refresh' | 'ingest', values: JsonRecord): Promise<Dataset> {
     try {
       const result = await this.transport.request(command, values);
       this.datasets = result.datasets as Dataset[];
@@ -360,4 +374,62 @@ export class Engine {
       throw error;
     } finally { this.state.busy = this.pausing; if (!this.pausing) { this.state.stage = 'Ready to run'; this.publish(); } }
   }
+
+  /** Saves refreshed market prices from inside a research cycle (the cycle already owns the worker slot). */
+  async ingestDuringCycle(values: JsonRecord): Promise<Dataset> {
+    const result = await this.transport.request('ingest', values);
+    this.datasets = result.datasets as Dataset[];
+    return result.dataset as Dataset;
+  }
+
+  /** Runs one worker command in the shared slot (strategy lab, paper signal); same rules as option calculations. */
+  runTask(stage: string, command: string, values: JsonRecord): Promise<JsonRecord> {
+    if (this.shuttingDown) return Promise.reject(new Error('Quant Engine is shutting down.'));
+    if (this.pausing || this.state.settingsPending) return Promise.reject(new Error('The engine is saving or pausing; try again in a moment.'));
+    if (this.state.busy) return Promise.reject(new Error('A numerical worker is already active. Try again when it finishes.'));
+    this.clearTimer();
+    this.cancelled = false;
+    this.state.busy = true;
+    this.state.stage = stage;
+    this.state.fraction = 0;
+    this.publish();
+    const pending = this.transport.request(command, values, event => this.workerEvent(event)).finally(() => {
+      if (this.optionsActive === pending) this.optionsActive = null;
+      this.state.busy = this.pausing;
+      if (this.pausing) return;
+      if (this.state.continuous && !this.cancelled) this.schedule();
+      else { this.state.stage = 'Ready to run'; this.publish(); }
+    });
+    this.optionsActive = pending;
+    return pending;
+  }
+
+  /** Fits a market implied-volatility surface to a staged option chain in the shared worker slot. */
+  fitMarketSurface(path: string, rate: number): Promise<JsonRecord> {
+    if (this.shuttingDown) return Promise.reject(new Error('Quant Engine is shutting down.'));
+    if (this.pausing || this.state.settingsPending) return Promise.reject(new Error('The engine is saving or pausing; try again in a moment.'));
+    if (this.state.busy) return Promise.reject(new Error('A numerical worker is already active. Try again when it finishes.'));
+    this.clearTimer();
+    this.cancelled = false;
+    this.state.busy = true;
+    this.state.stage = 'Fitting the market volatility surface';
+    this.publish();
+    const pending = this.transport.request('market-surface', { path, rate }).then(result => {
+      this.marketSurface = result.surface as JsonRecord;
+      return this.marketSurface;
+    }).finally(() => {
+      if (this.optionsActive === pending) this.optionsActive = null;
+      this.state.busy = this.pausing;
+      if (this.pausing) return;
+      if (this.state.continuous && !this.cancelled) this.schedule();
+      else { this.state.stage = 'Ready to run'; this.publish(); }
+    });
+    this.optionsActive = pending;
+    return pending;
+  }
+}
+
+/** Today's date in New York, where US market sessions are dated. */
+export function newYorkDate(at = new Date()): string {
+  return at.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }

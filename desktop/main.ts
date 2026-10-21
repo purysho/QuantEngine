@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, ipcMain, shell, safeStorage } from 'electron';
 import fs from 'node:fs';
 import { readFile, writeFile, mkdir, rename, unlink, appendFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -8,10 +8,20 @@ import { ConfigStore, USER_SETTINGS, validatePatch } from './config.js';
 import { Engine } from './engine.js';
 import { Assistant } from './assistant.js';
 import { WorkerTransport, type JsonRecord } from './transport.js';
+import { MarketService } from './market/service.js';
+import { demoFetch, demoSocket, demoPaperFetch, DEMO_KEYS } from './market/demo.js';
+import { StrategyDesk } from './market/desk.js';
+import { PaperBroker, type PaperFetch } from './market/paper.js';
+import { SecretStore } from './market/secrets.js';
+import { validSymbol, type Fetch } from './market/alpaca.js';
+import type { SocketLike } from './market/stream.js';
+import type { Dataset } from './engine.js';
 
 app.setName('Quant Engine');
 if (process.platform === 'win32') app.setAppUserModelId('org.quantengine.desktop');
 const selfTest = process.argv.includes('--self-test');
+// Offline synthetic market for the self-test and screenshots; the window labels it DEMO DATA.
+const marketDemo = selfTest || process.argv.includes('--market-demo');
 const selfTestRoot = selfTest ? fs.mkdtempSync(path.join(os.tmpdir(), 'quant-desktop-test-')) : null;
 app.setPath('userData', selfTestRoot ? path.join(selfTestRoot, 'settings') : path.join(app.getPath('appData'), 'QuantEngine'));
 if (selfTestRoot) fs.mkdirSync(app.getPath('userData'), { recursive: true });
@@ -27,6 +37,8 @@ let configStore: ConfigStore;
 let lastSentReport: unknown;
 let lastSentRuns: unknown;
 let lastSentOptions: unknown;
+let market: MarketService;
+let desk: StrategyDesk;
 let settingsQueue: Promise<unknown> = Promise.resolve();
 let settingsPending = 0;
 
@@ -59,6 +71,40 @@ function pushState() {
       { type: 'separator' }, { label: 'Quit Quant Engine', click: () => { void quit(); } },
     ]));
   }
+}
+
+function pushMarket() {
+  if (window && !window.isDestroyed()) window.webContents.send('quant:market', market.snapshot());
+}
+
+function pushDesk() {
+  if (window && !window.isDestroyed()) window.webContents.send('quant:desk', desk.snapshot());
+}
+
+/** Writes a file into the engine's sources folder for the worker (requests over 64 KB travel as files). */
+async function stage(extension: 'csv' | 'json', content: string) {
+  const folder = path.join(engine.config.dataRoot, 'sources');
+  await mkdir(folder, { recursive: true });
+  const file = path.join(folder, `staged-${randomUUID()}.${extension}`);
+  await writeFile(file, content, 'utf8');
+  return file;
+}
+
+function pricesCsv(symbols: string[], dates: string[], closes: number[][]) {
+  return 'date,' + symbols.join(',') + '\n' + dates.map((date, i) => date + ',' + closes[i].map(v => String(v)).join(',')).join('\n') + '\n';
+}
+
+/** Alpaca daily closes → research dataset (stable id per symbol set, so updates replace it). */
+async function marketDataset(symbols: string[], years: number, duringCycle: boolean): Promise<Dataset> {
+  const { dates, closes } = await market.dailyCloses(symbols, years);
+  const file = await stage('csv', pricesCsv(symbols, dates, closes));
+  const id = 'alpaca-' + symbols.map(s => s.replace('/', '')).join('-').toLowerCase().slice(0, 60);
+  const values = { path: file, dataset_id: id, name: symbols.join(', ') + ' (Alpaca daily)',
+    metadata: { source: 'alpaca', symbols, years, units: 'Daily closes adjusted for splits and dividends (all US exchanges)',
+      update_frequency: 'Checked hourly while the engine runs, after each US session closes',
+      notice: 'Market data from Alpaca; not warranted as to completeness or accuracy.', citation: 'Alpaca Markets Data API' },
+    source_url: 'https://data.alpaca.markets/v2/stocks/bars' };
+  return duringCycle ? engine.ingestDuringCycle(values) : engine.dataCommand('ingest', values);
 }
 
 function showError(error: unknown) {
@@ -104,6 +150,7 @@ function quit(): Promise<void> {
   quitting = true;
   quitPromise = (async () => {
     await settingsQueue.catch(() => {});
+    market?.stop();
     await engine?.shutdown();
     tray?.destroy();
     exitAllowed = true;
@@ -112,6 +159,8 @@ function quit(): Promise<void> {
   return quitPromise;
 }
 
+const DATA_SOURCES = new Set(['ecb', 'us-industries', 'us-indices']);
+const CHART_RANGES = new Set(['1D', '5D', '1M', '6M', '1Y', '5Y', 'MAX']);
 const OPTION_FIELDS = new Set(['spot', 'strike', 'time', 'rate', 'volatility', 'dividend', 'kind', 'steps', 'paths', 'seed', 'market_price', 'surface_rho', 'surface_eta']);
 
 /** Shape check only; the numerical worker performs the authoritative range validation. */
@@ -185,7 +234,12 @@ async function command(method: string, values?: unknown): Promise<unknown> {
     await engine.dataCommand('import', { path: selected.filePaths[0] });
     return engine.snapshot();
   }
-  if (method === 'refresh-ecb') { await engine.dataCommand('refresh'); return engine.snapshot(); }
+  if (method === 'refresh-ecb') { await engine.dataCommand('refresh', { source: 'ecb' }); return engine.snapshot(); }
+  if (method === 'refresh-source') {
+    if (typeof values !== 'string' || !DATA_SOURCES.has(values)) throw new Error('Unknown data source.');
+    await engine.dataCommand('refresh', { source: values });
+    return engine.snapshot();
+  }
   if (method === 'open-run') {
     const run = checkedRun(values);
     const report = JSON.parse(await readFile(run.report_path as string, 'utf8')) as JsonRecord;
@@ -213,6 +267,58 @@ async function command(method: string, values?: unknown): Promise<unknown> {
     finally { await unlink(temporary).catch(() => {}); }
     return { path: selected.filePath };
   }
+  if (method === 'market-state') return market.snapshot();
+  if (method === 'market-keys') {
+    const { keyId, secret, feed } = (values ?? {}) as JsonRecord;
+    await market.setCredentials({ keyId, secret }, feed);
+    return market.snapshot();
+  }
+  if (method === 'market-clear-keys') { await market.clearCredentials(); return market.snapshot(); }
+  if (method === 'market-watchlist') { await market.setWatchlist(values); return market.snapshot(); }
+  if (method === 'market-chart') {
+    const { symbol, range } = (values ?? {}) as JsonRecord;
+    if (!CHART_RANGES.has(String(range))) throw new Error('Unknown chart range.');
+    return market.chart(symbol, range);
+  }
+  if (method === 'market-describe') return market.describe(values);
+  if (method === 'market-news') return market.news(values);
+  if (method === 'market-movers') return market.movers();
+  if (method === 'market-search') {
+    if (typeof values !== 'string' || values.length > 40) throw new Error('Search text is limited to 40 characters.');
+    return market.search(values);
+  }
+  if (method === 'market-surface') {
+    const chain = await market.optionChain(values);
+    const dff = market.macro.find(point => point.id === 'DFF')?.value;
+    const file = await stage('json', JSON.stringify(chain));
+    await engine.fitMarketSurface(file, typeof dff === 'number' ? dff / 100 : 0.04);
+    return engine.snapshot();
+  }
+  if (method === 'market-dataset') {
+    const { symbols, years } = (values ?? {}) as JsonRecord;
+    if (!Array.isArray(symbols) || symbols.length < 1 || symbols.length > 20 || !symbols.every(validSymbol)) throw new Error('Choose 1–20 valid symbols.');
+    if (typeof years !== 'number' || !Number.isInteger(years) || years < 1 || years > 10) throw new Error('Choose 1–10 years of history.');
+    if (engine.state.busy || engine.state.continuous) throw new Error('Pause the engine before creating a dataset.');
+    await marketDataset(symbols as string[], years, false);
+    return engine.snapshot();
+  }
+  if (method === 'desk-state') return desk.snapshot();
+  if (method === 'desk-lab') { await desk.runLab(); return desk.snapshot(); }
+  if (method === 'desk-configure') { await desk.configure(values); return desk.snapshot(); }
+  if (method === 'desk-refresh') { await desk.refresh(); return desk.snapshot(); }
+  if (method === 'desk-propose') { await desk.propose(); return desk.snapshot(); }
+  if (method === 'desk-submit') { await desk.submit(values); return desk.snapshot(); }
+  if (method === 'desk-kill') {
+    if (typeof values !== 'boolean') throw new Error('Kill switch must be on or off.');
+    await desk.kill(values);
+    return desk.snapshot();
+  }
+  if (method === 'open-link') {
+    // News links open in the user's browser; only https web pages are allowed.
+    if (typeof values !== 'string' || values.length > 2000 || !/^https:\/\/[^\s]+$/.test(values)) throw new Error('Only https links can be opened.');
+    await shell.openExternal(values);
+    return null;
+  }
   if (method === 'open-data-folder') { await mkdir(engine.config.dataRoot, { recursive: true }); await shell.openPath(engine.config.dataRoot); return null; }
   throw new Error('Unsupported desktop command.');
 }
@@ -225,7 +331,7 @@ function dispatchCommand(method: string, values?: unknown): Promise<unknown> {
     settingsQueue = pending;
     return pending;
   }
-  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'calculate-options', 'learn-now'].includes(method)) {
+  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'refresh-source', 'calculate-options', 'learn-now', 'market-dataset', 'market-surface', 'desk-lab', 'desk-propose', 'desk-submit'].includes(method)) {
     return Promise.reject(new Error('Settings or storage are still being saved. Wait before starting another operation.'));
   }
   return command(method, values);
@@ -251,7 +357,33 @@ async function nativeSelfTest() {
   await engine.learnNow();
   const learned = engine.learning as { tasks?: Record<string, { graph: { nodes: unknown[] } }> } | null;
   if (!learned?.tasks?.risk?.graph.nodes.length) throw new Error(`Self-test learning step failed: ${engine.learningError}`);
-  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), learnedModels: learned.tasks.risk.graph.nodes.length, completed: engine.state.completed,
+  // Terminal on the offline demo market: chart, description, market surface (worker) and a market dataset (staging + ingest).
+  const terminal = await window!.webContents.executeJavaScript(`(async () => {
+    const m = window.quant.market;
+    const chart = await m.chart('SPY', '6M');
+    const des = await m.describe('AAPL');
+    const surfaced = await m.surface('SPY');
+    const made = await m.dataset(['SPY', 'QQQ'], 2);
+    return { bars: chart.bars.length, vol20: des.vol20, expiries: surfaced.marketSurface.expiries.length,
+      datasetRows: made.datasets.find(d => d.id === 'alpaca-spy-qqq')?.rows ?? 0,
+      shown: !document.getElementById('page-terminal').classList.contains('hidden'), demo: (await m.state()).demo };
+  })()`);
+  if (terminal.bars < 100 || !(terminal.vol20 > 0) || terminal.expiries < 2 || terminal.datasetRows < 400 || !terminal.shown || !terminal.demo) {
+    throw new Error('Self-test terminal check failed: ' + JSON.stringify(terminal));
+  }
+  // Stage 3 loop on the demo paper account: enable, compute orders, two-step approval, submit, reconcile.
+  const paper = await window!.webContents.executeJavaScript(`(async () => {
+    const d = window.quant.desk;
+    const base = await d.state();
+    await d.configure({ ...base.settings, enabled: true, strategy: 'sectors' });
+    const proposed = await d.propose();
+    const submitted = await d.submit(proposed.proposal.id);
+    const again = await d.refresh();
+    return { orders: proposed.proposal.orders.length, positions: submitted.positions.length,
+      reconciled: again.journal.some(e => e.type === 'reconcile' && e.ok === true) };
+  })()`);
+  if (paper.orders < 1 || paper.positions < 1 || !paper.reconciled) throw new Error('Self-test paper loop failed: ' + JSON.stringify(paper));
+  console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), learnedModels: learned.tasks.risk.graph.nodes.length, completed: engine.state.completed, terminal, paper,
     runtime: engine.runtime, report: engine.lastReportPath }));
   await quit();
 }
@@ -284,6 +416,32 @@ else {
       await appendFile(path.join(engine.config.dataRoot, 'assistant-log.jsonl'), JSON.stringify(entry) + '\n', 'utf8');
     }, () => engine.config.assistantEndpoint ? { endpoint: engine.config.assistantEndpoint, model: engine.config.assistantModel } : null);
     try { await engine.initialize(); } catch (error) { showError(error); engine.state.phase = 'error'; }
+    // Market data: keys are encrypted by Windows (DPAPI) and stay in this process.
+    market = marketDemo
+      ? new MarketService(path.join(app.getPath('userData'), 'demo-market'), new SecretStore(path.join(app.getPath('userData'), 'demo-market', 'keys.json'), safeStorage), demoFetch(), demoSocket())
+      : new MarketService(app.getPath('userData'), new SecretStore(path.join(app.getPath('userData'), 'alpaca-keys.json'), safeStorage),
+        globalThis.fetch as unknown as Fetch, url => new WebSocket(url) as unknown as SocketLike);
+    market.onChange = pushMarket;
+    await market.load();
+    if (marketDemo) market.useDemo(DEMO_KEYS);
+    // Paper trading: only Alpaca's paper host is reachable (see market/paper.ts); demo mode uses an in-memory account.
+    const paperFetch = (marketDemo ? demoPaperFetch() : globalThis.fetch) as unknown as PaperFetch;
+    desk = new StrategyDesk(path.join(app.getPath('userData'), marketDemo ? 'demo-market/paper.json' : 'paper.json'),
+      new PaperBroker(() => market.credentials, paperFetch), market, {
+        dataRoot: () => engine.config.dataRoot,
+        runTask: (stage, command, values) => engine.runTask(stage, command, values),
+        stage,
+        riskFreeAnnual: () => { const dff = market.macro.find(point => point.id === 'DFF')?.value; return typeof dff === 'number' ? dff / 100 : 0.04; },
+      });
+    desk.onChange = pushDesk;
+    await desk.load();
+    engine.refreshExternal = async dataset => {
+      const meta = dataset.metadata as { symbols?: unknown; years?: unknown } | undefined;
+      if (!market.credentials || !Array.isArray(meta?.symbols) || !meta.symbols.every(validSymbol) || typeof meta.years !== 'number') return null;
+      return marketDataset(meta.symbols as string[], meta.years, true);
+    };
+    void market.start();
+    void desk.loadSavedLab().then(() => { pushDesk(); if (market.credentials && desk.settings.enabled) void desk.refresh(); });
     if (!selfTest) {
       const image = nativeImage.createFromPath(path.join(app.getAppPath(), 'assets/app.png'));
       if (!image.isEmpty()) {
@@ -304,6 +462,8 @@ else {
     const browserWindow = createWindow(selfTest || process.argv.includes('--background'));
     browserWindow.webContents.once('did-finish-load', () => {
       pushState();
+      pushMarket();
+      pushDesk();
       if (selfTest) void nativeSelfTest().catch(async error => { console.error('QUANT_SELF_TEST_FAILED', error); await engine.pause(); quitting = true; app.exit(1); });
     });
     if (!selfTest && config.resumeOnLaunch) void engine.start().catch(showError);

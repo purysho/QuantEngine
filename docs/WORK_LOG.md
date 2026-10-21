@@ -502,3 +502,119 @@ Every new report includes `conditional_risk`: a GJR-GARCH(1,1) fit with filtered
 **Interactive test (user-reported, 2026-10-18): no issues.** The user ran the remaining checks on the laptop and reported no problems: first launch, Options reference prices with the 3D surface on integrated graphics, Run once, Learn now, the assistant (including refusing a trade), continuous running and restart persistence. I did not observe these runs; this is the user's report.
 
 **Next:** make the download instructions clearer (to-do above). Decide on code signing. Then the next roadmap items: Newey–West standard errors and a deflated Sharpe ratio, and desktop pages for pairs, market making and alpha.
+
+---
+
+## Task 22 — Download instructions (PR #3, merged)
+
+The README and user guide now cover the problems found on the first install: the source-code zip, PowerShell's silent download, `curl.exe` bypassing the Windows proxy, and extracting into a new folder. Documentation-only pushes no longer rebuild the release. PR #3 passed all 8 checks and was merged (`fce278b`). Because the workflow file itself changed, the release rebuilt once and succeeded, so the published zip's SHA-256 changed to `6b88c7a6…` (the copy already on the laptop is still the verified earlier build).
+
+---
+
+## Task 23 — Real data and a market terminal (QuantEngine 0.3)
+
+**Asked:** the data was not live ("I want it to be a real, usable app") and "our own mini-Bloomberg terminal", using Alpaca.
+
+**Built**
+- **Free official datasets, one click** (`quant_store.refresh`). The sources are:
+  - FRED S&P 500 / Nasdaq Composite / Dow Jones;
+  - Ken French US market plus 12 industries since 2000, as total-return indexes;
+  - ECB rates.
+
+  Every download keeps a hashed raw copy. In continuous mode the datasets refresh once a day (`refreshAttempts` per dataset); a failure keeps the snapshot. All three were downloaded live in this environment: indices 2,513 rows ending 2026-10-15, industries 6,705 rows ending 2026-08-31, ECB 65 rows.
+- **Alpaca market data** (`desktop/market/`), in the main process only:
+  - **Client:** a GET-only client with an explicit path allowlist, so trading endpoints are impossible. Tests check that `/v2/orders` and `/v2/positions` are blocked.
+  - **Rate limit and history:** a 180-request-per-minute token bucket. Full-market (SIP) history ends 16 minutes ago, which is the free-plan rule.
+  - **Errors:** messages are explained in plain words without parsing Alpaca's HTML error pages.
+  - **Live stream:** authenticates, subscribes and resubscribes as the watchlist changes. Back-off is exponential up to 60 s. Code 406 (another app using the one free connection) falls back to 15-second snapshots. Code 402/409 stops with a clear message.
+  - **Keys:** encrypted with Windows DPAPI (Electron `safeStorage`) and tested with Alpaca before saving. The window only ever sees `••••` plus the last 4 characters.
+  - **Economy panel:** FRED macro data (VIX, 2y/10y, the curve, Fed funds, the broad dollar, Brent).
+- **Terminal page** (now the start page). It has:
+  - a command line (`AAPL`, `GP`, `DES`, `N`, `OMON`, `MOST`, `ECO`, `ADD`/`DEL`, `RESEARCH`, ranges) with symbol search;
+  - a watchlist that flashes on each live tick;
+  - TradingView Lightweight Charts candles and volume, in New York time, with the latest candle moving with live trades;
+  - description statistics, news, the economy panel and movers.
+- **Market implied-volatility surface** (`quant_options.market_surface`):
+  - **Data:** out-of-the-money mids from Alpaca's free indicative option chain. Quotes are skipped when they have no two-sided market, a spread over 50% of the mid, or under 7 days to expiry.
+  - **Fit:** raw SVI per expiry, with static-arbitrage checks and the median gap to Alpaca's own IV.
+  - **Display:** the Options page has a Model/Market toggle.
+- **Market data → research:**
+  - `RESEARCH SPY QQQ TLT` saves 5 years of adjusted daily closes through the worker's new `ingest` command and analyses them.
+  - Large payloads (CSV, option chains) travel as files staged in `sources/`, because worker requests are limited to 64 KB.
+  - These datasets refresh hourly in continuous mode until the latest New York close is in.
+- **Offline demo market** (`--market-demo`, and the self-test) with synthetic prices, news, chains and a ticking stream, labelled **DEMO DATA** on screen. The packaged self-test now also checks the terminal: a chart, a description, a fitted market surface (7 expiries) and an Alpaca-style dataset (521 rows).
+
+**What did not work at first, and why**
+- **FRED zip files:** FRED returned a **zip file** for a multi-series request when the series had mixed frequencies (DFF is a 7-day series). Fix: one request per series.
+- **Chart logo blocked:** Lightweight Charts' attribution logo injects an inline `<style>` element, which the Content Security Policy (`style-src 'self'`) blocks. Fix: logo off, attribution and link in the terminal footer, and the licence plus NOTICE in `licenses/`.
+- **Renderer tests:** they execute `ui-source.js` as a plain script, so an ES `import` broke them. Fix: the terminal is bundled separately (`app/terminal.bundle.js`, `window.QuantTerminal`). The tests now open the Monitor explicitly, because the app opens on the Terminal.
+- **Surface extrapolation:** the first market surface extrapolated SVI into strikes a short expiry never quoted (118% IV at the wing). Fix: show only the log-moneyness range every displayed expiry quotes, dropping the shortest expiries if the common range would be under ±7.5%.
+- **Demo volatility:** the demo's daily bars used intraday scaling (38% instead of 18% volatility). Fixed in the demo generator.
+- **Watchlist overflow:** the watchlist overflowed horizontally. Fix: a fixed table layout.
+
+**Not verified yet (important)**
+- **No real Alpaca keys:** this environment has none, so the Alpaca client has been tested only against fakes and the demo market. The first real check is on the laptop.
+- **Endpoints written from the docs, still unconfirmed:**
+  - Paper keys are documented to use the Basic data plan, but no page says outright that they work for market data.
+  - The screener (most actives, movers) is documented as "based on SIP data". It may need a paid plan; the terminal shows Alpaca's error if so.
+
+**Next**
+- The laptop test with paper keys: watchlist ticking during US hours, `AAPL OMON`, `RESEARCH SPY QQQ TLT`.
+- A real symbol directory for crypto names.
+- Optional desktop pages for pairs, market making and the alpha protocol.
+
+
+---
+
+## Task 24 — The road to real money: stages 1–3 (strategy lab and paper trading)
+
+**Asked:** "Is anything missing that you would feel comfortable giving this real money?" I answered no: there is no proven edge, the statistics were incomplete, and nothing has been tested live. I proposed four stages and the user said "Go ahead".
+
+**Stage 1: fixed rules** (`workers/quant_strategies.py`, registered 2026-10-21, hash `45cbcf4e541eb701…`)
+- **Trend + volatility target:** the US market while its 12-month return beats cash, sized to 15% volatility, versus buy-and-hold.
+- **Sector momentum:** the top 3 of 12 industries by return over months 12 to 1, versus equal weight.
+- **Grids:** 18 and 12 variants. Every variant is recorded for the multiple-testing correction.
+- **Execution:** the signal is computed at close s and traded at close s + 1; cash earns the risk-free rate; 10 bps is charged on turnover.
+
+**Stage 2: statistics** (`workers/quant_stats.py`)
+- **Newey–West standard errors:** match statsmodels 0.15.0 to 1e-15 (the reference value is in the tests).
+- **Probabilistic and Deflated Sharpe Ratios** (Bailey & López de Prado).
+- **Stationary block bootstrap** for the Sharpe ratio and for the paired difference against the benchmark.
+- **Walk-forward choice:** the best variant on earlier data only, re-chosen each year from 1950.
+- **Holdout:** the final 10 years are reserved.
+
+**Results on 1926-07-01 to 2026-08-31 (26,317 days), `experiments/results/strategy_lab.json`**
+- **Trend: NO-GO.** Sharpe 0.52 vs 0.45; annual return 8.4% vs 9.7%; max drawdown -48.9% vs -84.1%; last 10 years 0.43 vs 0.73; walk-forward 0.59 vs 0.54; deflated Sharpe (active) 0.003; Newey–West t (active) -1.63; P(Sharpe beats benchmark) 0.75; variants beating benchmark 100%; gates 2/5. It reduces risk (better Sharpe, much smaller drawdowns) but earns less than buy-and-hold and lagged it over the last decade.
+- **Sectors: NO-GO.** Sharpe 0.54 vs 0.49; annual return 11.8% vs 10.3%; max drawdown -80.8% vs -83.7%; last 10 years 0.69 vs 0.66; walk-forward 0.59 vs 0.58; deflated Sharpe (active) 0.519; Newey–West t (active) 2.16; P(Sharpe beats benchmark) 0.89; variants beating benchmark 83%; gates 4/5. It shows a small edge that does not survive the correction for the variants tried.
+- **Contamination:** both ideas are well published, and industry momentum was already examined on this data in Task 16. The final decade is therefore not a pristine holdout; forward paper trading is the only clean test.
+
+**What went wrong first and why**
+- **Version 1 gates were too lenient.** They compared returns with *cash*, so both strategies "passed" (deflated Sharpe 1.000), but buy-and-hold would pass too: that is just the equity premium.
+  - **Fix:** version 2 tests everything against the passive benchmark.
+  - **Disclosure:** this change was made after seeing results. It is recorded in the code and the JSON, and it can only make passing harder.
+  - **Not done:** no further gate changes were made. In particular, trend was not given a drawdown-based gate after seeing it fail, because that would be moving the goalposts.
+- **Live sector signal bug.** SPY, the market column, could be ranked as if it were a sector. Fixed, with a test.
+- **Fixed-dollar order cap.** The $25,000 cap blocked the strategies' normal trades on a $100,000 paper account (the self-test caught it). It is now a share of equity, default 50%, which still catches sizing bugs.
+- **Startup race.** Reading saved lab results at start-up used the shared worker slot and collided with the self-test ("A numerical worker is already active"). It is now read directly from disk.
+
+**Stage 3: paper trading** (`desktop/market/paper.ts`, `desk.ts`, the Strategies page)
+- **Host:** the only trading host is `paper-api.alpaca.markets`, with an allowlist of account, positions, orders and cancel-all. There is no "close all positions" endpoint and no live host. Live-account keys are rejected by the paper host with an explanation.
+- **Flow:** **Compute today's orders** runs the same rule on the traded ETFs' adjusted closes (worker `strategy-signal`). Orders are whole shares, sells before buys, long-only, with no leverage. **Submit** needs two clicks.
+- **Risk checks before sending:** enabled, kill switch off, list under 30 minutes old, each order at most a set share of equity, orders-per-day limit, daily loss stop on buys, cash plus sale proceeds covering the buys, and symbols in the universe.
+- **Idempotent orders:** `client_order_id = qe-<proposal>-<symbol>`, so a retry cannot double an order.
+- **Journal and reconciliation:** everything goes to `paper/journal.jsonl`, with one equity point per New York date. Reconciliation checks that every order filled and that positions equal the plan.
+- **Stage 3 checks:**
+  - 63 trading days compared with the rule's simulated returns on the same ETFs;
+  - tracking error at most 5%;
+  - paper return within ±2 tracking errors of the simulation;
+  - no unreconciled differences in 30 days;
+  - the kill switch tested once.
+- **Demo paper account** (in memory) for the self-test, which now runs the whole loop: enable → propose → approve → 3 orders filled → reconciled.
+
+**Stage 4** stays the user's decision outside QuantEngine. The app shows it as locked unless stages 2 and 3 pass, and it can never place real-money orders.
+
+**Not verified:** no real Alpaca paper account has been used from here (no keys). The trading endpoints follow Alpaca's documented v2 API. The first real check is the user's paper account.
+
+**Next**
+- Run paper trading for at least 63 trading days if the user wants to learn from it, knowing neither strategy passed stage 2.
+- Look for better hypotheses with the same discipline, for example cross-asset trend across stocks, bonds and gold. Each new idea counts toward the deflated Sharpe ratio.

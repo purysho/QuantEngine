@@ -23,7 +23,7 @@ import numpy as np
 
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={ids}"
 FRENCH_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/{name}_CSV.zip"
-USER_AGENT = "QuantEngine/0.2 (+https://github.com/purysho/QuantEngine)"  # FRED stalls some UA strings; an identifying URL is served.
+USER_AGENT = "QuantEngine/0.3 (+https://github.com/purysho/QuantEngine)"  # FRED stalls some UA strings; an identifying URL is served.
 
 
 def _now() -> str:
