@@ -562,3 +562,59 @@ The README and user guide now cover the problems found on the first install: the
 - The laptop test with paper keys: watchlist ticking during US hours, `AAPL OMON`, `RESEARCH SPY QQQ TLT`.
 - A real symbol directory for crypto names.
 - Optional desktop pages for pairs, market making and the alpha protocol.
+
+
+---
+
+## Task 24 — The road to real money: stages 1–3 (strategy lab and paper trading)
+
+**Asked:** "Is anything missing that you would feel comfortable giving this real money?" I answered no: there is no proven edge, the statistics were incomplete, and nothing has been tested live. I proposed four stages and the user said "Go ahead".
+
+**Stage 1: fixed rules** (`workers/quant_strategies.py`, registered 2026-10-21, hash `45cbcf4e541eb701…`)
+- **Trend + volatility target:** the US market while its 12-month return beats cash, sized to 15% volatility, versus buy-and-hold.
+- **Sector momentum:** the top 3 of 12 industries by return over months 12 to 1, versus equal weight.
+- **Grids:** 18 and 12 variants. Every variant is recorded for the multiple-testing correction.
+- **Execution:** the signal is computed at close s and traded at close s + 1; cash earns the risk-free rate; 10 bps is charged on turnover.
+
+**Stage 2: statistics** (`workers/quant_stats.py`)
+- **Newey–West standard errors:** match statsmodels 0.15.0 to 1e-15 (the reference value is in the tests).
+- **Probabilistic and Deflated Sharpe Ratios** (Bailey & López de Prado).
+- **Stationary block bootstrap** for the Sharpe ratio and for the paired difference against the benchmark.
+- **Walk-forward choice:** the best variant on earlier data only, re-chosen each year from 1950.
+- **Holdout:** the final 10 years are reserved.
+
+**Results on 1926-07-01 to 2026-08-31 (26,317 days), `experiments/results/strategy_lab.json`**
+- **Trend: NO-GO.** Sharpe 0.52 vs 0.45; annual return 8.4% vs 9.7%; max drawdown -48.9% vs -84.1%; last 10 years 0.43 vs 0.73; walk-forward 0.59 vs 0.54; deflated Sharpe (active) 0.003; Newey–West t (active) -1.63; P(Sharpe beats benchmark) 0.75; variants beating benchmark 100%; gates 2/5. It reduces risk (better Sharpe, much smaller drawdowns) but earns less than buy-and-hold and lagged it over the last decade.
+- **Sectors: NO-GO.** Sharpe 0.54 vs 0.49; annual return 11.8% vs 10.3%; max drawdown -80.8% vs -83.7%; last 10 years 0.69 vs 0.66; walk-forward 0.59 vs 0.58; deflated Sharpe (active) 0.519; Newey–West t (active) 2.16; P(Sharpe beats benchmark) 0.89; variants beating benchmark 83%; gates 4/5. It shows a small edge that does not survive the correction for the variants tried.
+- **Contamination:** both ideas are well published, and industry momentum was already examined on this data in Task 16. The final decade is therefore not a pristine holdout; forward paper trading is the only clean test.
+
+**What went wrong first and why**
+- **Version 1 gates were too lenient.** They compared returns with *cash*, so both strategies "passed" (deflated Sharpe 1.000), but buy-and-hold would pass too: that is just the equity premium.
+  - **Fix:** version 2 tests everything against the passive benchmark.
+  - **Disclosure:** this change was made after seeing results. It is recorded in the code and the JSON, and it can only make passing harder.
+  - **Not done:** no further gate changes were made. In particular, trend was not given a drawdown-based gate after seeing it fail, because that would be moving the goalposts.
+- **Live sector signal bug.** SPY, the market column, could be ranked as if it were a sector. Fixed, with a test.
+- **Fixed-dollar order cap.** The $25,000 cap blocked the strategies' normal trades on a $100,000 paper account (the self-test caught it). It is now a share of equity, default 50%, which still catches sizing bugs.
+- **Startup race.** Reading saved lab results at start-up used the shared worker slot and collided with the self-test ("A numerical worker is already active"). It is now read directly from disk.
+
+**Stage 3: paper trading** (`desktop/market/paper.ts`, `desk.ts`, the Strategies page)
+- **Host:** the only trading host is `paper-api.alpaca.markets`, with an allowlist of account, positions, orders and cancel-all. There is no "close all positions" endpoint and no live host. Live-account keys are rejected by the paper host with an explanation.
+- **Flow:** **Compute today's orders** runs the same rule on the traded ETFs' adjusted closes (worker `strategy-signal`). Orders are whole shares, sells before buys, long-only, with no leverage. **Submit** needs two clicks.
+- **Risk checks before sending:** enabled, kill switch off, list under 30 minutes old, each order at most a set share of equity, orders-per-day limit, daily loss stop on buys, cash plus sale proceeds covering the buys, and symbols in the universe.
+- **Idempotent orders:** `client_order_id = qe-<proposal>-<symbol>`, so a retry cannot double an order.
+- **Journal and reconciliation:** everything goes to `paper/journal.jsonl`, with one equity point per New York date. Reconciliation checks that every order filled and that positions equal the plan.
+- **Stage 3 checks:**
+  - 63 trading days compared with the rule's simulated returns on the same ETFs;
+  - tracking error at most 5%;
+  - paper return within ±2 tracking errors of the simulation;
+  - no unreconciled differences in 30 days;
+  - the kill switch tested once.
+- **Demo paper account** (in memory) for the self-test, which now runs the whole loop: enable → propose → approve → 3 orders filled → reconciled.
+
+**Stage 4** stays the user's decision outside QuantEngine. The app shows it as locked unless stages 2 and 3 pass, and it can never place real-money orders.
+
+**Not verified:** no real Alpaca paper account has been used from here (no keys). The trading endpoints follow Alpaca's documented v2 API. The first real check is the user's paper account.
+
+**Next**
+- Run paper trading for at least 63 trading days if the user wants to learn from it, knowing neither strategy passed stage 2.
+- Look for better hypotheses with the same discipline, for example cross-asset trend across stocks, bonds and gold. Each new idea counts toward the deflated Sharpe ratio.

@@ -1,0 +1,773 @@
+{
+  "experiment": "strategy_lab",
+  "recorded_at": "2026-10-21T09:51:59+00:00",
+  "duration_seconds": 8.747,
+  "runtime": {
+    "python": "3.13.16",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "platform": "Linux-6.18.44-fc-v140-x86_64-with-glibc2.39"
+  },
+  "registration": {
+    "date": "2026-10-21",
+    "hash": "45cbcf4e541eb70169d78c8b3237612bbaa9d95eaf8c007af7276f26c426e8be",
+    "families": {
+      "trend": {
+        "grid": {
+          "lookback": [
+            126,
+            189,
+            252
+          ],
+          "target_vol": [
+            null,
+            0.1,
+            0.15
+          ],
+          "rebalance": [
+            "month",
+            "week"
+          ]
+        },
+        "primary": {
+          "lookback": 252,
+          "target_vol": 0.15,
+          "rebalance": "month"
+        },
+        "benchmark": "Buy and hold the US market"
+      },
+      "sectors": {
+        "grid": {
+          "lookback": [
+            126,
+            252
+          ],
+          "top": [
+            2,
+            3,
+            4
+          ],
+          "trend_filter": [
+            false,
+            true
+          ],
+          "rebalance": [
+            "month"
+          ]
+        },
+        "primary": {
+          "lookback": 252,
+          "top": 3,
+          "trend_filter": false,
+          "rebalance": "month"
+        },
+        "benchmark": "Equal-weight all industries"
+      }
+    },
+    "gates": {
+      "deflated_sharpe": "Deflated Sharpe Ratio of the primary rule's active return (strategy minus benchmark, after costs) is at least 0.95",
+      "newey_west": "Newey\u2013West t-statistic of the primary rule's active return is at least 2",
+      "walk_forward": "Walk-forward out-of-sample Sharpe beats the benchmark's Sharpe over the same days",
+      "holdout": "Sharpe over the reserved final 10 years (after costs) is at least the benchmark's",
+      "robust": "At least 75% of all parameter variants beat the benchmark's Sharpe"
+    },
+    "gates_version": 2,
+    "gates_history": "Version 1 compared returns with cash; buy-and-hold passes that, so version 2 compares with the benchmark."
+  },
+  "data": {
+    "source": "Kenneth R. French Data Library: Mkt-RF + RF and 12 value-weighted industries (daily)",
+    "first": "1926-07-01",
+    "last": "2026-08-31",
+    "days": 26317,
+    "sha256": "f5b229fd2741537c329c277ffd245a037393607e9170817db9307f01a249eb05",
+    "files": [
+      "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "cde9864260d22e42fdbd29a8a1272b8a0ab67aaf4d8cc6fd7898e11c448f06b1"
+    ]
+  },
+  "contamination_note": "Industry momentum on this data was already examined in Task 16 (real_world_backtest), and trend-following is widely published, so the reserved final decade is not a pristine holdout. The only clean out-of-sample test is forward paper trading (stage 3).",
+  "results": {
+    "trend": {
+      "family": "trend",
+      "benchmark": "Buy and hold the US market",
+      "primary": "trend:lookback=252,rebalance=month,target_vol=0.15",
+      "period": [
+        "1927-06-02",
+        "2026-08-31"
+      ],
+      "cost_bps": 10.0,
+      "summary": {
+        "annual_return": 0.08412482097755625,
+        "annual_volatility": 0.10994268686711779,
+        "sharpe": 0.7902064906385425,
+        "max_drawdown": -0.48930441449079054,
+        "years": 103.34126984126983,
+        "skew": -1.5651228222010183,
+        "kurtosis": 41.54053122976969
+      },
+      "excess_sharpe": 0.5156548677685394,
+      "benchmark_summary": {
+        "annual_return": 0.09733856326566848,
+        "annual_volatility": 0.17167349648765323,
+        "sharpe": 0.627164584273899,
+        "max_drawdown": -0.8407399476860208,
+        "years": 103.34126984126983,
+        "skew": -0.1643027570021501,
+        "kurtosis": 19.004878197306446
+      },
+      "benchmark_excess_sharpe": 0.45131941827713834,
+      "newey_west_excess": {
+        "mean": 0.00022499513844188767,
+        "se": 4.4421019210006883e-05,
+        "t": 5.065060244975248,
+        "naive_se": 4.292171984299582e-05,
+        "lags": 13,
+        "n": 26042
+      },
+      "newey_west_active": {
+        "mean": -8.250044561463643e-05,
+        "se": 5.056269828969111e-05,
+        "t": -1.6316464193022882,
+        "naive_se": 4.8367156909419234e-05,
+        "lags": 13,
+        "n": 26042
+      },
+      "psr_excess": 0.9999998186484992,
+      "information_ratio": -0.16779106776419753,
+      "deflated": {
+        "dsr": 0.0030735278815592756,
+        "threshold_per_period": 0.006345099798648256,
+        "threshold_annual": 0.10072533666665576,
+        "trials": 18
+      },
+      "bootstrap": {
+        "sharpe": 0.5156548677685394,
+        "ci90": [
+          0.33809312259482577,
+          0.7151734152381409
+        ],
+        "ci95": [
+          0.3036279320752277,
+          0.7511983139806856
+        ],
+        "p_sharpe_le_0": 0.0,
+        "block": 21,
+        "draws": 1000,
+        "seed": 7
+      },
+      "sharpe_vs_benchmark": {
+        "difference": 0.06433544949140108,
+        "ci95": [
+          -0.11116005150139004,
+          0.2446543882188988
+        ],
+        "p_better": 0.752,
+        "draws": 1000,
+        "block": 21,
+        "seed": 11
+      },
+      "turnover_per_year": 0.9804288530904305,
+      "average_exposure": 0.6713805651096472,
+      "cost_sensitivity_sharpe": {
+        "0": 0.524548299563244,
+        "10": 0.5156548677685394,
+        "25": 0.5022511890857264,
+        "50": 0.4797571449207833
+      },
+      "holdout": {
+        "from": "2016-08-31",
+        "sharpe": 0.42968386619684484,
+        "benchmark_sharpe": 0.7318172958580765,
+        "pre_holdout_sharpe": 0.5327642212207496,
+        "max_drawdown": -0.3794262415744457,
+        "benchmark_max_drawdown": -0.34216280934892906
+      },
+      "walk_forward": {
+        "sharpe": 0.5920312361368182,
+        "in_sample_sharpe": 0.7376228081139278,
+        "benchmark_sharpe": 0.5399730834813868,
+        "from": "1950-01-03",
+        "years": 77,
+        "distinct_choices": 2
+      },
+      "variants": [
+        {
+          "id": "trend:lookback=126,rebalance=week,target_vol=0.1",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "week",
+            "target_vol": 0.1
+          },
+          "sharpe": 0.6363449060842693,
+          "benchmark_sharpe": 0.45665457909919643,
+          "active_per_period": -0.011900381089047533,
+          "annual_return": 0.08264005885840287,
+          "max_drawdown": -0.32097458703534876,
+          "turnover_per_year": 2.8288243665077992
+        },
+        {
+          "id": "trend:lookback=189,rebalance=week,target_vol=0.1",
+          "spec": {
+            "lookback": 189,
+            "rebalance": "week",
+            "target_vol": 0.1
+          },
+          "sharpe": 0.6354851772150025,
+          "benchmark_sharpe": 0.45489017601186665,
+          "active_per_period": -0.011637825141953452,
+          "annual_return": 0.08296305279500404,
+          "max_drawdown": -0.3706393497648611,
+          "turnover_per_year": 2.453322027374825
+        },
+        {
+          "id": "trend:lookback=189,rebalance=week,target_vol=0.15",
+          "spec": {
+            "lookback": 189,
+            "rebalance": "week",
+            "target_vol": 0.15
+          },
+          "sharpe": 0.6299320885657219,
+          "benchmark_sharpe": 0.45489017601186665,
+          "active_per_period": -0.006844961677123144,
+          "annual_return": 0.09289315183715141,
+          "max_drawdown": -0.41139912172857884,
+          "turnover_per_year": 2.4330345443086827
+        },
+        {
+          "id": "trend:lookback=126,rebalance=week,target_vol=0.15",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "week",
+            "target_vol": 0.15
+          },
+          "sharpe": 0.626928392787672,
+          "benchmark_sharpe": 0.45665457909919643,
+          "active_per_period": -0.007311580130920701,
+          "annual_return": 0.0921598350461339,
+          "max_drawdown": -0.4400689002323618,
+          "turnover_per_year": 2.879680954439742
+        },
+        {
+          "id": "trend:lookback=189,rebalance=week,target_vol=None",
+          "spec": {
+            "lookback": 189,
+            "rebalance": "week",
+            "target_vol": null
+          },
+          "sharpe": 0.6025517131936392,
+          "benchmark_sharpe": 0.45489017601186665,
+          "active_per_period": -0.003972837896201353,
+          "annual_return": 0.09791043643428865,
+          "max_drawdown": -0.39435368706131124,
+          "turnover_per_year": 2.4982010257980556
+        },
+        {
+          "id": "trend:lookback=189,rebalance=month,target_vol=0.1",
+          "spec": {
+            "lookback": 189,
+            "rebalance": "month",
+            "target_vol": 0.1
+          },
+          "sharpe": 0.5992944695400247,
+          "benchmark_sharpe": 0.45431747037317965,
+          "active_per_period": -0.012066009383460252,
+          "annual_return": 0.08240763587906441,
+          "max_drawdown": -0.3519755604861864,
+          "turnover_per_year": 1.340902528540941
+        },
+        {
+          "id": "trend:lookback=189,rebalance=month,target_vol=0.15",
+          "spec": {
+            "lookback": 189,
+            "rebalance": "month",
+            "target_vol": 0.15
+          },
+          "sharpe": 0.5831289938684325,
+          "benchmark_sharpe": 0.45431747037317965,
+          "active_per_period": -0.0076630641872946085,
+          "annual_return": 0.09094966407686944,
+          "max_drawdown": -0.41158425407473076,
+          "turnover_per_year": 1.2338943513440281
+        },
+        {
+          "id": "trend:lookback=252,rebalance=week,target_vol=0.1",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "week",
+            "target_vol": 0.1
+          },
+          "sharpe": 0.5807318395146299,
+          "benchmark_sharpe": 0.4527125510191109,
+          "active_per_period": -0.01330178850565545,
+          "annual_return": 0.0792635568782798,
+          "max_drawdown": -0.38055342871397935,
+          "turnover_per_year": 2.0449723226343575
+        },
+        {
+          "id": "trend:lookback=126,rebalance=week,target_vol=None",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "week",
+            "target_vol": null
+          },
+          "sharpe": 0.5776963376339855,
+          "benchmark_sharpe": 0.45665457909919643,
+          "active_per_period": -0.005376396043297029,
+          "annual_return": 0.09504951500905512,
+          "max_drawdown": -0.5777424560828925,
+          "turnover_per_year": 2.9928969678454136
+        },
+        {
+          "id": "trend:lookback=252,rebalance=week,target_vol=0.15",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "week",
+            "target_vol": 0.15
+          },
+          "sharpe": 0.5759108438035783,
+          "benchmark_sharpe": 0.4527125510191109,
+          "active_per_period": -0.008740927520640079,
+          "annual_return": 0.08852633892304529,
+          "max_drawdown": -0.4229987728549627,
+          "turnover_per_year": 1.8903736844783132
+        },
+        {
+          "id": "trend:lookback=189,rebalance=month,target_vol=None",
+          "spec": {
+            "lookback": 189,
+            "rebalance": "month",
+            "target_vol": null
+          },
+          "sharpe": 0.5735295529992231,
+          "benchmark_sharpe": 0.45431747037317965,
+          "active_per_period": -0.00401808963101215,
+          "annual_return": 0.09731285694293246,
+          "max_drawdown": -0.4131456418187601,
+          "turnover_per_year": 1.2060186071442245
+        },
+        {
+          "id": "trend:lookback=252,rebalance=week,target_vol=None",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "week",
+            "target_vol": null
+          },
+          "sharpe": 0.5583072133993325,
+          "benchmark_sharpe": 0.4527125510191109,
+          "active_per_period": -0.005216114955855811,
+          "annual_return": 0.09461146008432175,
+          "max_drawdown": -0.41056951152962196,
+          "turnover_per_year": 1.8468976631748588
+        },
+        {
+          "id": "trend:lookback=126,rebalance=month,target_vol=0.1",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "month",
+            "target_vol": 0.1
+          },
+          "sharpe": 0.5559097901635809,
+          "benchmark_sharpe": 0.456379117052629,
+          "active_per_period": -0.014034224684762273,
+          "annual_return": 0.07812601940603936,
+          "max_drawdown": -0.36278937875590866,
+          "turnover_per_year": 1.5108702253776913
+        },
+        {
+          "id": "trend:lookback=126,rebalance=month,target_vol=0.15",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "month",
+            "target_vol": 0.15
+          },
+          "sharpe": 0.5420864206278821,
+          "benchmark_sharpe": 0.456379117052629,
+          "active_per_period": -0.010104122463435597,
+          "annual_return": 0.08583650399583798,
+          "max_drawdown": -0.4573960774903395,
+          "turnover_per_year": 1.4679696191204046
+        },
+        {
+          "id": "trend:lookback=252,rebalance=month,target_vol=None",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "month",
+            "target_vol": null
+          },
+          "sharpe": 0.5342237066071764,
+          "benchmark_sharpe": 0.45131941827713834,
+          "active_per_period": -0.0062208289377906996,
+          "annual_return": 0.09221845287244457,
+          "max_drawdown": -0.47193322510402214,
+          "turnover_per_year": 0.8999308808847247
+        },
+        {
+          "id": "trend:lookback=252,rebalance=month,target_vol=0.1",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "month",
+            "target_vol": 0.1
+          },
+          "sharpe": 0.525495414345857,
+          "benchmark_sharpe": 0.45131941827713834,
+          "active_per_period": -0.014643969737305829,
+          "annual_return": 0.07628944223074896,
+          "max_drawdown": -0.43449473409193196,
+          "turnover_per_year": 1.1335838154648827
+        },
+        {
+          "id": "trend:lookback=252,rebalance=month,target_vol=0.15",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "month",
+            "target_vol": 0.15
+          },
+          "sharpe": 0.5156548677685394,
+          "benchmark_sharpe": 0.45131941827713834,
+          "active_per_period": -0.010569843750525075,
+          "annual_return": 0.08412482097755625,
+          "max_drawdown": -0.48930441449079054,
+          "turnover_per_year": 0.9804288530904305
+        },
+        {
+          "id": "trend:lookback=126,rebalance=month,target_vol=None",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "month",
+            "target_vol": null
+          },
+          "sharpe": 0.5135897615547292,
+          "benchmark_sharpe": 0.456379117052629,
+          "active_per_period": -0.008389616949225994,
+          "annual_return": 0.08850773706373571,
+          "max_drawdown": -0.5097958435009977,
+          "turnover_per_year": 1.4542536115569824
+        }
+      ],
+      "spec_curve": {
+        "count": 18,
+        "positive_share": 1.0,
+        "beats_benchmark_share": 1.0,
+        "median_sharpe": 0.5768035907187818,
+        "min_sharpe": 0.5135897615547292,
+        "max_sharpe": 0.6363449060842693
+      },
+      "gates": {
+        "deflated_sharpe": false,
+        "newey_west": false,
+        "walk_forward": true,
+        "holdout": false,
+        "robust": true
+      },
+      "gates_version": 2,
+      "go_to_paper": false
+    },
+    "sectors": {
+      "family": "sectors",
+      "benchmark": "Equal-weight all industries",
+      "primary": "sectors:lookback=252,rebalance=month,top=3,trend_filter=False",
+      "period": [
+        "1927-06-02",
+        "2026-08-31"
+      ],
+      "cost_bps": 10.0,
+      "summary": {
+        "annual_return": 0.11765270586211085,
+        "annual_volatility": 0.18095657768233386,
+        "sharpe": 0.7056381804137494,
+        "max_drawdown": -0.8084277842378588,
+        "years": 103.34126984126983,
+        "skew": -0.37295631087210535,
+        "kurtosis": 23.156395446189567
+      },
+      "excess_sharpe": 0.5388012508101757,
+      "benchmark_summary": {
+        "annual_return": 0.10289138822529642,
+        "annual_volatility": 0.1675235707982458,
+        "sharpe": 0.6686162267874545,
+        "max_drawdown": -0.8373183338202133,
+        "years": 103.34126984126983,
+        "skew": -0.12223902114397871,
+        "kurtosis": 22.463973455538845
+      },
+      "benchmark_excess_sharpe": 0.48840474654291677,
+      "newey_west_excess": {
+        "mean": 0.0003869492870491258,
+        "se": 7.22094956946666e-05,
+        "t": 5.358703634842113,
+        "naive_se": 7.064615968920305e-05,
+        "lags": 13,
+        "n": 26042
+      },
+      "newey_west_active": {
+        "mean": 6.222576351022704e-05,
+        "se": 2.8857951333494774e-05,
+        "t": 2.15627792808712,
+        "naive_se": 2.7465671188253467e-05,
+        "lags": 13,
+        "n": 26042
+      },
+      "psr_excess": 0.9999999712293719,
+      "information_ratio": 0.22286564196417077,
+      "deflated": {
+        "dsr": 0.5190579382683271,
+        "threshold_per_period": 0.013742061009327582,
+        "threshold_annual": 0.21814845559294826,
+        "trials": 12
+      },
+      "bootstrap": {
+        "sharpe": 0.5388012508101757,
+        "ci90": [
+          0.35438433256996094,
+          0.7336645136055984
+        ],
+        "ci95": [
+          0.3224793297020875,
+          0.7610098461471554
+        ],
+        "p_sharpe_le_0": 0.0,
+        "block": 21,
+        "draws": 1000,
+        "seed": 7
+      },
+      "sharpe_vs_benchmark": {
+        "difference": 0.050396504267258946,
+        "ci95": [
+          -0.026200181067654104,
+          0.13622045088667237
+        ],
+        "p_better": 0.889,
+        "draws": 1000,
+        "block": 21,
+        "seed": 11
+      },
+      "turnover_per_year": 5.041548268182168,
+      "average_exposure": 1.0,
+      "cost_sensitivity_sharpe": {
+        "0": 0.566632201507801,
+        "10": 0.5388012508101757,
+        "25": 0.496933652323153,
+        "50": 0.42691875416927816
+      },
+      "holdout": {
+        "from": "2016-08-31",
+        "sharpe": 0.6906855216395733,
+        "benchmark_sharpe": 0.6565291327856422,
+        "pre_holdout_sharpe": 0.5203486513963992,
+        "max_drawdown": -0.3801784865894511,
+        "benchmark_max_drawdown": -0.36897704012566357
+      },
+      "walk_forward": {
+        "sharpe": 0.588856680690413,
+        "in_sample_sharpe": 0.6747785392572575,
+        "benchmark_sharpe": 0.5769030157498369,
+        "from": "1950-01-03",
+        "years": 77,
+        "distinct_choices": 2
+      },
+      "variants": [
+        {
+          "id": "sectors:lookback=252,rebalance=month,top=2,trend_filter=True",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "month",
+            "top": 2,
+            "trend_filter": true
+          },
+          "sharpe": 0.6183666336383098,
+          "benchmark_sharpe": 0.48840474654291677,
+          "active_per_period": 0.006219867832654774,
+          "annual_return": 0.12042930121571627,
+          "max_drawdown": -0.5695230763950008,
+          "turnover_per_year": 4.557714461254896
+        },
+        {
+          "id": "sectors:lookback=252,rebalance=month,top=4,trend_filter=True",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "month",
+            "top": 4,
+            "trend_filter": true
+          },
+          "sharpe": 0.6164486777104701,
+          "benchmark_sharpe": 0.48840474654291677,
+          "active_per_period": 0.0014597405477498532,
+          "annual_return": 0.11115264702327221,
+          "max_drawdown": -0.4974523219948216,
+          "turnover_per_year": 3.735196989478535
+        },
+        {
+          "id": "sectors:lookback=252,rebalance=month,top=3,trend_filter=True",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "month",
+            "top": 3,
+            "trend_filter": true
+          },
+          "sharpe": 0.6008377527498635,
+          "benchmark_sharpe": 0.48840474654291677,
+          "active_per_period": 0.0021289651370829735,
+          "annual_return": 0.11184900224531424,
+          "max_drawdown": -0.5170903390735446,
+          "turnover_per_year": 4.164196298287381
+        },
+        {
+          "id": "sectors:lookback=252,rebalance=month,top=2,trend_filter=False",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "month",
+            "top": 2,
+            "trend_filter": false
+          },
+          "sharpe": 0.5595208019898654,
+          "benchmark_sharpe": 0.48840474654291677,
+          "active_per_period": 0.01814394536007739,
+          "annual_return": 0.12692173638063187,
+          "max_drawdown": -0.8396784770482335,
+          "turnover_per_year": 5.747945626295984
+        },
+        {
+          "id": "sectors:lookback=252,rebalance=month,top=4,trend_filter=False",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "month",
+            "top": 4,
+            "trend_filter": false
+          },
+          "sharpe": 0.5542561959161817,
+          "benchmark_sharpe": 0.48840474654291677,
+          "active_per_period": 0.016922783194187958,
+          "annual_return": 0.1185448212219049,
+          "max_drawdown": -0.7859543593551105,
+          "turnover_per_year": 4.233545810613625
+        },
+        {
+          "id": "sectors:lookback=252,rebalance=month,top=3,trend_filter=False",
+          "spec": {
+            "lookback": 252,
+            "rebalance": "month",
+            "top": 3,
+            "trend_filter": false
+          },
+          "sharpe": 0.5388012508101757,
+          "benchmark_sharpe": 0.48840474654291677,
+          "active_per_period": 0.014039215819475153,
+          "annual_return": 0.11765270586211085,
+          "max_drawdown": -0.8084277842378588,
+          "turnover_per_year": 5.041548268182168
+        },
+        {
+          "id": "sectors:lookback=126,rebalance=month,top=3,trend_filter=True",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "month",
+            "top": 3,
+            "trend_filter": true
+          },
+          "sharpe": 0.5088669305122933,
+          "benchmark_sharpe": 0.4945900161018323,
+          "active_per_period": -0.0049535142374126226,
+          "annual_return": 0.0968034809209497,
+          "max_drawdown": -0.6143770685097504,
+          "turnover_per_year": 6.0321027287319415
+        },
+        {
+          "id": "sectors:lookback=126,rebalance=month,top=3,trend_filter=False",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "month",
+            "top": 3,
+            "trend_filter": false
+          },
+          "sharpe": 0.5053747080921209,
+          "benchmark_sharpe": 0.4945900161018323,
+          "active_per_period": 0.0067207193970464105,
+          "annual_return": 0.10991012744284223,
+          "max_drawdown": -0.8208905035446878,
+          "turnover_per_year": 7.386837881219904
+        },
+        {
+          "id": "sectors:lookback=126,rebalance=month,top=4,trend_filter=False",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "month",
+            "top": 4,
+            "trend_filter": false
+          },
+          "sharpe": 0.5020599815688189,
+          "benchmark_sharpe": 0.4945900161018323,
+          "active_per_period": 0.0052552144661244015,
+          "annual_return": 0.10779206416189657,
+          "max_drawdown": -0.8074523977395391,
+          "turnover_per_year": 6.3322632423756025
+        },
+        {
+          "id": "sectors:lookback=126,rebalance=month,top=4,trend_filter=True",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "month",
+            "top": 4,
+            "trend_filter": true
+          },
+          "sharpe": 0.4995830339670363,
+          "benchmark_sharpe": 0.4945900161018323,
+          "active_per_period": -0.007065350944190349,
+          "annual_return": 0.09327136071348763,
+          "max_drawdown": -0.6194609569189417,
+          "turnover_per_year": 5.38362760834671
+        },
+        {
+          "id": "sectors:lookback=126,rebalance=month,top=2,trend_filter=False",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "month",
+            "top": 2,
+            "trend_filter": false
+          },
+          "sharpe": 0.49294245296123956,
+          "benchmark_sharpe": 0.4945900161018323,
+          "active_per_period": 0.006635206130070573,
+          "annual_return": 0.11037085087353926,
+          "max_drawdown": -0.8627899775868915,
+          "turnover_per_year": 8.686998394863563
+        },
+        {
+          "id": "sectors:lookback=126,rebalance=month,top=2,trend_filter=True",
+          "spec": {
+            "lookback": 126,
+            "rebalance": "month",
+            "top": 2,
+            "trend_filter": true
+          },
+          "sharpe": 0.48719309771952435,
+          "benchmark_sharpe": 0.4945900161018323,
+          "active_per_period": -0.003969665210376366,
+          "annual_return": 0.09696388059777661,
+          "max_drawdown": -0.6476873568205337,
+          "turnover_per_year": 6.693418940609952
+        }
+      ],
+      "spec_curve": {
+        "count": 12,
+        "positive_share": 1.0,
+        "beats_benchmark_share": 0.8333333333333334,
+        "median_sharpe": 0.5238340906612344,
+        "min_sharpe": 0.48719309771952435,
+        "max_sharpe": 0.6183666336383098
+      },
+      "gates": {
+        "deflated_sharpe": false,
+        "newey_west": true,
+        "walk_forward": true,
+        "holdout": true,
+        "robust": true
+      },
+      "gates_version": 2,
+      "go_to_paper": false
+    }
+  },
+  "acceptance": {
+    "trend_go_to_paper": false,
+    "sectors_go_to_paper": false
+  }
+}

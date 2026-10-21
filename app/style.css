@@ -178,3 +178,21 @@ button.term-headline:hover,button.term-headline:focus-visible{color:var(--amber)
 .term-credits{font-size:12px;color:var(--ink-muted);margin:12px 0 4px}.term-credits .text-button{font-size:12px}
 body.market-demo #page-terminal .term-grid{outline:1px dashed #ffb34799;outline-offset:4px}body.market-demo .term-credits::before{content:"DEMO DATA: synthetic prices, news and option chains generated on this computer. ";color:var(--amber);font-weight:700}
 .term-watch .table-scroll{overflow-x:hidden}.term-table{table-layout:fixed}.term-table thead th:nth-child(1){width:38%}.term-table thead th:nth-child(2){width:24%}.term-table thead th:nth-child(3){width:20%}.term-table thead th:nth-child(4){width:18%}.term-table tbody th small{max-width:100%}
+/* ---- Strategies ---- */
+.ladder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.ladder-step{display:flex;gap:10px;border:1px solid #ff2a5533;background:#0d0a12;padding:12px}.ladder-step strong{display:block;font-size:14px}
+.ladder-n{font:700 22px "Cascadia Mono",Consolas,monospace;color:var(--ink-muted)}.ladder-step small{display:block;font-size:12px;color:var(--ink-muted);margin-top:4px}
+.ladder-state{font:700 12px "Cascadia Mono",Consolas,monospace;letter-spacing:1px;color:#ffb347}.ladder-step.done{border-color:#35e0a188}.ladder-step.done .ladder-state,.ladder-step.done .ladder-n{color:#35e0a1}
+.ladder-step.locked .ladder-state{color:var(--ink-muted)}
+.lab-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:6px 17px 14px}.lab-card{border:1px solid #ff2a5526;padding:12px;background:#07060a}
+.lab-head{display:flex;justify-content:space-between;align-items:center}.lab-head h3{margin:0;font-size:15px}.lab-foot{grid-column:1/-1}
+.spec-curve{width:100%;height:64px;margin-top:8px}
+.checks{list-style:none;margin:8px 0 0;padding:0}.checks li{display:flex;gap:8px;font-size:13px;padding:3px 0}.checks li span{font-weight:700;width:14px}
+.checks li.pass span{color:#35e0a1}.checks li.fail span{color:#ff4d6d}
+.paper-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;padding:8px 17px 12px}.paper-grid h3,.paper-account h3{font-size:13px;margin:8px 0}
+.panel-heading.inner{min-height:0;padding:0;border:0}.paper-orders{padding:4px 17px 8px}
+.paper-warning{border:1px solid #ffb34766;background:#1a0f0599;padding:8px 10px;font-size:13px;color:#ffd9a3}
+.journal{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto;font:12px "Cascadia Mono",Consolas,monospace}.journal li{padding:4px 0;border-bottom:1px solid #ff2a5510}.journal time{color:var(--ink-muted)}
+button.danger{border-color:#ff4d6d!important;color:#ff4d6d!important}
+@media (max-width:1360px){.ladder{grid-template-columns:repeat(2,minmax(0,1fr))}.lab-results,.paper-grid{grid-template-columns:1fr}}
+.ladder-step.failed{border-color:#ff4d6d88}.ladder-step.failed .ladder-state{color:#ff4d6d}

@@ -9,6 +9,10 @@ const BASE: Record<string, [number, string]> = {
   IWM: [245, 'iShares Russell 2000 ETF'], AAPL: [250, 'Apple Inc.'], MSFT: [520, 'Microsoft Corporation'], NVDA: [185, 'NVIDIA Corporation'],
   AMZN: [225, 'Amazon.com, Inc.'], GOOGL: [245, 'Alphabet Inc. Class A'], TSLA: [430, 'Tesla, Inc.'], TLT: [90, 'iShares 20+ Year Treasury Bond ETF'],
   'BTC/USD': [108000, 'Bitcoin'], 'ETH/USD': [3900, 'Ether'],
+  XLB: [90, 'Materials Select Sector SPDR'], XLE: [88, 'Energy Select Sector SPDR'], XLF: [52, 'Financial Select Sector SPDR'],
+  XLI: [150, 'Industrial Select Sector SPDR'], XLK: [280, 'Technology Select Sector SPDR'], XLP: [79, 'Consumer Staples Select Sector SPDR'],
+  XLU: [86, 'Utilities Select Sector SPDR'], XLV: [140, 'Health Care Select Sector SPDR'], XLY: [235, 'Consumer Discretionary Select Sector SPDR'],
+  XLRE: [42, 'Real Estate Select Sector SPDR'], XLC: [115, 'Communication Services Select Sector SPDR'],
 };
 
 function seeded(text: string) {
@@ -156,3 +160,34 @@ export function demoSocket(now = () => Date.now()): (url: string) => SocketLike 
 }
 
 export const DEMO_KEYS = { keyId: 'PKDEMO0000000000DEMO', secret: 'demo-secret-not-a-real-key-000000000000' };
+
+/** In-memory demo paper account: market orders fill immediately at the demo price. Used only in demo mode. */
+export function demoPaperFetch(now = () => Date.now()) {
+  let cash = 100_000;
+  const positions = new Map<string, number>();
+  const orders: Array<Record<string, unknown>> = [];
+  const price = (symbol: string) => snapshot(symbol, now()).latestTrade.p;
+  const equity = () => cash + [...positions].reduce((a, [s, q]) => a + q * price(s), 0);
+  const reply = (status: number, body: unknown) => ({ status, ok: status < 400, text: async () => JSON.stringify(body) });
+  return async (url: string, init: { method: string; body?: string }) => {
+    const u = new URL(url);
+    if (u.pathname === '/v2/account') return reply(200, { equity: String(equity()), last_equity: '100000', cash: String(cash), buying_power: String(cash),
+      status: 'ACTIVE', currency: 'USD', trading_blocked: false, account_blocked: false });
+    if (u.pathname === '/v2/positions') return reply(200, [...positions].filter(([, q]) => q !== 0).map(([symbol, qty]) => ({ symbol, qty: String(qty),
+      market_value: String(qty * price(symbol)), current_price: String(price(symbol)), avg_entry_price: String(price(symbol)), unrealized_pl: '0' })));
+    if (u.pathname === '/v2/orders' && init.method === 'GET') return reply(200, [...orders].reverse());
+    if (u.pathname === '/v2/orders' && init.method === 'DELETE') return reply(207, []);
+    if (u.pathname === '/v2/orders' && init.method === 'POST') {
+      const o = JSON.parse(init.body ?? '{}') as { symbol: string; qty: string; side: string; client_order_id: string };
+      if (orders.some(x => x.client_order_id === o.client_order_id)) return reply(422, { message: 'client_order_id must be unique' });
+      const qty = Number(o.qty), p = price(o.symbol), signed = o.side === 'buy' ? qty : -qty;
+      cash -= signed * p;
+      positions.set(o.symbol, (positions.get(o.symbol) ?? 0) + signed);
+      const order = { id: 'demo-' + (orders.length + 1), client_order_id: o.client_order_id, symbol: o.symbol, side: o.side, qty: o.qty,
+        status: 'filled', filled_qty: o.qty, filled_avg_price: String(p), submitted_at: new Date(now()).toISOString(), filled_at: new Date(now()).toISOString() };
+      orders.push(order);
+      return reply(200, order);
+    }
+    return reply(404, { message: 'not found' });
+  };
+}

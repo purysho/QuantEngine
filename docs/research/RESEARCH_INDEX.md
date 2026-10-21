@@ -58,8 +58,8 @@ AIA Macro (Bridgewater), Alpha-GPT, the Citadel AI assistant and Balyasny's tool
 ## Next research steps (ranked)
 
 1. ~~VaR exception backtests~~ and ~~GARCH(1,1)-t conditional VaR~~ (done; Tasks 8 and 10).
-2. Newey–West standard errors and a deflated Sharpe ratio for every reported strategy mean.
-3. Specification curve across lookback/rebalance/cost so parameter choice is visibly not cherry-picked.
+2. ~~Newey–West standard errors and a deflated Sharpe ratio~~ and ~~specification curves~~ (done in `quant_stats` / `quant_strategies`, Task 24).
+3. Apply the same discipline to new hypotheses (cross-asset trend); each new idea raises the deflated-Sharpe bar.
 4. GARCH(1,1)-t volatility for risk; a Kalman-filter hedge ratio for pairs, evaluated with the same clocks.
 5. Desktop pages for pairs, market making and alpha, using the shared worker slot.
 6. Elapsed-time windows (chrono-ta semantics) for irregular CSV data.
@@ -75,3 +75,9 @@ AIA Macro (Bridgewater), Alpha-GPT, the Citadel AI assistant and Balyasny's tool
 - `desktop/market/`: a read-only Alpaca client (allowlisted GET paths only), a reconnecting stream, encrypted key storage, a FRED macro panel and an offline demo market used by the self-test. Tests in `tests/market.test.ts`.
 - `workers/quant_store.py`: one-click refreshable datasets (FRED indices, French-library industries since 2000, ECB) and `ingest` for Alpaca daily closes. Tests in `tests/test_quant_sources.py` and `tests/test_quant_market.py`.
 - Not yet verified against a real Alpaca account from this environment (no keys here); the client follows Alpaca's current documentation, and the first run on the user's laptop is the real test.
+
+## Strategy evidence (0.3, Task 24)
+
+- `workers/quant_stats.py`: Newey–West HAC (matches statsmodels to 1e-15), Probabilistic/Deflated Sharpe Ratio (Bailey & López de Prado 2012, 2014), stationary block bootstrap (Politis & Romano 1994) including paired Sharpe differences.
+- `workers/quant_strategies.py`: pre-registered trend/volatility-target (Moskowitz, Ooi & Pedersen 2012; Moreira & Muir 2017) and industry momentum (Moskowitz & Grinblatt 1999), gates version 2 against passive benchmarks.
+- `experiments/results/strategy_lab.json`: neither strategy passes; the work log explains why and how the gates were set.

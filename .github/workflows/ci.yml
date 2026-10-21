@@ -80,9 +80,11 @@ jobs:
         run: python experiments/real_world_backtest.py
       - name: Prequential evolutionary learning on real data
         run: python experiments/evolution_real.py --offline
+      - name: Strategy lab (stage 2 gates) on 100 years of data
+        run: python experiments/strategy_lab.py --offline
       - name: Acceptance summary
         run: |
-          python -c "import json; [print(p, json.load(open('experiments/results/'+p+'.json')).get('acceptance')) for p in ('real_world_backtest','evolution_real')]"
+          python -c "import json; [print(p, json.load(open('experiments/results/'+p+'.json')).get('acceptance')) for p in ('real_world_backtest','evolution_real','strategy_lab')]"
 
   windows-package:
     name: Windows portable package with embedded runtime

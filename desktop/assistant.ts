@@ -97,7 +97,7 @@ export function parseCommand(input: string): Intent {
   if (!text) return { kind: 'unknown' };
   if (/\b(buy|sell|short|go long|place|submit|send)\b.*\b(order|shares?|stock|contracts?|position|it)\b|\b(trade|execute|broker(age)?)\b(?! cost)/.test(text)
       && !/\b(cost|costs|backtest)\b/.test(text)) {
-    return { kind: 'refuse', reason: 'QuantEngine is research-only: it has no brokerage connection and cannot place or send orders.' };
+    return { kind: 'refuse', reason: 'The assistant never places orders. QuantEngine cannot trade real money; simulated paper orders are sent only from the Strategies page after you approve the list.' };
   }
   if (/^(help|what can you do|commands|\?)/.test(text)) return { kind: 'help' };
   // Explanations of QuantEngine's own maths are answered from the report's step-by-step workings;

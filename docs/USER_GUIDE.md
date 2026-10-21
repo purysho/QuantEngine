@@ -76,7 +76,7 @@ The app opens on the **Terminal**. Type in the command line at the top (press **
 | `ADD TLT`, `DEL TLT` | Change the watchlist (up to 40 symbols) |
 | `RESEARCH SPY QQQ TLT` | Downloads 5 years of adjusted daily closes, saves them as a research dataset and analyses it |
 
-**Connecting live US stock data.** Create a free account at alpaca.markets, open the **paper trading** dashboard and generate API keys. In **Preferences → Market data (Alpaca)**, paste the key ID and secret, choose a feed and press **Save and test**. The keys are tested with Alpaca before they are saved, are encrypted by Windows, and are never shown again. QuantEngine only reads market data; it cannot place orders. Never paste your keys into a chat or a file.
+**Connecting live US stock data.** Create a free account at alpaca.markets, open the **paper trading** dashboard and generate API keys. In **Preferences → Market data (Alpaca)**, paste the key ID and secret, choose a feed and press **Save and test**. The keys are tested with Alpaca before they are saved, are encrypted by Windows, and are never shown again. The terminal only reads market data. Orders exist only on the Strategies page, only in a paper account, and only after you approve them (see below). Never paste your keys into a chat or a file.
 
 - **Feeds.** *IEX* (free) is real-time but covers about 2.5% of US volume, so its volume figures are partial. *All exchanges, 15 min delay* (free) is complete but delayed. *All exchanges, real-time* needs Alpaca's paid plan. Charts of a day or longer always use complete, split- and dividend-adjusted history.
 - **Live updates.** The watchlist streams trades over one connection; the free plan allows one live connection and 30 streamed stock symbols. If another program uses the same keys, QuantEngine says so and shows 15-second snapshots instead.
@@ -87,6 +87,34 @@ Data from Alpaca is "not warranted as to completeness or accuracy" (Alpaca's ter
 
 **Official datasets.** On the **Datasets** page, **Free official data** downloads the S&P 500, Nasdaq Composite and Dow Jones (FRED, about ten years), the US market and 12 industries since 2000 (Ken French library, total-return indexes, updated monthly by the source) or ECB exchange rates. While the engine runs continuously, these refresh once a day and Alpaca datasets hourly until the latest close arrives; a failed refresh keeps the saved snapshot.
 
+## Strategies: from idea to (maybe) real money
+
+The **Strategies** page follows four stages. QuantEngine automates stages 1–3 and can never trade real money.
+
+1. **Fixed rules.** Two strategies are written in code before testing (`workers/quant_strategies.py`, registered 2026-10-21, with a hash shown in every result):
+   - **Trend + volatility target:** hold the US market only while its 12-month return beats cash, sized to 15% annual volatility. Traded as SPY versus cash.
+   - **Sector momentum:** hold the 3 industries with the best 12-month return, skipping the latest month. Traded as SPDR sector ETFs.
+2. **Backtest gates.** **Run strategy lab** downloads 100 years of daily US data (Kenneth R. French library) and tests each strategy against simply holding its benchmark:
+   - **Execution and costs:** trades happen at the next close, and 10 bps is charged on turnover.
+   - **Tests:** every parameter variant, a walk-forward choice of variant (decided each year using only earlier data), and the final 10 years reserved.
+   - **Statistics:** Newey–West t-statistics and the Deflated Sharpe Ratio, which corrects for the number of variants tried.
+
+   All five gates must pass before a strategy counts as ready for paper trading. **Result so far (2026-08 data): neither passes.** Trend has a higher Sharpe ratio and a far smaller worst fall (−49% against −84%), but lower returns, and it lagged buy-and-hold in the last decade. Sector momentum's edge (t = 2.2) does not survive the multiple-testing correction (deflated Sharpe 0.52, needs 0.95).
+3. **Paper trading.** In Preferences, add keys from Alpaca's *paper trading* dashboard. On the Strategies page, tick **Enable paper trading**, choose a strategy and save.
+   - **Compute today's orders** shows the targets and whole-share orders. Nothing is sent until you press **Submit to paper account** and confirm.
+   - **Limits:** each order at most a set share of equity (default 50%), no leverage, no shorts, a maximum number of orders per day, and a daily loss stop that blocks new buys. The **kill switch** cancels open paper orders and blocks new ones.
+   - **Records:** every proposal, approval, order, error and reconciliation goes to `paper/journal.jsonl`; daily equity goes to `paper/equity.jsonl`.
+   - **Stage 3 checks:**
+     - at least 63 trading days compared with the rule's simulated returns on the same ETFs;
+     - tracking error at most 5% a year;
+     - paper return within the expected band;
+     - no unreconciled differences in 30 days;
+     - the kill switch tested once.
+   - A strategy that failed stage 2 can still be paper-traded for learning; the page says so.
+4. **Small real money** is your decision, outside QuantEngine. Only consider it after stages 2 and 3 both pass, with a small amount you can afford to lose. Keep in mind US rules such as the $25,000 minimum for frequent day trading in margin accounts, and keep tax records.
+
+Orders go only to `paper-api.alpaca.markets`. The live trading host is not in QuantEngine's code, and live-account keys are rejected by the paper host. US options are not paper-traded: there is not enough history of option prices to test such a strategy.
+
 ## Options calculator
 
 Open **Options** to price a hypothetical call or put. Enter spot, strike, years to expiry, and volatility, rate and dividend yield as annual percentages. The page shows the Black–Scholes price, CRR tree prices (European and American, with the early-exercise premium), a seeded Monte Carlo price with its standard error, the put–call parity gap, and Greeks with units. Enter a market price to get implied volatility; impossible quotes are rejected with the bound they violate. The implied-move panel explains the "VIX ÷ 16" rule: it is a one-standard-deviation daily move (√252 ≈ 15.87), and the expected absolute move is only about 0.8 of that.
@@ -95,7 +123,7 @@ The calculation uses the same single worker as research. If a continuous cycle i
 
 ## Ask (Ctrl+K) and voice
 
-Press **Ctrl+K** and type or dictate: "what is my VaR", "explain Black–Scholes", "price a put strike 95 spot 100 6 months vol 25%", "show the vol surface", "learn now", "set paths to 100000". For voice on Windows, install **Handy** (`winget install cjpais.Handy`; free and offline; choose the Parakeet model on a laptop without a GPU), hold its shortcut and speak into the Ask box. Changes to settings always ask you to confirm and can be undone ("undo"). Requests to buy, sell or trade are refused: QuantEngine has no brokerage connection. Every request is logged in `assistant-log.jsonl` in your storage folder. Optionally, point Preferences → Assistant at a model server on this computer (llama.cpp, Ollama, LM Studio) for free-form questions; only localhost addresses are accepted.
+Press **Ctrl+K** and type or dictate: "what is my VaR", "explain Black–Scholes", "price a put strike 95 spot 100 6 months vol 25%", "show the vol surface", "learn now", "set paths to 100000". For voice on Windows, install **Handy** (`winget install cjpais.Handy`; free and offline; choose the Parakeet model on a laptop without a GPU), hold its shortcut and speak into the Ask box. Changes to settings always ask you to confirm and can be undone ("undo"). Requests to buy, sell or trade are refused: the assistant never places orders. Every request is logged in `assistant-log.jsonl` in your storage folder. Optionally, point Preferences → Assistant at a model server on this computer (llama.cpp, Ollama, LM Studio) for free-form questions; only localhost addresses are accepted.
 
 ## Evolution: the engine keeps learning
 
@@ -111,7 +139,7 @@ Under the option results and the risk report, **The maths** shows each formula w
 
 ## Interpretation and next release
 
-Treat these calculations as research and scenario analysis. QuantEngine reads market data but has no order routing or execution, and the assistant refuses trading requests. Data import and the numerical methods are the first complete loop. An event-driven strategy framework, stronger out-of-sample experiment selection and paper execution are later milestones.
+Treat these calculations as research and scenario analysis. QuantEngine reads market data, places orders only in an Alpaca paper account after your approval, cannot trade real money, and the assistant refuses trading requests. Data import and the numerical methods are the first complete loop. An event-driven strategy framework, stronger out-of-sample experiment selection and paper execution are later milestones.
 
 ## Release status
 

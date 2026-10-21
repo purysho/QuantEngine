@@ -23,6 +23,21 @@ contextBridge.exposeInMainWorld('quant', Object.freeze({
   openRun: (id: string) => call('open-run', id),
   exportReport: () => call('export-report'),
   openDataFolder: () => call('open-data-folder'),
+  desk: Object.freeze({
+    state: () => call('desk-state'),
+    runLab: () => call('desk-lab'),
+    configure: (settings: unknown) => call('desk-configure', settings),
+    refresh: () => call('desk-refresh'),
+    propose: () => call('desk-propose'),
+    submit: (proposalId: string) => call('desk-submit', proposalId),
+    kill: (on: boolean) => call('desk-kill', on),
+    onUpdate: (callback: (state: unknown) => void) => {
+      if (typeof callback !== 'function') throw new Error('A desk callback is required.');
+      const listener = (_event: unknown, state: unknown) => callback(state);
+      ipcRenderer.on('quant:desk', listener);
+      return () => ipcRenderer.removeListener('quant:desk', listener);
+    },
+  }),
   market: Object.freeze({
     state: () => call('market-state'),
     setKeys: (keyId: string, secret: string, feed: string) => call('market-keys', { keyId, secret, feed }),

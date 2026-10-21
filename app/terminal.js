@@ -1,6 +1,7 @@
 // Market terminal: command line, live watchlist, candlestick chart, description, news, economy and movers.
 // All data arrives through the sandboxed bridge (window.quant.market); this page has no network access.
 import { createChart, CandlestickSeries, HistogramSeries, ColorType, CrosshairMode } from 'lightweight-charts';
+export { initStrategies } from './strategies.js';
 
 const RANGES = ['1D', '5D', '1M', '6M', '1Y', '5Y', 'MAX'];
 const FUNCTIONS = new Set(['GP', 'DES', 'N', 'NEWS', 'OMON', 'OVDV', 'VOL', 'MOST', 'MOVERS', 'ECO', 'WEI', 'HELP', ...RANGES]);

@@ -14,6 +14,7 @@ let page = 'terminal';
 let surfaceSource = 'model';
 let previousMarketSurface;
 let terminal = { shown() {} };
+let strategies = { shown() {} };
 let operation = false;
 let previousReport;
 let previousRuns;
@@ -52,8 +53,8 @@ function receive(value) {
 
 function navigate(name) {
   page = name;
-  const labels = { terminal: 'Market terminal', monitor: 'Research monitor', datasets: 'Datasets', options: 'Options calculator', evolution: 'Evolution', runs: 'Research runs', preferences: 'Preferences' };
-  const kickers = { terminal: 'MARKETS / TERMINAL', monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', options: 'DERIVATIVES / PRICING', evolution: 'LEARNING / SECOND MIND', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
+  const labels = { strategies: 'Strategies', terminal: 'Market terminal', monitor: 'Research monitor', datasets: 'Datasets', options: 'Options calculator', evolution: 'Evolution', runs: 'Research runs', preferences: 'Preferences' };
+  const kickers = { strategies: 'EVIDENCE / PAPER TRADING', terminal: 'MARKETS / TERMINAL', monitor: 'ENGINE / OVERVIEW', datasets: 'DATA / SNAPSHOTS', options: 'DERIVATIVES / PRICING', evolution: 'LEARNING / SECOND MIND', runs: 'RESEARCH / HISTORY', preferences: 'ENGINE / SETTINGS' };
   $('page-title').textContent = labels[name];
   $('page-kicker').textContent = kickers[name];
   document.querySelectorAll('.page').forEach(section => section.classList.toggle('hidden', section.id !== 'page-' + name));
@@ -61,6 +62,7 @@ function navigate(name) {
   if (name === 'monitor') requestAnimationFrame(drawChart);
   if (name === 'evolution') requestAnimationFrame(renderEvolution);
   if (name === 'terminal') void terminal.shown();
+  if (name === 'strategies') strategies.shown();
   syncSurfaceAnimation();
 }
 
@@ -109,7 +111,7 @@ function render() {
   $('storage-path').textContent = current.config.dataRoot || 'D:\\Quant-Engine';
   const runtime = current.runtime || {};
   $('runtime-details').innerHTML = ['Python', 'NumPy', 'SciPy'].map(name => '<div class="runtime-row"><span>' + name + '</span><span>' + esc(runtime[name.toLowerCase()] || 'Unavailable') + '</span></div>').join('') +
-    '<div class="runtime-row"><span>Maximum numerical threads</span><span>' + (current.config.lowCpu ? '1' : '2') + '</span></div><p class="field-help">The numerical worker owns its research database. It does not send orders or connect to a brokerage.</p>';
+    '<div class="runtime-row"><span>Maximum numerical threads</span><span>' + (current.config.lowCpu ? '1' : '2') + '</span></div><p class="field-help">The numerical worker owns its research database and never sends orders. Paper orders are sent only by the Strategies page, after your approval, to the Alpaca paper host.</p>';
   if (previousReport !== report) { previousReport = report; renderReport(); drawChart(); updateSurfaces(); renderMaths('report'); }
   if (previousRuns !== current.runs) { previousRuns = current.runs; renderRuns(); }
   if (previousOptions !== current.options) { previousOptions = current.options; renderOptions(); updateSurfaces(); renderMaths('options'); }
@@ -991,7 +993,10 @@ new ResizeObserver(() => requestAnimationFrame(drawChart)).observe($('research-c
 document.body.classList.add('loading');
 if (window.quant) {
   // Bundled separately (app/terminal.bundle.js) so this file stays a plain script.
-  if (window.QuantTerminal) terminal = window.QuantTerminal.initTerminal({ $, esc, toast, navigate, receive });
+  if (window.QuantTerminal) {
+    terminal = window.QuantTerminal.initTerminal({ $, esc, toast, navigate, receive });
+    strategies = window.QuantTerminal.initStrategies({ $, esc, toast, receive });
+  }
   document.querySelectorAll('.surface-source').forEach(button => button.addEventListener('click', () => { surfaceSource = button.dataset.source; updateSurfaces(); }));
   navigate('terminal');
   window.quant.onState(receive);

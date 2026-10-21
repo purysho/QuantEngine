@@ -65,6 +65,38 @@ def main():
             if isinstance(rate, bool) or not isinstance(rate, (int, float)):
                 raise ValueError("Rate must be a number.")
             result = {"surface": market_surface(chain, float(rate), as_of=str(chain.get("asOf", ""))[:10] or time.strftime("%Y-%m-%d"))}
+        elif command == "strategy-lab":
+            # Stage 2 evidence on fresh French-library data; raw files are kept with their hashes.
+            from quant_store import download
+            from quant_data import FRENCH_URL
+            from quant_strategies import run_lab
+            emit({"type": "progress", "stage": "Downloading 100 years of US market data", "fraction": 0.02})
+            contents = [download(FRENCH_URL.format(name=name), 32 * 1024 * 1024)
+                        for name in ("F-F_Research_Data_Factors_daily", "12_Industry_Portfolios_daily")]
+            raw = [store.save_source(f"french-lab-{i}", c) for i, c in enumerate(contents)]
+            lab = run_lab(*contents, progress=lambda stage, fraction: emit({"type": "progress", "stage": stage, "fraction": 0.1 + 0.9 * fraction}))
+            lab["data"]["raw"] = raw
+            lab["completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            folder = store.root / "strategies"
+            folder.mkdir(exist_ok=True)
+            (folder / "lab.json").write_text(json.dumps(lab, allow_nan=False, default=float), encoding="utf-8")
+            result = {"lab": lab}
+        elif command == "strategy-signal":
+            from quant_core import load_prices
+            from quant_strategies import paper_signal
+            staged = Path(request.get("path", "")).resolve()
+            if staged.parent != (store.root / "sources").resolve() or staged.suffix != ".csv":
+                raise ValueError("Only price files staged in the engine's sources folder can be read.")
+            dates, symbols, closes = load_prices(staged)
+            staged.unlink(missing_ok=True)
+            family = request.get("family")
+            if family not in ("trend", "sectors"):
+                raise ValueError("Unknown strategy family.")
+            rf_annual = request.get("rf_annual", 0.0)
+            if isinstance(rf_annual, bool) or not isinstance(rf_annual, (int, float)) or not -0.05 <= rf_annual <= 0.25:
+                raise ValueError("Risk-free rate must be a number between -5% and 25%.")
+            since = request.get("since")
+            result = {"signal": paper_signal(family, dates, closes, symbols, float(rf_annual), since if isinstance(since, str) else None)}
         elif command == "history":
             if request.get("recover"):
                 store.recover()

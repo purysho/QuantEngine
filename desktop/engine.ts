@@ -382,6 +382,28 @@ export class Engine {
     return result.dataset as Dataset;
   }
 
+  /** Runs one worker command in the shared slot (strategy lab, paper signal); same rules as option calculations. */
+  runTask(stage: string, command: string, values: JsonRecord): Promise<JsonRecord> {
+    if (this.shuttingDown) return Promise.reject(new Error('Quant Engine is shutting down.'));
+    if (this.pausing || this.state.settingsPending) return Promise.reject(new Error('The engine is saving or pausing; try again in a moment.'));
+    if (this.state.busy) return Promise.reject(new Error('A numerical worker is already active. Try again when it finishes.'));
+    this.clearTimer();
+    this.cancelled = false;
+    this.state.busy = true;
+    this.state.stage = stage;
+    this.state.fraction = 0;
+    this.publish();
+    const pending = this.transport.request(command, values, event => this.workerEvent(event)).finally(() => {
+      if (this.optionsActive === pending) this.optionsActive = null;
+      this.state.busy = this.pausing;
+      if (this.pausing) return;
+      if (this.state.continuous && !this.cancelled) this.schedule();
+      else { this.state.stage = 'Ready to run'; this.publish(); }
+    });
+    this.optionsActive = pending;
+    return pending;
+  }
+
   /** Fits a market implied-volatility surface to a staged option chain in the shared worker slot. */
   fitMarketSurface(path: string, rate: number): Promise<JsonRecord> {
     if (this.shuttingDown) return Promise.reject(new Error('Quant Engine is shutting down.'));
