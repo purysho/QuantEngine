@@ -189,9 +189,9 @@ def _ensemble_weights(spec: dict, assets, trend, signal_days: np.ndarray, layout
 
 
 def backtest(family: str, spec: dict, dates: list[str], market: np.ndarray, rf: np.ndarray,
-             assets: np.ndarray | None = None, cost_bps: float = 10.0) -> dict:
+             assets: np.ndarray | None = None, cost_bps: float = 10.0, layout: dict | None = None) -> dict:
     """Daily net returns with next-close execution, cash at the risk-free rate and costs on turnover."""
-    wanted = target_weights(family, spec, market, rf, assets, dates)
+    wanted = target_weights(family, spec, market, rf, assets, dates, layout)
     returns = market[:, None] if family == "trend" else assets
     n, k = returns.shape
     signal = rebalance_days(dates, spec["rebalance"]) & ~np.isnan(wanted).any(axis=1)
@@ -323,28 +323,54 @@ def evaluate(family: str, dates: list[str], market: np.ndarray, rf: np.ndarray, 
     return result
 
 
+# Traded instruments for each family. The first column is always SPY (market and trend filter).
+PAPER_UNIVERSE = {
+    "trend": ["SPY"],
+    "sectors": ["SPY", "XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY", "XLRE", "XLC"],
+    "quality": ["SPY", "QUAL"],
+    "ensemble": ["SPY", "XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY", "XLRE", "XLC", "QUAL", "IEF"],
+}
+PAPER_LAYOUT = {"quality": {"quality": 1}, "ensemble": {"sectors": slice(1, 12), "quality": 12, "bonds": 13}}
+
+
 def latest_signal(family: str, spec: dict, dates: list[str], closes: np.ndarray, symbols: list[str], rf_annual: float = 0.0) -> dict:
     """Target weights for live/paper trading from the traded instruments' own adjusted closes.
 
-    The first column is always the market proxy (SPY): ``trend`` trades it; ``sectors`` uses it only for
-    the trend filter and ranks the remaining columns. Same rules as the backtest; the decision is for the next close.
+    The first column is always the market proxy (SPY): ``trend`` trades it; ``sectors`` uses it only for the
+    trend filter and ranks the other columns; ``quality`` holds QUAL; ``ensemble`` uses SPY, the sector ETFs,
+    QUAL and IEF in the PAPER_UNIVERSE order. Same rules as the backtest; the decision is for the next close.
     """
     prices = np.asarray(closes, dtype=np.float64)
-    if prices.ndim != 2 or prices.shape[1] != len(symbols) or prices.shape[0] < spec["lookback"] + 30 or (prices <= 0).any():
+    if prices.ndim != 2 or prices.shape[1] != len(symbols) or prices.shape[0] < spec.get("lookback", 252) + 30 or (prices <= 0).any():
         raise ValueError("Need positive closes for every symbol covering the lookback plus 30 days.")
+    if family in PAPER_UNIVERSE and family != "sectors" and symbols != PAPER_UNIVERSE[family]:
+        raise ValueError(f"The {family} signal expects these symbols in order: {', '.join(PAPER_UNIVERSE[family])}.")
     returns = prices[1:] / prices[:-1] - 1
     rf = np.full(len(returns), (1 + rf_annual) ** (1 / TRADING_DAYS) - 1)
     market = returns[:, 0]
-    assets = returns[:, 1:] if family == "sectors" else None
-    if family == "sectors" and (assets.shape[1] < spec["top"] + 1):
-        raise ValueError("Sector momentum needs more sectors than it holds.")
-    weights = target_weights(family, spec, market, rf, assets)[-1]
+    if family == "sectors":
+        assets = returns[:, 1:]
+        if assets.shape[1] < spec["top"] + 1:
+            raise ValueError("Sector momentum needs more sectors than it holds.")
+    else:
+        assets = returns if family in ("quality", "ensemble") else None
+    signal_dates = dates[1:]
+    weights = target_weights(family, spec, market, rf, assets, signal_dates, PAPER_LAYOUT.get(family))
+    if family == "ensemble":
+        # The ensemble decides on month-ends only; between them it keeps the latest month-end targets.
+        decided = np.flatnonzero(~np.isnan(weights).any(axis=1))
+        if not len(decided):
+            raise ValueError("Not enough history for this rule yet.")
+        weights = weights[decided[-1]]
+    else:
+        weights = weights[-1]
     if np.isnan(weights).any():
         raise ValueError("Not enough history for this rule yet.")
-    targets = {symbols[0]: float(weights[0])} if family == "trend" else {s: float(w) for s, w in zip(symbols[1:], weights) if w > 0}
-    trend = float(_trailing_growth(market, spec["lookback"])[-1] - _trailing_growth(rf, spec["lookback"])[-1])
+    columns = symbols[1:] if family == "sectors" else symbols
+    targets = {symbols[0]: float(weights[0])} if family == "trend" else {s: float(w) for s, w in zip(columns, weights) if w > 1e-9}
+    trend = float(_trailing_growth(market, spec.get("lookback", 252))[-1] - _trailing_growth(rf, spec.get("lookback", 252))[-1])
     return {"family": family, "spec": spec, "as_of": dates[-1], "targets": targets, "cash": 1 - sum(targets.values()),
-            "market_trend": trend, "registration": registration_hash(),
+            "gross_exposure": float(sum(targets.values())), "market_trend": trend, "registration": registration_hash(),
             "note": "Signal from closes up to as_of; the rule trades at the next close."}
 
 
@@ -430,8 +456,10 @@ def paper_signal(family: str, dates: list[str], closes, symbols: list[str], rf_a
     prices = np.asarray(closes, dtype=np.float64)
     returns = prices[1:] / prices[:-1] - 1
     rf = np.full(len(returns), (1 + rf_annual) ** (1 / TRADING_DAYS) - 1)
-    run = backtest(family, spec, dates[1:], returns[:, 0], rf, returns[:, 1:] if family == "sectors" else None, cost_bps)
+    assets = returns[:, 1:] if family == "sectors" else returns if family in ("quality", "ensemble") else None
+    run = backtest(family, spec, dates[1:], returns[:, 0], rf, assets, cost_bps, PAPER_LAYOUT.get(family))
     simulated = {d: float(r) for d, r in zip(run["dates"], run["net"]) if since is None or d >= since}
     signal["simulated"] = simulated
+    signal["market_returns"] = {d: float(r) for d, r in zip(dates[1:], returns[:, 0]) if since is None or d >= since}
     signal["prices"] = {s: float(p) for s, p in zip(symbols, prices[-1])}
     return signal

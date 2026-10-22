@@ -126,6 +126,35 @@ def fred(ids: list[str], cache: str | Path, *, offline: bool = False) -> tuple[d
     return parse_fred(data), meta
 
 
+FRED_CHUNKS = (("1950-01-01", "1979-12-31"), ("1980-01-01", "1999-12-31"), ("2000-01-01", "2099-12-31"))
+
+
+def join_fred_csv(parts: list[bytes]) -> bytes:
+    """Concatenates FRED graph CSVs for consecutive date ranges (one header kept)."""
+    lines: list[str] = []
+    for part in parts:
+        rows = part.decode("utf-8-sig").strip().splitlines()
+        if not rows:
+            continue
+        if not lines:
+            lines.append(rows[0])
+        elif rows[0] != lines[0]:
+            raise ValueError("FRED chunks have different columns.")
+        lines.extend(rows[1:])
+    return ("\n".join(lines) + "\n").encode()
+
+
+def fred_long(series_id: str, cache: str | Path, *, offline: bool = False) -> tuple[bytes, dict]:
+    """Full daily history in date chunks: FRED times out (HTTP 504) on some single full-history requests."""
+    parts, metas = [], []
+    for start, end in FRED_CHUNKS:
+        url = FRED_URL.format(ids=series_id) + f"&cosd={start}&coed={end}"
+        data, meta = fetch(url, cache, f"fred-{series_id}-{start[:4]}", offline=offline)
+        parts.append(data); metas.append(meta)
+    return join_fred_csv(parts), {"name": f"fred-{series_id}", "chunks": metas,
+                                   "sha256": hashlib.sha256(b"".join(m["sha256"].encode() for m in metas)).hexdigest()}
+
+
 def french(name: str, cache: str | Path, *, section: str | None = None, offline: bool = False) -> tuple[dict, dict]:
     data, meta = fetch(FRENCH_URL.format(name=name), cache, "french-" + name, offline=offline)
     return parse_french(data, section), meta

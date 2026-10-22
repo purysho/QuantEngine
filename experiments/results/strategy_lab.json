@@ -1,7 +1,7 @@
 {
   "experiment": "strategy_lab",
-  "recorded_at": "2026-10-21T09:51:59+00:00",
-  "duration_seconds": 8.747,
+  "recorded_at": "2026-10-22T04:53:23+00:00",
+  "duration_seconds": 35.848,
   "runtime": {
     "python": "3.13.16",
     "numpy": "2.3.5",
@@ -10,7 +10,18 @@
   },
   "registration": {
     "date": "2026-10-21",
-    "hash": "45cbcf4e541eb70169d78c8b3237612bbaa9d95eaf8c007af7276f26c426e8be",
+    "extra": "2026-10-22",
+    "hash": "cc19bab78de43491a308731e98d6eea3330de1fb9486ba81714a462cbc6581bb",
+    "gates": {
+      "deflated_sharpe": "Deflated Sharpe Ratio of the primary rule's active return (strategy minus benchmark, after costs) is at least 0.95",
+      "newey_west": "Newey\u2013West t-statistic of the primary rule's active return is at least 2",
+      "walk_forward": "Walk-forward out-of-sample Sharpe beats the benchmark's Sharpe over the same days",
+      "holdout": "Sharpe over the reserved final 10 years (after costs) is at least the benchmark's",
+      "robust": "At least 75% of all parameter variants beat the benchmark's Sharpe"
+    },
+    "gates_version": 2,
+    "borrow_spread": 0.025,
+    "total_trials": 43,
     "families": {
       "trend": {
         "grid": {
@@ -62,28 +73,110 @@
           "rebalance": "month"
         },
         "benchmark": "Equal-weight all industries"
+      },
+      "quality": {
+        "grid": {
+          "portfolio": [
+            "Hi 10",
+            "Hi 20",
+            "Hi 30"
+          ],
+          "rebalance": [
+            "month"
+          ]
+        },
+        "primary": {
+          "portfolio": "Hi 30",
+          "rebalance": "month"
+        },
+        "benchmark": "Buy and hold the US market"
+      },
+      "ensemble": {
+        "specs": [
+          {
+            "weighting": "equal",
+            "target_vol": null,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          {
+            "weighting": "equal",
+            "target_vol": 0.1,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          {
+            "weighting": "equal",
+            "target_vol": 0.1,
+            "leverage_cap": 1.5,
+            "rebalance": "month"
+          },
+          {
+            "weighting": "equal",
+            "target_vol": 0.15,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          {
+            "weighting": "equal",
+            "target_vol": 0.15,
+            "leverage_cap": 1.5,
+            "rebalance": "month"
+          },
+          {
+            "weighting": "inverse_vol",
+            "target_vol": null,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          {
+            "weighting": "inverse_vol",
+            "target_vol": 0.1,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          {
+            "weighting": "inverse_vol",
+            "target_vol": 0.1,
+            "leverage_cap": 1.5,
+            "rebalance": "month"
+          },
+          {
+            "weighting": "inverse_vol",
+            "target_vol": 0.15,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          {
+            "weighting": "inverse_vol",
+            "target_vol": 0.15,
+            "leverage_cap": 1.5,
+            "rebalance": "month"
+          }
+        ],
+        "primary": {
+          "weighting": "inverse_vol",
+          "target_vol": 0.15,
+          "leverage_cap": 1.5,
+          "rebalance": "month"
+        },
+        "benchmark": "Buy and hold the US market"
       }
     },
-    "gates": {
-      "deflated_sharpe": "Deflated Sharpe Ratio of the primary rule's active return (strategy minus benchmark, after costs) is at least 0.95",
-      "newey_west": "Newey\u2013West t-statistic of the primary rule's active return is at least 2",
-      "walk_forward": "Walk-forward out-of-sample Sharpe beats the benchmark's Sharpe over the same days",
-      "holdout": "Sharpe over the reserved final 10 years (after costs) is at least the benchmark's",
-      "robust": "At least 75% of all parameter variants beat the benchmark's Sharpe"
-    },
-    "gates_version": 2,
     "gates_history": "Version 1 compared returns with cash; buy-and-hold passes that, so version 2 compares with the benchmark."
   },
   "data": {
-    "source": "Kenneth R. French Data Library: Mkt-RF + RF and 12 value-weighted industries (daily)",
+    "source": "Kenneth R. French Data Library (market, risk-free rate, 12 industries, portfolios on operating profitability) and FRED DGS10 (10-year Treasury yield, converted to daily par-bond returns)",
     "first": "1926-07-01",
     "last": "2026-08-31",
     "days": 26317,
-    "sha256": "f5b229fd2741537c329c277ffd245a037393607e9170817db9307f01a249eb05",
-    "files": [
-      "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
-      "cde9864260d22e42fdbd29a8a1272b8a0ab67aaf4d8cc6fd7898e11c448f06b1"
-    ]
+    "full_first": "1963-07-02",
+    "files": {
+      "F-F_Research_Data_Factors_daily": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db",
+      "12_Industry_Portfolios_daily": "cde9864260d22e42fdbd29a8a1272b8a0ab67aaf4d8cc6fd7898e11c448f06b1",
+      "Portfolios_Formed_on_OP_Daily": "9165db9af6a0c416182d840c82216b5de78ee636986493fa6708282eda5b2dbd",
+      "DGS10": "f616219be1bf4be0751d609104b0167d39ba88fc797739420c4f15592627726c"
+    }
   },
   "contamination_note": "Industry momentum on this data was already examined in Task 16 (real_world_backtest), and trend-following is widely published, so the reserved final decade is not a pristine holdout. The only clean out-of-sample test is forward paper trading (stage 3).",
   "results": {
@@ -118,16 +211,16 @@
       "benchmark_excess_sharpe": 0.45131941827713834,
       "newey_west_excess": {
         "mean": 0.00022499513844188767,
-        "se": 4.4421019210006883e-05,
-        "t": 5.065060244975248,
+        "se": 4.442101921000694e-05,
+        "t": 5.065060244975242,
         "naive_se": 4.292171984299582e-05,
         "lags": 13,
         "n": 26042
       },
       "newey_west_active": {
         "mean": -8.250044561463643e-05,
-        "se": 5.056269828969111e-05,
-        "t": -1.6316464193022882,
+        "se": 5.056269828969098e-05,
+        "t": -1.6316464193022924,
         "naive_se": 4.8367156909419234e-05,
         "lags": 13,
         "n": 26042
@@ -168,6 +261,9 @@
       },
       "turnover_per_year": 0.9804288530904305,
       "average_exposure": 0.6713805651096472,
+      "max_exposure": 1.0,
+      "return_at_benchmark_risk": 0.11870292400398527,
+      "benchmark_return_arithmetic": 0.10766753705552569,
       "cost_sensitivity_sharpe": {
         "0": 0.524548299563244,
         "10": 0.5156548677685394,
@@ -493,8 +589,8 @@
       "benchmark_excess_sharpe": 0.48840474654291677,
       "newey_west_excess": {
         "mean": 0.0003869492870491258,
-        "se": 7.22094956946666e-05,
-        "t": 5.358703634842113,
+        "se": 7.220949569466664e-05,
+        "t": 5.35870363484211,
         "naive_se": 7.064615968920305e-05,
         "lags": 13,
         "n": 26042
@@ -543,6 +639,9 @@
       },
       "turnover_per_year": 5.041548268182168,
       "average_exposure": 1.0,
+      "max_exposure": 1.0,
+      "return_at_benchmark_risk": 0.1204405593595635,
+      "benchmark_return_arithmetic": 0.11200897780508409,
       "cost_sensitivity_sharpe": {
         "0": 0.566632201507801,
         "10": 0.5388012508101757,
@@ -764,10 +863,477 @@
       },
       "gates_version": 2,
       "go_to_paper": false
+    },
+    "quality": {
+      "family": "quality",
+      "benchmark": "Buy and hold the US market",
+      "primary": "quality:portfolio=Hi 30,rebalance=month",
+      "period": [
+        "1963-08-02",
+        "2026-08-31"
+      ],
+      "cost_bps": 10.0,
+      "summary": {
+        "annual_return": 0.12134262973926568,
+        "annual_volatility": 0.16165469624253911,
+        "sharpe": 0.789691574766668,
+        "max_drawdown": -0.49935723632579865,
+        "years": 62.992063492063494,
+        "skew": -0.38310975872094327,
+        "kurtosis": 17.45796067389919
+      },
+      "excess_sharpe": 0.5220020071419746,
+      "benchmark_summary": {
+        "annual_return": 0.10908041195196239,
+        "annual_volatility": 0.16217449729179872,
+        "sharpe": 0.7199208585559652,
+        "max_drawdown": -0.5456553593385389,
+        "years": 62.992063492063494,
+        "skew": -0.49076202143616643,
+        "kurtosis": 18.56599411027717
+      },
+      "benchmark_excess_sharpe": 0.45311298680614615,
+      "newey_west_excess": {
+        "mean": 0.00033493133425727606,
+        "se": 7.952661040817259e-05,
+        "t": 4.211563054658453,
+        "naive_se": 8.084267753395374e-05,
+        "lags": 12,
+        "n": 15874
+      },
+      "newey_west_active": {
+        "mean": 4.3272017134937636e-05,
+        "se": 1.521651404178215e-05,
+        "t": 2.8437536360903355,
+        "naive_se": 1.4677082253558758e-05,
+        "lags": 12,
+        "n": 15874
+      },
+      "psr_excess": 0.999980070682786,
+      "information_ratio": 0.37147064056551743,
+      "deflated": {
+        "dsr": 0.9069223433346367,
+        "threshold_per_period": 0.012907848866749682,
+        "threshold_annual": 0.20490574837335937,
+        "trials": 43
+      },
+      "bootstrap": {
+        "sharpe": 0.5220020071419746,
+        "ci90": [
+          0.29983017029683023,
+          0.7527652061200718
+        ],
+        "ci95": [
+          0.2490057424478156,
+          0.7801493156390441
+        ],
+        "p_sharpe_le_0": 0.0,
+        "block": 21,
+        "draws": 1000,
+        "seed": 7
+      },
+      "sharpe_vs_benchmark": {
+        "difference": 0.0688890203358285,
+        "ci95": [
+          0.01861636584040005,
+          0.11580447502353634
+        ],
+        "p_better": 0.998,
+        "draws": 1000,
+        "block": 21,
+        "seed": 11
+      },
+      "turnover_per_year": 0.01587501574902356,
+      "average_exposure": 1.0,
+      "max_exposure": 1.0,
+      "return_at_benchmark_risk": 0.12791006850492415,
+      "benchmark_return_arithmetic": 0.11675280332619377,
+      "cost_sensitivity_sharpe": {
+        "0": 0.5220995657091702,
+        "10": 0.5220020071419746,
+        "25": 0.5218550747029269,
+        "50": 0.5216086032213683
+      },
+      "holdout": {
+        "from": "2016-08-31",
+        "sharpe": 0.8066255748472493,
+        "benchmark_sharpe": 0.7318172958580765,
+        "pre_holdout_sharpe": 0.4610375513736085,
+        "max_drawdown": -0.3234869718936859,
+        "benchmark_max_drawdown": -0.34216280934892906
+      },
+      "walk_forward": {
+        "sharpe": 0.4843477144606118,
+        "in_sample_sharpe": 0.4235675935626653,
+        "benchmark_sharpe": 0.43206578379696775,
+        "from": "1969-01-02",
+        "years": 58,
+        "distinct_choices": 2
+      },
+      "variants": [
+        {
+          "id": "quality:portfolio=Hi 30,rebalance=month",
+          "spec": {
+            "portfolio": "Hi 30",
+            "rebalance": "month"
+          },
+          "sharpe": 0.5220020071419746,
+          "benchmark_sharpe": 0.45311298680614615,
+          "active_per_period": 0.02340045081662431,
+          "annual_return": 0.12134262973926568,
+          "max_drawdown": -0.49935723632579865,
+          "turnover_per_year": 0.01587501574902356
+        },
+        {
+          "id": "quality:portfolio=Hi 20,rebalance=month",
+          "spec": {
+            "portfolio": "Hi 20",
+            "rebalance": "month"
+          },
+          "sharpe": 0.5106777198890322,
+          "benchmark_sharpe": 0.45311298680614615,
+          "active_per_period": 0.017185101476592975,
+          "annual_return": 0.12112412287009544,
+          "max_drawdown": -0.5203320343527137,
+          "turnover_per_year": 0.01587501574902356
+        },
+        {
+          "id": "quality:portfolio=Hi 10,rebalance=month",
+          "spec": {
+            "portfolio": "Hi 10",
+            "rebalance": "month"
+          },
+          "sharpe": 0.5063871663167191,
+          "benchmark_sharpe": 0.45311298680614615,
+          "active_per_period": 0.011769988087166443,
+          "annual_return": 0.1207940509002885,
+          "max_drawdown": -0.5457416509685216,
+          "turnover_per_year": 0.01587501574902356
+        }
+      ],
+      "spec_curve": {
+        "count": 3,
+        "positive_share": 1.0,
+        "beats_benchmark_share": 1.0,
+        "median_sharpe": 0.5106777198890322,
+        "min_sharpe": 0.5063871663167191,
+        "max_sharpe": 0.5220020071419746
+      },
+      "gates": {
+        "deflated_sharpe": false,
+        "newey_west": true,
+        "walk_forward": true,
+        "holdout": true,
+        "robust": true
+      },
+      "gates_version": 2,
+      "reference_60_40": {
+        "summary": {
+          "annual_return": 0.09275204294067074,
+          "annual_volatility": 0.10062966835773256,
+          "sharpe": 0.9319736080973191,
+          "max_drawdown": -0.3187851887963792,
+          "years": 62.992063492063494,
+          "skew": -0.3173727089692436,
+          "kurtosis": 14.98678978284842
+        },
+        "excess_sharpe": 0.5020099187441104
+      },
+      "go_to_paper": false
+    },
+    "ensemble": {
+      "family": "ensemble",
+      "benchmark": "Buy and hold the US market",
+      "primary": "ensemble:leverage_cap=1.5,rebalance=month,target_vol=0.15,weighting=inverse_vol",
+      "period": [
+        "1964-08-04",
+        "2026-08-31"
+      ],
+      "cost_bps": 10.0,
+      "summary": {
+        "annual_return": 0.09992192328741845,
+        "annual_volatility": 0.12383099453208395,
+        "sharpe": 0.8314176417858047,
+        "max_drawdown": -0.333522993306953,
+        "years": 61.992063492063494,
+        "skew": -0.7355385636854344,
+        "kurtosis": 21.82566826332161
+      },
+      "excess_sharpe": 0.47987420749901677,
+      "benchmark_summary": {
+        "annual_return": 0.10753275798686879,
+        "annual_volatility": 0.16320546521111715,
+        "sharpe": 0.7078467951299113,
+        "max_drawdown": -0.5456553593385383,
+        "years": 61.992063492063494,
+        "skew": -0.48985740992621357,
+        "kurtosis": 18.37405482654869
+      },
+      "benchmark_excess_sharpe": 0.44112124665541436,
+      "newey_west_excess": {
+        "mean": 0.0002358667167324418,
+        "se": 6.421564546119812e-05,
+        "t": 3.6730412820496015,
+        "naive_se": 6.242681924842039e-05,
+        "lags": 12,
+        "n": 15622
+      },
+      "newey_west_active": {
+        "mean": -4.9877746204442086e-05,
+        "se": 4.152900248062871e-05,
+        "t": -1.2010340539170827,
+        "naive_se": 4.320601384106766e-05,
+        "lags": 12,
+        "n": 15622
+      },
+      "psr_excess": 0.9999035149068666,
+      "information_ratio": -0.1466204588405812,
+      "deflated": {
+        "dsr": 0.010414600213564867,
+        "threshold_per_period": 0.009263420695100163,
+        "threshold_annual": 0.1470522446940247,
+        "trials": 43
+      },
+      "bootstrap": {
+        "sharpe": 0.47987420749901677,
+        "ci90": [
+          0.24658080902014598,
+          0.7092819655669108
+        ],
+        "ci95": [
+          0.2077467684498497,
+          0.7374537273566317
+        ],
+        "p_sharpe_le_0": 0.0,
+        "block": 21,
+        "draws": 1000,
+        "seed": 7
+      },
+      "sharpe_vs_benchmark": {
+        "difference": 0.03875296084360241,
+        "ci95": [
+          -0.10680176104798071,
+          0.184639082733583
+        ],
+        "p_better": 0.692,
+        "draws": 1000,
+        "block": 21,
+        "seed": 11
+      },
+      "turnover_per_year": 2.972529513710719,
+      "average_exposure": 1.3945316082781456,
+      "max_exposure": 1.5000000000000002,
+      "return_at_benchmark_risk": 0.12183495411497396,
+      "benchmark_return_arithmetic": 0.1155244654973755,
+      "cost_sensitivity_sharpe": {
+        "0": 0.5038416272508508,
+        "10": 0.47987420749901677,
+        "25": 0.4438599879832519,
+        "50": 0.3837096115533153
+      },
+      "holdout": {
+        "from": "2016-08-31",
+        "sharpe": 0.45267934042856184,
+        "benchmark_sharpe": 0.7318172958580765,
+        "pre_holdout_sharpe": 0.48721503859551074,
+        "max_drawdown": -0.27593556164662225,
+        "benchmark_max_drawdown": -0.34216280934892906
+      },
+      "walk_forward": {
+        "sharpe": 0.5578498658472809,
+        "in_sample_sharpe": 0.40672554996999716,
+        "benchmark_sharpe": 0.4555669334396531,
+        "from": "1970-01-02",
+        "years": 57,
+        "distinct_choices": 3
+      },
+      "variants": [
+        {
+          "id": "ensemble:leverage_cap=1.0,rebalance=month,target_vol=None,weighting=inverse_vol",
+          "spec": {
+            "weighting": "inverse_vol",
+            "target_vol": null,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          "sharpe": 0.5707126171795973,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.014663140491856552,
+          "annual_return": 0.09273132887590063,
+          "max_drawdown": -0.2226298719853015,
+          "turnover_per_year": 1.9443274740180583
+        },
+        {
+          "id": "ensemble:leverage_cap=1.0,rebalance=month,target_vol=0.15,weighting=inverse_vol",
+          "spec": {
+            "weighting": "inverse_vol",
+            "target_vol": 0.15,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          "sharpe": 0.5696443446591687,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.014790552179958229,
+          "annual_return": 0.09248031039993898,
+          "max_drawdown": -0.22262987198530126,
+          "turnover_per_year": 1.9512768084260517
+        },
+        {
+          "id": "ensemble:leverage_cap=1.0,rebalance=month,target_vol=None,weighting=equal",
+          "spec": {
+            "weighting": "equal",
+            "target_vol": null,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          "sharpe": 0.5689501645184604,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.008782806031448867,
+          "annual_return": 0.10457519956603467,
+          "max_drawdown": -0.271548766540482,
+          "turnover_per_year": 1.5485853283830495
+        },
+        {
+          "id": "ensemble:leverage_cap=1.0,rebalance=month,target_vol=0.1,weighting=inverse_vol",
+          "spec": {
+            "weighting": "inverse_vol",
+            "target_vol": 0.1,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          "sharpe": 0.5601757911603991,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.015928106241137205,
+          "annual_return": 0.0901797768004613,
+          "max_drawdown": -0.21918870428839043,
+          "turnover_per_year": 1.9816863424738127
+        },
+        {
+          "id": "ensemble:leverage_cap=1.0,rebalance=month,target_vol=0.15,weighting=equal",
+          "spec": {
+            "weighting": "equal",
+            "target_vol": 0.15,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          "sharpe": 0.5575583402308005,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.010599531097874934,
+          "annual_return": 0.10182880521144733,
+          "max_drawdown": -0.271548766540482,
+          "turnover_per_year": 1.6392707680799448
+        },
+        {
+          "id": "ensemble:leverage_cap=1.0,rebalance=month,target_vol=0.1,weighting=equal",
+          "spec": {
+            "weighting": "equal",
+            "target_vol": 0.1,
+            "leverage_cap": 1.0,
+            "rebalance": "month"
+          },
+          "sharpe": 0.5382400961137171,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.01511686385582625,
+          "annual_return": 0.09447597212442482,
+          "max_drawdown": -0.2686533088183982,
+          "turnover_per_year": 1.8574528155203105
+        },
+        {
+          "id": "ensemble:leverage_cap=1.5,rebalance=month,target_vol=0.1,weighting=equal",
+          "spec": {
+            "weighting": "equal",
+            "target_vol": 0.1,
+            "leverage_cap": 1.5,
+            "rebalance": "month"
+          },
+          "sharpe": 0.4959032007822558,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.013441372548875482,
+          "annual_return": 0.09624297914063185,
+          "max_drawdown": -0.36430722862116927,
+          "turnover_per_year": 2.8828558584957653
+        },
+        {
+          "id": "ensemble:leverage_cap=1.5,rebalance=month,target_vol=0.1,weighting=inverse_vol",
+          "spec": {
+            "weighting": "inverse_vol",
+            "target_vol": 0.1,
+            "leverage_cap": 1.5,
+            "rebalance": "month"
+          },
+          "sharpe": 0.4858660729891519,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.014397316348242465,
+          "annual_return": 0.09280661829549586,
+          "max_drawdown": -0.3335229933069527,
+          "turnover_per_year": 2.962807531491962
+        },
+        {
+          "id": "ensemble:leverage_cap=1.5,rebalance=month,target_vol=0.15,weighting=equal",
+          "spec": {
+            "weighting": "equal",
+            "target_vol": 0.15,
+            "leverage_cap": 1.5,
+            "rebalance": "month"
+          },
+          "sharpe": 0.48404516389198365,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.0025541734614280202,
+          "annual_return": 0.10789843803508603,
+          "max_drawdown": -0.4196776394945634,
+          "turnover_per_year": 2.7861792232804663
+        },
+        {
+          "id": "ensemble:leverage_cap=1.5,rebalance=month,target_vol=0.15,weighting=inverse_vol",
+          "spec": {
+            "weighting": "inverse_vol",
+            "target_vol": 0.15,
+            "leverage_cap": 1.5,
+            "rebalance": "month"
+          },
+          "sharpe": 0.47987420749901677,
+          "benchmark_sharpe": 0.44112124665541436,
+          "active_per_period": -0.00923622074300856,
+          "annual_return": 0.09992192328741845,
+          "max_drawdown": -0.333522993306953,
+          "turnover_per_year": 2.972529513710719
+        }
+      ],
+      "spec_curve": {
+        "count": 10,
+        "positive_share": 1.0,
+        "beats_benchmark_share": 1.0,
+        "median_sharpe": 0.5478992181722588,
+        "min_sharpe": 0.47987420749901677,
+        "max_sharpe": 0.5707126171795973
+      },
+      "gates": {
+        "deflated_sharpe": false,
+        "newey_west": false,
+        "walk_forward": true,
+        "holdout": false,
+        "robust": true
+      },
+      "gates_version": 2,
+      "reference_60_40": {
+        "summary": {
+          "annual_return": 0.09211568974348516,
+          "annual_volatility": 0.10128024281291001,
+          "sharpe": 0.9208833471033686,
+          "max_drawdown": -0.3187851887963795,
+          "years": 61.992063492063494,
+          "skew": -0.3172741535651883,
+          "kurtosis": 14.824209032449192
+        },
+        "excess_sharpe": 0.4910968221941137
+      },
+      "go_to_paper": false
     }
   },
   "acceptance": {
     "trend_go_to_paper": false,
-    "sectors_go_to_paper": false
+    "sectors_go_to_paper": false,
+    "quality_go_to_paper": false,
+    "ensemble_go_to_paper": false
   }
 }

@@ -21,8 +21,8 @@ cache = ROOT / ".cache" / "data"
 raw = {}
 for name, kind in (("F-F_Research_Data_Factors_daily", "french"), ("12_Industry_Portfolios_daily", "french"),
                    ("Portfolios_Formed_on_OP_Daily", "french"), ("DGS10", "fred")):
-    url = qd.FRENCH_URL.format(name=name) if kind == "french" else qd.FRED_URL.format(ids=name)
-    raw[name] = qd.fetch(url, cache, f"{kind}-{name}", offline=args.offline)
+    raw[name] = (qd.fetch(qd.FRENCH_URL.format(name=name), cache, f"french-{name}", offline=args.offline) if kind == "french"
+                 else qd.fred_long(name, cache, offline=args.offline))
 lab = st.run_lab(*(raw[n][0] for n in ("F-F_Research_Data_Factors_daily", "12_Industry_Portfolios_daily", "Portfolios_Formed_on_OP_Daily", "DGS10")))
 families = lab["results"]
 

@@ -628,3 +628,55 @@ PR #4 passed all 8 checks on `bd94928`, including the Windows packaged self-test
 **Lesson recorded:** during Task 24, a chained `npm run build >/dev/null && …` hid a build failure (an apostrophe inside a single-quoted string), and a later step ran against a stale bundle. From now on, build output is never discarded: check with `node --check` and read the build's exit status.
 
 **Reproduced on the target laptop (user screenshot, 2026-10-21 19:26):** the strategy lab ran in the packaged 0.3.0 app on the Windows 11 laptop. It printed the same data range (1926-07-01 to 2026-08-31, 26,317 days), the same registration hash (`45cbcf4e541e…`) and identical statistics and gates to the CI and development runs, for example trend Sharpe 0.52 vs 0.45 and sectors deflated Sharpe 0.519. Paper trading was enabled and saved (badge PAPER · TREND). Suggested next step: paper-trade sector momentum, which passed 4 of 5 gates against trend's 2 of 5, explicitly as a learning exercise.
+
+
+---
+
+## Task 25: Ideas from Berkshire Hathaway and Medallion, and daily updates
+
+**Asked:** what QuantEngine can borrow from Berkshire Hathaway and Renaissance's Medallion to "bump up" returns, and to have it update daily.
+
+**What can honestly raise returns:** only more risk (leverage or concentration), better diversification (more return per unit of risk, which then affords a little more risk), or tilting toward premia that have paid historically. Copied from Berkshire: quality (the most profitable companies) plus modest borrowing at a realistic cost. Copied from Medallion, the retail version: several weakly related return sources balanced by risk.
+
+**Pre-registration.** Commit `434bf85` added the rules before any real-data run:
+- **Quality:** the Fama–French operating-profitability portfolios Hi 10, Hi 20 and Hi 30; the primary rule holds Hi 30.
+- **Ensemble:** trend-timed market, sector momentum, quality and 10-year Treasuries.
+  - Sleeves are weighted equally or by inverse volatility.
+  - The portfolio is sized to a target volatility (none, 10% or 15%) with a leverage cap of 1.0 or 1.5.
+  - The primary rule is inverse volatility, 15% target, cap 1.5.
+  - Borrowing costs the risk-free rate plus 2.5%.
+- **Trial count:** later strategies are deflated by every variant tried so far (43).
+- **Treasury data:** daily returns of a 10-year par bond repriced from FRED DGS10. A rise of 100 basis points costs about 7.8%, as expected.
+
+**Results** (`experiments/results/strategy_lab.json`; columns: return vs benchmark | at benchmark risk | max drawdown | Sharpe vs benchmark | deflated Sharpe | P(Sharpe beats) | gates)
+
+| family | annual | at market risk | drawdown | Sharpe | DSR | P(beat) | gates |
+|---|---|---|---|---|---|---|---|
+| trend | 8.4% vs 9.7% | 11.9% | -49% vs -84% | 0.52 vs 0.45 | 0.003 | 0.75 | 2/5 |
+| sectors | 11.8% vs 10.3% | 12.0% | -81% vs -84% | 0.54 vs 0.49 | 0.519 | 0.89 | 4/5 |
+| quality | 12.1% vs 10.9% | 12.8% | -50% vs -55% | 0.52 vs 0.45 | 0.907 | 1.00 | 4/5 |
+| ensemble | 10.0% vs 10.8% | 12.2% | -33% vs -55% | 0.48 vs 0.44 | 0.010 | 0.69 | 2/5 |
+
+- **Quality** is the best evidence so far. It beat the market's Sharpe ratio in 100% of bootstrap resamples, with a 95% range for the difference of 0.02 to 0.12 and a Newey–West t of 2.84. It held up over the last decade (0.81 vs 0.73). It narrowly fails the deflated Sharpe gate (0.907 vs 0.95) because of the 43-trial correction. The paper universe trades it as QUAL, whose quality definition (ROE, leverage, earnings stability) differs from the profitability sort; the tracking in stage 3 will show the size of that gap.
+- **Ensemble:** about 40% smaller worst fall (−33% vs −55%) and 12.2% a year at the market's risk. But at its own target it earned 10.0% vs 10.8%, and it lagged in the last decade (bonds in 2022, trend whipsaws).
+- **How much returns can be raised:** about +1 to +2 percentage points a year at the same risk is what the evidence supports. Anything claiming much more needs extraordinary proof.
+
+**Daily updates**
+- **When:** a scheduler runs about 20 minutes after each US close (never during the session) or when the app next opens.
+- **What it does:**
+  - refreshes the account;
+  - fills missed days from Alpaca's portfolio history (a new read-only GET);
+  - computes the rule's proposal, never submitting it;
+  - finds the next rebalance from Alpaca's calendar (read-only GET);
+  - writes `paper/brief.json` and a `daily-update` journal entry;
+  - shows a Windows notification.
+- **Strategies page:** a **Daily update** panel and an **Update now** button.
+
+**Borrowing:** opt-in only. Max total exposure defaults to 100%. A rule asking for more is scaled down, and risk checks allow borrowing only up to the chosen limit (at most 150%).
+
+**What went wrong first and why**
+- **FRED timeout:** the full-history DGS10 request failed (HTTP 504 gateway timeout, twice). Fix: `fred_long` downloads in three date ranges and joins them.
+- **Worker rejected the new strategies:** it still accepted only the original two, so the daily rule check failed for quality ("Unknown strategy family"). The screenshot run caught it, and the fix was made before commit.
+- **Two paper tests were wrong, not the code.** One assumed a 60% order should pass, but the 50% max-order limit correctly blocked it. The other expected an error for a 140% target that is now scaled down.
+
+**Next:** keep paper-trading. If paper-trading quality, compare QUAL's tracking against the rule over at least 63 days. Do not add more variants without counting them in the deflated Sharpe ratio.

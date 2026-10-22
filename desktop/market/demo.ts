@@ -13,6 +13,7 @@ const BASE: Record<string, [number, string]> = {
   XLI: [150, 'Industrial Select Sector SPDR'], XLK: [280, 'Technology Select Sector SPDR'], XLP: [79, 'Consumer Staples Select Sector SPDR'],
   XLU: [86, 'Utilities Select Sector SPDR'], XLV: [140, 'Health Care Select Sector SPDR'], XLY: [235, 'Consumer Discretionary Select Sector SPDR'],
   XLRE: [42, 'Real Estate Select Sector SPDR'], XLC: [115, 'Communication Services Select Sector SPDR'],
+  QUAL: [190, 'iShares MSCI USA Quality Factor ETF'], IEF: [95, 'iShares 7-10 Year Treasury Bond ETF'],
 };
 
 function seeded(text: string) {
@@ -176,6 +177,17 @@ export function demoPaperFetch(now = () => Date.now()) {
     if (u.pathname === '/v2/positions') return reply(200, [...positions].filter(([, q]) => q !== 0).map(([symbol, qty]) => ({ symbol, qty: String(qty),
       market_value: String(qty * price(symbol)), current_price: String(price(symbol)), avg_entry_price: String(price(symbol)), unrealized_pl: '0' })));
     if (u.pathname === '/v2/orders' && init.method === 'GET') return reply(200, [...orders].reverse());
+    if (u.pathname === '/v2/account/portfolio/history') {
+      const days = Array.from({ length: 5 }, (_, i) => now() - (5 - i) * 86_400_000);
+      return reply(200, { timestamp: days.map(t => Math.floor(t / 1000)), equity: days.map((_, i) => 100_000 + i * 50) });
+    }
+    if (u.pathname === '/v2/calendar') {
+      const out = [];
+      for (let t = Date.parse(u.searchParams.get('start') + 'T12:00:00Z'); t <= Date.parse(u.searchParams.get('end') + 'T12:00:00Z'); t += 86_400_000) {
+        const d = new Date(t); if (d.getUTCDay() % 6) out.push({ date: d.toISOString().slice(0, 10), open: '09:30', close: '16:00' });
+      }
+      return reply(200, out);
+    }
     if (u.pathname === '/v2/orders' && init.method === 'DELETE') return reply(207, []);
     if (u.pathname === '/v2/orders' && init.method === 'POST') {
       const o = JSON.parse(init.body ?? '{}') as { symbol: string; qty: string; side: string; client_order_id: string };

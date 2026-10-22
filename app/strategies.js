@@ -1,4 +1,5 @@
 // Strategies page: go/no-go ladder, strategy lab (stages 1–2) and paper trading (stage 3).
+const NAMES = { trend: 'Trend + volatility target', sectors: 'Sector momentum', quality: 'Quality (most profitable companies)', ensemble: 'Diversified ensemble' };
 const GATE_LABELS = { deflated_sharpe: 'Survives the multiple-testing correction', newey_west: 'Edge over the benchmark is significant',
   walk_forward: 'Beats the benchmark out of sample', holdout: 'Holds up in the last 10 years', robust: 'Most parameter choices beat the benchmark' };
 
@@ -39,7 +40,7 @@ export function initStrategies({ $, esc, toast, receive }) {
     const lab = state.lab;
     if (!lab) return;
     $('lab-meta').textContent = 'Data ' + lab.data.first + ' to ' + lab.data.last + ' (' + lab.data.days.toLocaleString() + ' days) · rules registered ' + lab.registration.date +
-      ' · gates v' + lab.registration.gates_version + ' · hash ' + lab.registration.hash.slice(0, 12) + (lab.completed_at ? ' · run ' + new Date(lab.completed_at).toLocaleString() : '');
+      (lab.registration.extra ? ' (quality and ensemble ' + lab.registration.extra + ')' : '') + ' · gates v' + lab.registration.gates_version + ' · hash ' + lab.registration.hash.slice(0, 12) + (lab.completed_at ? ' · run ' + new Date(lab.completed_at).toLocaleString() : '');
     $('lab-results').innerHTML = Object.values(lab.results).map(r => {
       const rows = [
         ['Sharpe (after costs)', num(r.excess_sharpe), num(r.benchmark_excess_sharpe)],
@@ -47,16 +48,19 @@ export function initStrategies({ $, esc, toast, receive }) {
         ['Worst fall (max drawdown)', pct(r.summary.max_drawdown), pct(r.benchmark_summary.max_drawdown)],
         ['Last 10 years Sharpe', num(r.holdout.sharpe), num(r.holdout.benchmark_sharpe)],
         ['Walk-forward Sharpe (from ' + (r.walk_forward.from || '—').slice(0, 4) + ')', num(r.walk_forward.sharpe), num(r.walk_forward.benchmark_sharpe)],
+        ['Annual return at the market\'s risk', pct(r.return_at_benchmark_risk), pct(r.benchmark_summary.annual_return)],
       ];
-      return '<div class="lab-card"><div class="lab-head"><h3>' + esc(r.family === 'trend' ? 'Trend + volatility target' : 'Sector momentum') + '</h3><span class="tag ' + (r.go_to_paper ? '' : 'neutral') + '">' +
-        (r.go_to_paper ? 'GO TO PAPER' : 'NO-GO') + '</span></div><p class="term-note">Primary rule ' + esc(r.primary) + ' · benchmark: ' + esc(r.benchmark) + '</p>' +
+      if (r.reference_60_40) rows.push(['60/40 stocks/bonds (reference)', pct(r.reference_60_40.summary.annual_return) + ' · ' + pct(r.reference_60_40.summary.max_drawdown), '']);
+      return '<div class="lab-card"><div class="lab-head"><h3>' + esc(NAMES[r.family] || r.family) + '</h3><span class="tag ' + (r.go_to_paper ? '' : 'neutral') + '">' +
+        (r.go_to_paper ? 'GO TO PAPER' : 'NO-GO') + '</span></div><p class="term-note">Primary rule ' + esc(r.primary) + ' · benchmark: ' + esc(r.benchmark) +
+        ' · data from ' + esc(r.period[0]) + (r.max_exposure > 1.001 ? ' · borrows up to ' + pct(r.max_exposure - 1, 0) + ' at the risk-free rate + 2.5%' : '') + '</p>' +
         '<table class="term-table"><thead><tr><th scope="col"></th><th scope="col" class="num">Strategy</th><th scope="col" class="num">Benchmark</th></tr></thead><tbody>' +
         rows.map(([k, a, b]) => '<tr><th scope="row">' + esc(k) + '</th><td class="num">' + a + '</td><td class="num">' + b + '</td></tr>').join('') + '</tbody></table>' +
         '<p class="term-note">Chance its Sharpe really beats the benchmark: <strong>' + pct(r.sharpe_vs_benchmark.p_better, 0) + '</strong> (95% range of the difference ' +
         num(r.sharpe_vs_benchmark.ci95[0]) + ' to ' + num(r.sharpe_vs_benchmark.ci95[1]) + ') · deflated Sharpe ' + num(r.deflated.dsr, 3) + ' · t-stat ' + num(r.newey_west_active.t) + '</p>' +
         specCurve(r) + '<p class="term-note">Each bar is one of ' + r.variants.length + ' parameter choices; green beats the benchmark (dashed line).</p>' +
         '<ul class="checks">' + Object.entries(r.gates).map(([k, ok]) => '<li class="' + (ok ? 'pass' : 'fail') + '"><span>' + (ok ? '✓' : '✗') + '</span>' + esc(GATE_LABELS[k] || k) + '</li>').join('') + '</ul></div>';
-    }).join('') + '<p class="term-note lab-foot">Industry momentum was already examined on this data earlier, and both ideas are well published, so the last 10 years are not a pristine test. Forward paper trading is the only clean test.</p>';
+    }).join('') + '<p class="term-note lab-foot">All four ideas are well published, and industry momentum was already examined on this data earlier, so the last 10 years are not a pristine test. Later strategies are judged against all ' + (lab.registration.total_trials || '') + ' variants tried so far. Forward paper trading is the only clean test.</p>';
   }
 
   function renderPaper() {
@@ -69,6 +73,8 @@ export function initStrategies({ $, esc, toast, receive }) {
       $('paper-enabled').checked = s.enabled; $('paper-strategy').value = s.strategy;
       $('limit-order').value = +(s.limits.maxOrderFraction * 100).toFixed(1); $('limit-orders').value = s.limits.maxOrdersPerDay;
       $('limit-loss').value = +(s.limits.dailyLossStop * 100).toFixed(2); $('limit-min').value = s.limits.minOrderNotional;
+      $('limit-gross').value = Math.round((s.limits.maxGrossExposure ?? 1) * 100);
+      $('paper-daily').checked = s.dailyUpdate !== false; $('paper-notify').checked = s.notify !== false;
     }
     $('paper-kill').textContent = s.killSwitch ? 'Turn kill switch off' : 'Kill switch';
     $('paper-kill').setAttribute('aria-pressed', String(s.killSwitch));
@@ -97,11 +103,27 @@ export function initStrategies({ $, esc, toast, receive }) {
       esc(e.symbol ? e.side + ' ' + e.qty + ' ' + e.symbol + ' (' + (e.status || e.error) + ')' : e.problems ? e.problems.join(' ') : e.type === 'reconcile' ? (e.ok ? 'matches plan' : 'DIFFERENCES: ' + JSON.stringify(e.differences)) : e.type === 'kill-switch' ? (e.on ? 'on' : 'off') : '') + '</li>').join('') || '<li class="term-note">Empty.</li>';
   }
 
+  function renderBrief() {
+    const b = state.brief;
+    if (!b) return;
+    const signed = v => Number.isFinite(v) ? (v >= 0 ? '+' : '') + (v * 100).toFixed(2) + '%' : '—';
+    const tile = (label, value, cls = '') => '<div class="brief-tile"><span class="label">' + esc(label) + '</span><span class="value ' + cls + '">' + esc(value) + '</span></div>';
+    const tone = v => !Number.isFinite(v) || v === 0 ? '' : v > 0 ? 'up' : 'down';
+    $('paper-brief').innerHTML = tile('Equity', money(b.equity)) + tile('Today', signed(b.day_change), tone(b.day_change)) +
+      tile('Since ' + (b.since || 'start'), signed(b.since_start), tone(b.since_start)) + tile('SPY, same days', signed(b.spy_since_start), tone(b.spy_since_start)) +
+      tile('The rule, simulated', signed(b.rule_since_start), tone(b.rule_since_start)) + tile('Next rebalance', b.next_rebalance || '—') +
+      tile('Orders proposed', b.orders_needed === null ? '—' : String(b.orders_needed)) + tile('Stage 3', b.stage3 || '—') +
+      '<p class="term-note brief-foot">Updated ' + esc(new Date(b.updated).toLocaleString()) + ' · ' + esc(NAMES[b.strategy] || b.strategy) + ' · ' + b.days + ' days recorded' +
+      (b.backfilled ? ' · ' + b.backfilled + ' missed days filled from Alpaca' : '') + (b.signal_error ? ' · rule check failed: ' + esc(b.signal_error) : '') +
+      (b.orders_needed ? ' · <strong>orders are waiting for your approval below</strong>' : '') + '</p>';
+  }
+
   function render(next) {
     state = next;
     renderLadder();
     renderLab();
     renderPaper();
+    renderBrief();
   }
 
   $('lab-run').addEventListener('click', async () => {
@@ -113,10 +135,16 @@ export function initStrategies({ $, esc, toast, receive }) {
     event.preventDefault();
     void act(() => desk.configure({ enabled: $('paper-enabled').checked, strategy: $('paper-strategy').value, killSwitch: state.settings.killSwitch,
       limits: { maxOrderFraction: Number($('limit-order').value) / 100, maxOrdersPerDay: Number($('limit-orders').value),
-        dailyLossStop: Number($('limit-loss').value) / 100, minOrderNotional: Number($('limit-min').value) } }), 'Paper settings saved.');
+        dailyLossStop: Number($('limit-loss').value) / 100, minOrderNotional: Number($('limit-min').value),
+        maxGrossExposure: Number($('limit-gross').value) / 100 }, dailyUpdate: $('paper-daily').checked, notify: $('paper-notify').checked }), 'Paper settings saved.');
   });
   $('paper-kill').addEventListener('click', () => { void act(() => desk.kill(!state.settings.killSwitch), state.settings.killSwitch ? 'Kill switch off.' : 'Kill switch on: open paper orders cancelled.'); });
   $('paper-refresh').addEventListener('click', () => { void act(() => desk.refresh()); });
+  $('paper-daily-now').addEventListener('click', async () => {
+    $('paper-daily-now').textContent = 'Updating…';
+    await act(() => desk.daily(), 'Daily update recorded.');
+    $('paper-daily-now').textContent = 'Update now ↻';
+  });
   $('paper-propose').addEventListener('click', async () => {
     confirming = false;
     $('paper-propose').disabled = true; $('paper-propose').textContent = 'Computing…';

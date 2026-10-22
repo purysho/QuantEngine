@@ -150,6 +150,19 @@ class StrategyTests(unittest.TestCase):
             st.BORROW_SPREAD = spread
         self.assertGreater(free["net"].sum(), levered["net"].sum())
 
+    def test_paper_signals_for_quality_and_the_levered_ensemble(self):
+        dates, market, rf, assets = market_data(n=700, k=13)
+        closes = 100 * np.cumprod(1 + np.column_stack([market, assets]), axis=0)  # SPY, 11 sectors, QUAL, IEF.
+        universe = st.PAPER_UNIVERSE["ensemble"]
+        ens = st.paper_signal("ensemble", dates, closes, universe, 0.04, since=dates[600])
+        self.assertLessEqual(ens["gross_exposure"], 1.5 + 1e-9)
+        self.assertIn("IEF", ens["targets"])
+        self.assertIn("QUAL", ens["targets"])
+        quality = st.paper_signal("quality", dates, closes[:, [0, 12]], st.PAPER_UNIVERSE["quality"], 0.04)
+        self.assertEqual(quality["targets"], {"QUAL": 1.0})
+        with self.assertRaisesRegex(ValueError, "expects these symbols"):
+            st.latest_signal("quality", st.FAMILIES["quality"]["primary"], dates, closes[:, [0, 12]], ["SPY", "XLK"])
+
     def test_treasury_returns_reprice_a_par_bond(self):
         r = st.treasury_returns(["a", "b", "c", "d"], ["a", "b", "c"], [4.0, 4.0, 5.0])
         self.assertTrue(np.isnan(r[0]))
