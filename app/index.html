@@ -20,7 +20,7 @@
       <button class="nav-item" data-page="runs"><svg viewBox="0 0 24 24"><path d="m7 4 13 8-13 8Z"/></svg>Runs</button>
       <button class="nav-item" data-page="preferences"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z"/><circle cx="12" cy="12" r="3"/></svg>Preferences</button>
     </nav>
-    <div class="sidebar-note"><span class="eyebrow">YOUR MACHINE. YOUR RESEARCH.</span><p>Numerical work stays on this computer.</p><span class="version">v0.3.0 · Windows x64</span></div>
+    <div class="sidebar-note"><span class="eyebrow">YOUR MACHINE. YOUR RESEARCH.</span><p>Numerical work stays on this computer.</p><span class="version">v0.3.1 · Windows x64</span></div>
     <div class="sidebar-status"><span id="status-dot" class="dot"></span><span id="sidebar-status">Engine paused</span></div>
   </aside>
   <main>
@@ -91,14 +91,19 @@
       <article class="panel"><div class="panel-heading"><div><h2>Stages 1–2 · Strategy lab</h2><p id="lab-meta">Pre-registered rules tested on 100 years of US data (Kenneth R. French library), after costs, against the passive benchmark.</p></div><button type="button" id="lab-run" class="primary">Run strategy lab</button></div>
         <div id="lab-results" class="lab-results"><p class="term-note">Run the lab to download the data and test both strategies (about 30 seconds).</p></div></article>
       <article class="panel" id="paper-panel"><div class="panel-heading"><div><h2>Stage 3 · Paper trading</h2><p>Orders go only to your Alpaca paper account, and only after you approve them. Every step is written to <code>paper/journal.jsonl</code> in your storage folder.</p></div><span id="paper-badge" class="tag neutral">OFF</span></div>
+        <div class="daily-brief"><div class="panel-heading inner"><h3>Daily update</h3><button type="button" id="paper-daily-now" class="text-button">Update now ↻</button></div><div id="paper-brief" class="brief-grid"><p class="term-note">The first update runs after the next US close (4:20 p.m. New York time) while QuantEngine is open, or press Update now.</p></div></div>
         <div class="paper-grid">
           <form id="paper-form" class="paper-settings" autocomplete="off">
             <label class="checkbox-row"><input type="checkbox" id="paper-enabled"><span>Enable paper trading<small>I understand this places simulated orders in my Alpaca paper account after I approve each list.</small></span></label>
-            <label for="paper-strategy">Strategy</label><select id="paper-strategy"><option value="trend">Trend + volatility target (SPY vs cash)</option><option value="sectors">Sector momentum (top 3 SPDR sector ETFs)</option></select>
-            <div class="form-grid"><div><label for="limit-order">Max order (% of equity)</label><input id="limit-order" type="number" min="1" max="105" step="1"></div>
+            <label for="paper-strategy">Strategy</label><select id="paper-strategy"><option value="trend">Trend + volatility target (SPY vs cash)</option><option value="sectors">Sector momentum (top 3 SPDR sector ETFs)</option><option value="quality">Quality: most profitable companies (QUAL)</option><option value="ensemble">Diversified ensemble (SPY, sectors, QUAL, IEF)</option></select>
+            <div class="form-grid"><div><label for="limit-order">Max order (% of equity)</label><input id="limit-order" type="number" min="1" max="150" step="1"></div>
             <div><label for="limit-orders">Max orders per day</label><input id="limit-orders" type="number" min="1" max="200" step="1"></div>
             <div><label for="limit-loss">Daily loss stop (%)</label><input id="limit-loss" type="number" min="0.5" max="50" step="0.5"></div>
-            <div><label for="limit-min">Min order ($)</label><input id="limit-min" type="number" min="1" max="10000" step="1"></div></div>
+            <div><label for="limit-min">Min order ($)</label><input id="limit-min" type="number" min="1" max="10000" step="1"></div>
+            <div><label for="limit-gross">Max total exposure (%)</label><input id="limit-gross" type="number" min="100" max="150" step="5"></div></div>
+            <p class="field-help">100% means no borrowing. Above 100% lets the ensemble use margin in the paper account, as its rule allows (up to 150%); borrowing raises both gains and losses and costs interest.</p>
+            <label class="checkbox-row"><input type="checkbox" id="paper-daily"><span>Daily update after each US close<small>Refreshes the account, records the day's value, checks whether the rule wants trades (never submits them) and fills missed days from Alpaca. Runs while QuantEngine is open or in the tray.</small></span></label>
+            <label class="checkbox-row"><input type="checkbox" id="paper-notify"><span>Windows notification with the daily summary</span></label>
             <div class="inline-actions"><button type="submit" class="secondary">Save settings</button><button type="button" id="paper-kill" class="secondary danger">Kill switch</button></div>
             <p id="paper-warning" class="paper-warning hidden" role="status"></p>
           </form>

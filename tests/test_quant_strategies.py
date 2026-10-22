@@ -31,6 +31,16 @@ def market_data(n=3000, seed=5, k=12):
     return dates, common, np.full(n, .00008), assets
 
 
+def layout(family, market, assets, seed=9):
+    """Asset matrix each family expects: industries for sectors; market, industries, 3 quality portfolios and bonds otherwise."""
+    if family in ("trend", "sectors"):
+        return assets
+    rng = np.random.default_rng(seed)
+    quality = market[:, None] * .9 + rng.normal(.0002, .004, (len(market), 3))
+    bonds = rng.normal(.0002, .004, len(market))[:, None]
+    return np.column_stack([market, assets, quality, bonds])
+
+
 class StatsTests(unittest.TestCase):
     def test_newey_west_matches_statsmodels_reference(self):
         # statsmodels 0.15.0 OLS(r, 1).fit(cov_type="HAC", maxlags=10, use_correction=False).bse[0]
@@ -64,11 +74,14 @@ class StrategyTests(unittest.TestCase):
         dates, market, rf, assets = market_data()
         for family in st.FAMILIES:
             spec = st.FAMILIES[family]["primary"]
-            base = st.backtest(family, spec, dates, market, rf, assets)
-            shocked_market, shocked_assets = market.copy(), assets.copy()
+            data = layout(family, market, assets)
+            base = st.backtest(family, spec, dates, market, rf, data)
+            shocked_market, shocked = market.copy(), data.copy()
             shocked_market[2000:] *= -3
-            shocked_assets[2000:] *= -3
-            other = st.backtest(family, spec, dates, shocked_market, rf, shocked_assets)
+            shocked[2000:] *= -3
+            if family not in ("trend", "sectors"):
+                shocked[:, 0] = shocked_market
+            other = st.backtest(family, spec, dates, shocked_market, rf, shocked)
             cut = 2000 - base["start"]
             np.testing.assert_array_equal(base["net"][:cut], other["net"][:cut])
 
@@ -116,6 +129,53 @@ class StrategyTests(unittest.TestCase):
         trend = st.paper_signal("trend", dates, closes[:, :1], ["SPY"], 0.04)
         self.assertIn("SPY", trend["targets"])
         self.assertLessEqual(trend["targets"]["SPY"], 1.0)
+
+    def test_ensemble_balances_sleeves_caps_leverage_and_pays_for_borrowing(self):
+        dates, market, rf, assets = market_data(n=1500)
+        data = layout("ensemble", market, assets)
+        spec = {"weighting": "inverse_vol", "target_vol": .30, "leverage_cap": 1.5, "rebalance": "month"}
+        weights = st.target_weights("ensemble", spec, market, rf, data, dates)
+        rows = weights[~np.isnan(weights).any(axis=1)]
+        self.assertTrue(len(rows) > 10)
+        self.assertLessEqual(rows.sum(axis=1).max(), 1.5 + 1e-12)
+        self.assertTrue((rows >= 0).all())
+        self.assertTrue((rows[:, st.ENSEMBLE_BONDS] > 0).all())
+        levered = st.backtest("ensemble", spec, dates, market, rf, data, cost_bps=0)
+        self.assertGreater(levered["max_exposure"], 1.0)
+        # Same weights with free borrowing would earn more: the margin spread is charged.
+        spread, st.BORROW_SPREAD = st.BORROW_SPREAD, 0.0
+        try:
+            free = st.backtest("ensemble", spec, dates, market, rf, data, cost_bps=0)
+        finally:
+            st.BORROW_SPREAD = spread
+        self.assertGreater(free["net"].sum(), levered["net"].sum())
+
+    def test_paper_signals_for_quality_and_the_levered_ensemble(self):
+        dates, market, rf, assets = market_data(n=700, k=13)
+        closes = 100 * np.cumprod(1 + np.column_stack([market, assets]), axis=0)  # SPY, 11 sectors, QUAL, IEF.
+        universe = st.PAPER_UNIVERSE["ensemble"]
+        ens = st.paper_signal("ensemble", dates, closes, universe, 0.04, since=dates[600])
+        self.assertLessEqual(ens["gross_exposure"], 1.5 + 1e-9)
+        self.assertIn("IEF", ens["targets"])
+        self.assertIn("QUAL", ens["targets"])
+        quality = st.paper_signal("quality", dates, closes[:, [0, 12]], st.PAPER_UNIVERSE["quality"], 0.04)
+        self.assertEqual(quality["targets"], {"QUAL": 1.0})
+        with self.assertRaisesRegex(ValueError, "expects these symbols"):
+            st.latest_signal("quality", st.FAMILIES["quality"]["primary"], dates, closes[:, [0, 12]], ["SPY", "XLK"])
+
+    def test_treasury_returns_reprice_a_par_bond(self):
+        r = st.treasury_returns(["a", "b", "c", "d"], ["a", "b", "c"], [4.0, 4.0, 5.0])
+        self.assertTrue(np.isnan(r[0]))
+        self.assertAlmostEqual(r[1], .04 / 252, places=12)       # Unchanged yield: one day of coupon.
+        self.assertAlmostEqual(r[2], -.0778, delta=5e-4)          # +100 bp on a 10-year 4% par bond.
+        self.assertAlmostEqual(r[3], .05 / 252, places=12)       # Missing yield carries the last value.
+
+    def test_quality_holds_the_chosen_portfolio(self):
+        dates, market, rf, assets = market_data(n=400)
+        data = layout("quality", market, assets)
+        run = st.backtest("quality", {"portfolio": "Hi 20", "rebalance": "month"}, dates, market, rf, data, cost_bps=0)
+        s = run["start"]
+        np.testing.assert_allclose(run["net"], data[s:, 14])
 
 
 if __name__ == "__main__":

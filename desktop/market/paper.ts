@@ -8,7 +8,7 @@ import type { Credentials } from './alpaca.js';
 
 export const PAPER_HOST = 'https://paper-api.alpaca.markets';
 const PATHS: Array<[string, RegExp]> = [
-  ['GET', /^\/v2\/account$/], ['GET', /^\/v2\/positions$/], ['GET', /^\/v2\/orders$/], ['GET', /^\/v2\/clock$/],
+  ['GET', /^\/v2\/account$/], ['GET', /^\/v2\/account\/portfolio\/history$/], ['GET', /^\/v2\/calendar$/], ['GET', /^\/v2\/positions$/], ['GET', /^\/v2\/orders$/], ['GET', /^\/v2\/clock$/],
   ['POST', /^\/v2\/orders$/], ['DELETE', /^\/v2\/orders$/],
 ];
 
@@ -21,19 +21,27 @@ export interface Position { symbol: string; qty: string; market_value: string; c
 export interface Order { id: string; client_order_id: string; symbol: string; side: string; qty: string | null; status: string;
   filled_qty: string; filled_avg_price: string | null; submitted_at: string; filled_at: string | null }
 /** maxOrderFraction caps one order as a share of equity: it catches sizing bugs (a wrong unit or price) without blocking normal rebalancing. */
-export interface RiskLimits { maxOrderFraction: number; maxOrdersPerDay: number; dailyLossStop: number; minOrderNotional: number }
-export interface PaperSettings { enabled: boolean; strategy: 'trend' | 'sectors'; limits: RiskLimits; killSwitch: boolean }
+export interface RiskLimits { maxOrderFraction: number; maxOrdersPerDay: number; dailyLossStop: number; minOrderNotional: number;
+  /** Total positions as a share of equity. 1.0 = no borrowing (default); up to 1.5 only if you opt in to margin. */
+  maxGrossExposure: number }
+export type Strategy = 'trend' | 'sectors' | 'quality' | 'ensemble';
+export interface PaperSettings { enabled: boolean; strategy: Strategy; limits: RiskLimits; killSwitch: boolean;
+  /** After each US close: refresh, record equity, check the rule (never submits) and show a notification. */
+  dailyUpdate: boolean; notify: boolean }
 export interface ProposedOrder { symbol: string; side: 'buy' | 'sell'; qty: number; price: number; notional: number; reason: string }
 export interface Proposal { id: string; created: string; strategy: string; asOf: string; equity: number; targets: Record<string, number>;
   orders: ProposedOrder[]; blocked: string[] }
 
-export const UNIVERSE: Record<'trend' | 'sectors', string[]> = {
+const SECTOR_ETFS = ['XLB', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLU', 'XLV', 'XLY', 'XLRE', 'XLC'];
+/** Same order as PAPER_UNIVERSE in workers/quant_strategies.py; SPY is always first. */
+export const UNIVERSE: Record<Strategy, string[]> = {
   trend: ['SPY'],
-  // SPY first (trend filter / market); then the SPDR sector ETFs with history since 2016 or earlier.
-  sectors: ['SPY', 'XLB', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLU', 'XLV', 'XLY', 'XLRE', 'XLC'],
+  sectors: ['SPY', ...SECTOR_ETFS],
+  quality: ['SPY', 'QUAL'],
+  ensemble: ['SPY', ...SECTOR_ETFS, 'QUAL', 'IEF'],
 };
-export const DEFAULT_SETTINGS: PaperSettings = { enabled: false, strategy: 'trend', killSwitch: false,
-  limits: { maxOrderFraction: 0.5, maxOrdersPerDay: 24, dailyLossStop: 0.03, minOrderNotional: 50 } };
+export const DEFAULT_SETTINGS: PaperSettings = { enabled: false, strategy: 'trend', killSwitch: false, dailyUpdate: true, notify: true,
+  limits: { maxOrderFraction: 1.0, maxOrdersPerDay: 24, dailyLossStop: 0.03, minOrderNotional: 50, maxGrossExposure: 1.0 } };
 
 export function validateSettings(value: unknown): PaperSettings {
   const v = (value ?? {}) as Partial<PaperSettings>;
@@ -42,20 +50,26 @@ export function validateSettings(value: unknown): PaperSettings {
     if (typeof x !== 'number' || !Number.isFinite(x) || x < lo || x > hi) throw new Error(`${name} must be between ${lo} and ${hi}.`);
     return x;
   };
-  if (v.strategy !== 'trend' && v.strategy !== 'sectors') throw new Error('Choose the trend or sectors strategy.');
-  return { enabled: v.enabled === true, strategy: v.strategy, killSwitch: v.killSwitch === true, limits: {
-    maxOrderFraction: num(l.maxOrderFraction, 0.01, 1.05, 'Maximum order (share of equity)'),
+  if (!['trend', 'sectors', 'quality', 'ensemble'].includes(v.strategy as string)) throw new Error('Choose one of the registered strategies.');
+  return { enabled: v.enabled === true, strategy: v.strategy as Strategy, killSwitch: v.killSwitch === true,
+    dailyUpdate: v.dailyUpdate !== false, notify: v.notify !== false, limits: {
+    maxOrderFraction: num(l.maxOrderFraction, 0.01, 1.5, 'Maximum order (share of equity)'),
     maxOrdersPerDay: num(l.maxOrdersPerDay, 1, 200, 'Maximum orders per day'),
     dailyLossStop: num(l.dailyLossStop, 0.005, 0.5, 'Daily loss stop'),
-    minOrderNotional: num(l.minOrderNotional, 1, 10_000, 'Minimum order size') } };
+    minOrderNotional: num(l.minOrderNotional, 1, 10_000, 'Minimum order size'),
+    maxGrossExposure: num(l.maxGrossExposure ?? 1.0, 1.0, 1.5, 'Maximum total exposure') } };
 }
 
 /** Orders that move current positions to the target weights: whole shares, sells before buys, no shorts, no leverage. */
 export function planOrders(targets: Record<string, number>, positions: Position[], prices: Record<string, number>, equity: number,
-                           universe: string[], minNotional: number): { orders: ProposedOrder[]; blocked: string[] } {
+                           universe: string[], minNotional: number, maxGross = 1.0): { orders: ProposedOrder[]; blocked: string[] } {
   const blocked: string[] = [];
   const weightSum = Object.values(targets).reduce((a, b) => a + b, 0);
-  if (Object.values(targets).some(w => !(w >= 0)) || weightSum > 1 + 1e-9) throw new Error('Targets must be long-only and sum to at most 100%.');
+  if (Object.values(targets).some(w => !(w >= 0))) throw new Error('Targets must be long-only.');
+  // A rule may ask for more than 100% (the ensemble, up to 150%); without margin opted in it is scaled down to 100%.
+  if (weightSum > 1.5 + 1e-9) throw new Error('Targets must sum to at most 150%.');
+  const scale = weightSum > maxGross ? maxGross / weightSum : 1;
+  targets = Object.fromEntries(Object.entries(targets).map(([s, w]) => [s, w * scale]));
   const held = new Map(positions.map(p => [p.symbol, Number(p.qty)]));
   const orders: ProposedOrder[] = [];
   for (const symbol of new Set([...universe, ...held.keys()])) {
@@ -91,8 +105,10 @@ export function riskCheck(proposal: Proposal, settings: PaperSettings, account: 
     if (!UNIVERSE[settings.strategy].includes(o.symbol)) problems.push(`${o.symbol} is outside the strategy universe.`);
   }
   const buys = proposal.orders.filter(o => o.side === 'buy').reduce((a, o) => a + o.notional, 0);
-  if (buys > Number(account.cash) + proposal.orders.filter(o => o.side === 'sell').reduce((a, o) => a + o.notional, 0) + 1) {
-    problems.push('Buys would exceed cash plus sale proceeds (no leverage).');
+  const borrowing = Math.max(0, settings.limits.maxGrossExposure - 1) * equity;
+  if (buys > Number(account.cash) + proposal.orders.filter(o => o.side === 'sell').reduce((a, o) => a + o.notional, 0) + borrowing + 1) {
+    problems.push(settings.limits.maxGrossExposure > 1 ? `Buys would exceed cash, sale proceeds and the ${((settings.limits.maxGrossExposure - 1) * 100).toFixed(0)}% borrowing allowance.`
+      : 'Buys would exceed cash plus sale proceeds (no leverage).');
   }
   return problems;
 }
@@ -125,6 +141,11 @@ export class PaperBroker {
   positions() { return this.call<Position[]>('GET', '/v2/positions'); }
   orders(after?: string) { return this.call<Order[]>('GET', '/v2/orders', { status: 'all', limit: '100', direction: 'desc', ...(after ? { after } : {}) }); }
   cancelAll() { return this.call<unknown>('DELETE', '/v2/orders'); }
+  /** Daily equity history kept by Alpaca, so days when this laptop was off are not lost. */
+  portfolioHistory(period = '3M') {
+    return this.call<{ timestamp: number[]; equity: Array<number | null> }>('GET', '/v2/account/portfolio/history', { period, timeframe: '1D' });
+  }
+  calendar(start: string, end: string) { return this.call<Array<{ date: string; open: string; close: string }>>('GET', '/v2/calendar', { start, end }); }
   /** Market order for whole shares, valid for the day. client_order_id makes a retry of the same proposal idempotent. */
   submit(order: ProposedOrder, proposalId: string) {
     return this.call<Order>('POST', '/v2/orders', {}, { symbol: order.symbol, qty: String(order.qty), side: order.side, type: 'market',

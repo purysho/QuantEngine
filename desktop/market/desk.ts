@@ -9,6 +9,7 @@ import { PaperBroker, Journal, planOrders, riskCheck, stageThree, validateSettin
   type Account, type Order, type PaperSettings, type Position, type Proposal } from './paper.js';
 
 export interface DeskHost {
+  notify(title: string, body: string): void;
   dataRoot(): string;
   runTask(stage: string, command: string, values: JsonRecord): Promise<JsonRecord>;
   stage(extension: 'csv' | 'json', content: string): Promise<string>;
@@ -29,6 +30,8 @@ export class StrategyDesk {
   simulated: Record<string, number> = {};
   journalTail: Array<Record<string, unknown>> = [];
   stage3: ReturnType<typeof stageThree> | null = null;
+  brief: Record<string, unknown> | null = null;
+  marketReturns: Record<string, number> = {};
   onChange: () => void = () => {};
 
   constructor(readonly settingsFile: string, readonly broker: PaperBroker, readonly market: MarketService, readonly host: DeskHost) {}
@@ -39,6 +42,8 @@ export class StrategyDesk {
   async load() {
     try { this.settings = validateSettings(JSON.parse(await readFile(this.settingsFile, 'utf8'))); } catch { /* defaults */ }
     try { this.simulated = JSON.parse(await readFile(path.join(this.folder, 'simulated.json'), 'utf8')); } catch { this.simulated = {}; }
+    try { this.marketReturns = JSON.parse(await readFile(path.join(this.folder, 'market.json'), 'utf8')); } catch { this.marketReturns = {}; }
+    try { this.brief = JSON.parse(await readFile(path.join(this.folder, 'brief.json'), 'utf8')); } catch { this.brief = null; }
     this.journalTail = await this.journal.read(40);
   }
 
@@ -52,7 +57,7 @@ export class StrategyDesk {
   snapshot() {
     return { settings: this.settings, universe: UNIVERSE[this.settings.strategy], lab: this.lab, account: this.account,
       positions: this.positions, orders: this.orders.slice(0, 30), proposal: this.proposal, lastError: this.lastError,
-      updated: this.updated, journal: this.journalTail.slice(-25).reverse(), stage3: this.stage3,
+      updated: this.updated, journal: this.journalTail.slice(-25).reverse(), stage3: this.stage3, brief: this.brief,
       ladder: this.ladder() };
   }
 
@@ -132,6 +137,68 @@ export class StrategyDesk {
     await this.journal.write({ type: 'reconcile', proposal: submitted.proposal, ok: !differences.length && !problems.length, differences, problems });
   }
 
+  /** Fills days this laptop missed from Alpaca's own daily equity history (existing readings are kept). */
+  async backfill() {
+    const history = await this.broker.portfolioHistory('3M');
+    const have = new Set((await this.journal.equity()).map(p => p.date));
+    let added = 0;
+    for (let i = 0; i < history.timestamp.length; i++) {
+      const value = history.equity[i];
+      // Daily points are left-labelled (start of the day); +12 h lands mid-day whether that start is midnight in New York or UTC.
+      const date = nyDate(new Date(history.timestamp[i] * 1000 + 12 * 3_600_000));
+      if (typeof value === 'number' && value > 0 && !have.has(date)) { await this.journal.recordEquity(date, value, NaN); added++; }
+    }
+    return added;
+  }
+
+  /** The last trading day of this month (or next month, if this month's has passed): when monthly rules rebalance. */
+  async nextRebalance(): Promise<string | null> {
+    const now = new Date(), today = nyDate(now);
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 0)).toISOString().slice(0, 10);
+    const days = (await this.broker.calendar(today, end)).map(d => d.date);
+    const month = (d: string) => d.slice(0, 7);
+    const last = days.filter((d, i) => i === days.length - 1 || month(days[i + 1]) !== month(d));
+    return last.find(d => d >= today) ?? null;
+  }
+
+  /**
+   * After each US close: refresh the account, fill missed days, check the rule (proposal only, never submitted)
+   * and summarise the day. Called by the app's scheduler and by the "Update now" button.
+   */
+  async dailyUpdate(): Promise<Record<string, unknown>> {
+    await this.refresh();
+    if (!this.account) throw new Error(this.lastError || 'The paper account could not be read.');
+    const added = await this.backfill().catch(() => 0);
+    let proposal: Proposal | null = null, signalError: string | null = null;
+    try { proposal = await this.propose(); } catch (error) { signalError = (error as Error).message; }
+    const equity = await this.journal.equity();
+    const first = equity[0], last = equity.at(-1)!, previous = equity.at(-2);
+    const cumulative = (series: Record<string, number>) => Object.entries(series).filter(([d]) => first && d > first.date)
+      .reduce((a, [, r]) => a * (1 + r), 1) - 1;
+    this.stage3 = stageThree(equity, this.simulated, await this.journal.read(5000));
+    const nextRebalance = await this.nextRebalance().catch(() => null);
+    this.brief = {
+      date: nyDate(), updated: new Date().toISOString(), strategy: this.settings.strategy, equity: last.equity,
+      day_change: previous ? last.equity / previous.equity - 1 : null, since: first?.date ?? null,
+      since_start: first ? last.equity / first.equity - 1 : null, spy_since_start: first ? cumulative(this.marketReturns) : null,
+      rule_since_start: first ? cumulative(this.simulated) : null, days: equity.length, orders_needed: proposal ? proposal.orders.length : null,
+      next_rebalance: nextRebalance, signal_error: signalError, backfilled: added,
+      stage3: this.stage3 ? `${Object.values(this.stage3.checks).filter(c => c.pass).length} of 5 checks` : null,
+    };
+    await mkdir(this.folder, { recursive: true });
+    await writeFile(path.join(this.folder, 'brief.json'), JSON.stringify(this.brief));
+    await this.journal.write({ type: 'daily-update', ...this.brief });
+    this.journalTail = await this.journal.read(40);
+    if (this.settings.notify) {
+      const pct = (v: unknown) => typeof v === 'number' && Number.isFinite(v) ? (v >= 0 ? '+' : '') + (v * 100).toFixed(2) + '%' : '—';
+      this.host.notify(`QuantEngine paper · ${pct(this.brief.day_change)} today`,
+        `Equity $${Math.round(last.equity).toLocaleString('en-US')} · since ${this.brief.since}: ${pct(this.brief.since_start)} (SPY ${pct(this.brief.spy_since_start)})` +
+        (proposal?.orders.length ? ` · ${proposal.orders.length} orders proposed — review in Strategies` : ' · no orders needed'));
+    }
+    this.onChange();
+    return this.brief;
+  }
+
   /** Today's orders for the chosen strategy, from the traded ETFs' own daily closes. Nothing is sent. */
   async propose(): Promise<Proposal> {
     const strategy = this.settings.strategy;
@@ -141,14 +208,18 @@ export class StrategyDesk {
     const equityHistory = await this.journal.equity();
     const signal = (await this.host.runTask('Computing today\'s strategy signal', 'strategy-signal', { path: file, family: strategy,
       rf_annual: this.host.riskFreeAnnual(), since: equityHistory[0]?.date ?? null })).signal as {
-      targets: Record<string, number>; as_of: string; simulated: Record<string, number>; prices: Record<string, number> };
+      targets: Record<string, number>; as_of: string; simulated: Record<string, number>; prices: Record<string, number>;
+      market_returns: Record<string, number> };
     this.simulated = { ...this.simulated, ...signal.simulated };
+    this.marketReturns = { ...this.marketReturns, ...signal.market_returns };
     await mkdir(this.folder, { recursive: true });
     await writeFile(path.join(this.folder, 'simulated.json'), JSON.stringify(this.simulated));
+    await writeFile(path.join(this.folder, 'market.json'), JSON.stringify(this.marketReturns));
     const [account, positions, snaps] = await Promise.all([this.broker.account(), this.broker.positions(), this.market.client.snapshots(universe, this.market.settings.feed)]);
     this.account = account; this.positions = positions;
     const prices = Object.fromEntries(universe.map(s => [s, snaps[s]?.latestTrade?.p ?? signal.prices[s]]));
-    const { orders, blocked } = planOrders(signal.targets, positions, prices, Number(account.equity), universe, this.settings.limits.minOrderNotional);
+    const { orders, blocked } = planOrders(signal.targets, positions, prices, Number(account.equity), universe,
+      this.settings.limits.minOrderNotional, this.settings.limits.maxGrossExposure);
     this.proposal = { id: proposalId(strategy, signal.as_of), created: new Date().toISOString(), strategy, asOf: signal.as_of,
       equity: Number(account.equity), targets: signal.targets, orders, blocked };
     await this.journal.write({ type: 'proposal', proposal: this.proposal.id, strategy, as_of: signal.as_of, targets: signal.targets, orders, blocked });

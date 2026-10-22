@@ -196,3 +196,7 @@ body.market-demo #page-terminal .term-grid{outline:1px dashed #ffb34799;outline-
 button.danger{border-color:#ff4d6d!important;color:#ff4d6d!important}
 @media (max-width:1360px){.ladder{grid-template-columns:repeat(2,minmax(0,1fr))}.lab-results,.paper-grid{grid-template-columns:1fr}}
 .ladder-step.failed{border-color:#ff4d6d88}.ladder-step.failed .ladder-state{color:#ff4d6d}
+.daily-brief{padding:8px 17px 4px}.brief-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.brief-tile{border:1px solid #ff2a5526;background:#07060a;padding:8px 10px;display:flex;flex-direction:column;gap:2px}.brief-tile .label{font-size:12px;color:var(--ink-muted)}
+.brief-tile .value{font:700 17px "Cascadia Mono",Consolas,monospace;color:#fff}.brief-foot{grid-column:1/-1;margin:4px 0 0}
+@media (max-width:1360px){.brief-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

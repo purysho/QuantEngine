@@ -34,10 +34,26 @@ test('orders are whole shares, sells first, long-only and never exceed equity', 
     { XLK: 280, XLE: 88, XLF: 52, SPY: 670 }, 100_000, ['SPY', 'XLK', 'XLE', 'XLF'], 50);
   assert.deepEqual(orders.map(o => [o.side, o.symbol, o.qty]), [['sell', 'XLF', 100], ['buy', 'XLE', 568], ['buy', 'XLK', 178]]);
   assert.ok(orders.filter(o => o.side === 'buy').reduce((a, o) => a + o.notional, 0) <= 100_000);
-  assert.throws(() => planOrders({ XLK: .7, XLE: .7 }, [], { XLK: 1, XLE: 1 }, 1000, ['XLK', 'XLE'], 1), /at most 100%/);
+  const scaled = planOrders({ XLK: .7, XLE: .7 }, [], { XLK: 1, XLE: 1 }, 1000, ['XLK', 'XLE'], 1);  // 140% asked, no margin: scaled to 100%.
+  assert.ok(scaled.orders.reduce((a, o) => a + o.notional, 0) <= 1000);
   assert.throws(() => planOrders({ XLK: -.5 }, [], { XLK: 1 }, 1000, ['XLK'], 1), /long-only/);
   const outside = planOrders({}, [{ symbol: 'TSLA', qty: '5', market_value: '1', current_price: '1', avg_entry_price: '1', unrealized_pl: '0' }], {}, 1000, ['SPY'], 1);
   assert.match(outside.blocked[0], /outside the strategy universe/);
+});
+
+test('rules asking for more than 100% are scaled down unless margin is opted in', () => {
+  const prices = { SPY: 100, QUAL: 100, IEF: 100 };
+  const unlevered = planOrders({ SPY: .5, QUAL: .5, IEF: .5 }, [], prices, 100_000, ['SPY', 'QUAL', 'IEF'], 50, 1.0);
+  assert.ok(unlevered.orders.reduce((a, o) => a + o.notional, 0) <= 100_000);
+  const levered = planOrders({ SPY: .5, QUAL: .5, IEF: .5 }, [], prices, 100_000, ['SPY', 'QUAL', 'IEF'], 50, 1.5);
+  assert.equal(levered.orders.reduce((a, o) => a + o.notional, 0), 150_000);
+  assert.throws(() => planOrders({ SPY: 1, QUAL: 1 }, [], prices, 1000, ['SPY', 'QUAL'], 1, 1.5), /150%/);
+  const now = Date.now();
+  const proposal: Proposal = { id: 'p2', created: new Date(now).toISOString(), strategy: 'ensemble', asOf: '', equity: 100_000, targets: {}, orders: levered.orders, blocked: [] };
+  const ensemble = { ...enabled, strategy: 'ensemble' as const };
+  assert.match(riskCheck(proposal, ensemble, account(), 0, now).join(), /no leverage/);
+  assert.deepEqual(riskCheck(proposal, { ...ensemble, limits: { ...ensemble.limits, maxGrossExposure: 1.5 } }, account(), 0, now), []);
+  assert.throws(() => validateSettings({ ...ensemble, limits: { ...ensemble.limits, maxGrossExposure: 2 } }), /total exposure/);
 });
 
 test('risk checks block stale, oversized, over-limit, killed and loss-stopped batches', () => {

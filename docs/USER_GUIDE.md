@@ -99,10 +99,10 @@ The **Strategies** page follows four stages. QuantEngine automates stages 1–3 
    - **Tests:** every parameter variant, a walk-forward choice of variant (decided each year using only earlier data), and the final 10 years reserved.
    - **Statistics:** Newey–West t-statistics and the Deflated Sharpe Ratio, which corrects for the number of variants tried.
 
-   All five gates must pass before a strategy counts as ready for paper trading. **Result so far (2026-08 data): neither passes.** Trend has a higher Sharpe ratio and a far smaller worst fall (−49% against −84%), but lower returns, and it lagged buy-and-hold in the last decade. Sector momentum's edge (t = 2.2) does not survive the multiple-testing correction (deflated Sharpe 0.52, needs 0.95).
+   All five gates must pass before a strategy counts as ready for paper trading. Later strategies (quality and ensemble, registered 2026-10-22) are judged against every variant tried so far (43). **Result so far (2026-08 data): none passes.** Quality comes closest: 12.1% a year against the market's 10.9% since 1963, and it passed 4 of 5 gates, with a deflated Sharpe of 0.91 against the 0.95 required. The ensemble cut the worst fall from −55% to −33% but did not beat the market's return. Trend has a higher Sharpe ratio and a far smaller worst fall (−49% against −84%), but lower returns, and it lagged buy-and-hold in the last decade. Sector momentum's edge (t = 2.2) does not survive the multiple-testing correction (deflated Sharpe 0.52, needs 0.95).
 3. **Paper trading.** In Preferences, add keys from Alpaca's *paper trading* dashboard. On the Strategies page, tick **Enable paper trading**, choose a strategy and save.
    - **Compute today's orders** shows the targets and whole-share orders. Nothing is sent until you press **Submit to paper account** and confirm.
-   - **Limits:** each order at most a set share of equity (default 50%), no leverage, no shorts, a maximum number of orders per day, and a daily loss stop that blocks new buys. The **kill switch** cancels open paper orders and blocks new ones.
+   - **Limits:** each order at most a set share of equity (default 100%, because trend and quality hold a single fund), no leverage, no shorts, a maximum number of orders per day, and a daily loss stop that blocks new buys. The **kill switch** cancels open paper orders and blocks new ones.
    - **Records:** every proposal, approval, order, error and reconciliation goes to `paper/journal.jsonl`; daily equity goes to `paper/equity.jsonl`.
    - **Stage 3 checks:**
      - at least 63 trading days compared with the rule's simulated returns on the same ETFs;
@@ -111,6 +111,15 @@ The **Strategies** page follows four stages. QuantEngine automates stages 1–3 
      - no unreconciled differences in 30 days;
      - the kill switch tested once.
    - A strategy that failed stage 2 can still be paper-traded for learning; the page says so.
+   - **Four strategies are available:** trend, sectors, **quality** (the most profitable US companies, traded as QUAL) and a **diversified ensemble** (trend-timed SPY, sector momentum, QUAL and 7–10-year Treasuries via IEF, balanced by risk and sized to 15% volatility).
+   - **Borrowing is off by default.** The ensemble's rule may ask for up to 150% exposure. With **Max total exposure** at 100% it is scaled down to no borrowing. Raising the limit (up to 150%) lets it use margin in the paper account, which costs interest and makes losses bigger too.
+   - **Daily update** (on by default): about 20 minutes after each US close (4:20 p.m. New York time, 4:20–5:20 a.m. in China), or when the app next opens, QuantEngine:
+     - refreshes the paper account and records the day's value;
+     - fills any days your laptop missed from Alpaca's own history;
+     - checks whether the rule wants trades;
+     - shows a **Daily update** panel (today, since the start, SPY over the same days, the rule's simulated result, the next rebalance date) and a Windows notification.
+
+     It never submits orders: proposed orders wait for your approval. It runs while QuantEngine is open or in the tray, so turn on **Open at Windows sign-in** in Preferences if you want it every day.
 4. **Small real money** is your decision, outside QuantEngine. Only consider it after stages 2 and 3 both pass, with a small amount you can afford to lose. Keep in mind US rules such as the $25,000 minimum for frequent day trading in margin accounts, and keep tax records.
 
 Orders go only to `paper-api.alpaca.markets`. The live trading host is not in QuantEngine's code, and live-account keys are rejected by the paper host. US options are not paper-traded: there is not enough history of option prices to test such a strategy.

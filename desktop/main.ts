@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, ipcMain, shell, safeStorage } from 'electron';
+import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, ipcMain, shell, safeStorage, Notification } from 'electron';
 import fs from 'node:fs';
 import { readFile, writeFile, mkdir, rename, unlink, appendFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -75,6 +75,29 @@ function pushState() {
 
 function pushMarket() {
   if (window && !window.isDestroyed()) window.webContents.send('quant:market', market.snapshot());
+}
+
+/**
+ * Daily paper update: once per US trading day, from 20 minutes after the 4 p.m. New York close (or when the
+ * app next opens). It refreshes, records equity, checks the rule and notifies; it never submits orders.
+ */
+let lastDaily = '';
+let dailyFailures = 0;
+async function dailyTick() {
+  if (!desk?.settings.enabled || !desk.settings.dailyUpdate || !market.credentials || quitting) return;
+  const now = new Date();
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: '2-digit', minute: '2-digit',
+    hourCycle: 'h23' }).formatToParts(now).map(p => [p.type, p.value]));
+  const day = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const minutes = Number(parts.hour) * 60 + Number(parts.minute);
+  const weekend = ['Sat', 'Sun'].includes(parts.weekday);
+  // Never during the session (daily bars are still forming); after 16:20 New York time, or a catch-up before the open / at weekends.
+  if (!weekend && minutes >= 9 * 60 + 30 && minutes < 16 * 60 + 20) return;
+  const target = weekend || minutes < 9 * 60 + 30 ? 'catch-up:' + day : day;
+  if (lastDaily === target || (desk.brief && String(desk.brief.updated ?? '') > new Date(Date.now() - 6 * 3_600_000).toISOString())) return;
+  if (engine.state.busy || dailyFailures > 5) return;
+  try { await desk.dailyUpdate(); lastDaily = target; dailyFailures = 0; }
+  catch (error) { dailyFailures++; desk.lastError = 'Daily update: ' + (error as Error).message; pushDesk(); }
 }
 
 function pushDesk() {
@@ -308,6 +331,7 @@ async function command(method: string, values?: unknown): Promise<unknown> {
   if (method === 'desk-refresh') { await desk.refresh(); return desk.snapshot(); }
   if (method === 'desk-propose') { await desk.propose(); return desk.snapshot(); }
   if (method === 'desk-submit') { await desk.submit(values); return desk.snapshot(); }
+  if (method === 'desk-daily') { await desk.dailyUpdate(); return desk.snapshot(); }
   if (method === 'desk-kill') {
     if (typeof values !== 'boolean') throw new Error('Kill switch must be on or off.');
     await desk.kill(values);
@@ -331,7 +355,7 @@ function dispatchCommand(method: string, values?: unknown): Promise<unknown> {
     settingsQueue = pending;
     return pending;
   }
-  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'refresh-source', 'calculate-options', 'learn-now', 'market-dataset', 'market-surface', 'desk-lab', 'desk-propose', 'desk-submit'].includes(method)) {
+  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'refresh-source', 'calculate-options', 'learn-now', 'market-dataset', 'market-surface', 'desk-lab', 'desk-propose', 'desk-submit', 'desk-daily'].includes(method)) {
     return Promise.reject(new Error('Settings or storage are still being saved. Wait before starting another operation.'));
   }
   return command(method, values);
@@ -379,10 +403,12 @@ async function nativeSelfTest() {
     const proposed = await d.propose();
     const submitted = await d.submit(proposed.proposal.id);
     const again = await d.refresh();
+    const daily = await d.daily();
     return { orders: proposed.proposal.orders.length, positions: submitted.positions.length,
-      reconciled: again.journal.some(e => e.type === 'reconcile' && e.ok === true) };
+      reconciled: again.journal.some(e => e.type === 'reconcile' && e.ok === true),
+      daily: Boolean(daily.brief && daily.brief.next_rebalance && daily.brief.days >= 2) };
   })()`);
-  if (paper.orders < 1 || paper.positions < 1 || !paper.reconciled) throw new Error('Self-test paper loop failed: ' + JSON.stringify(paper));
+  if (paper.orders < 1 || paper.positions < 1 || !paper.reconciled || !paper.daily) throw new Error('Self-test paper loop failed: ' + JSON.stringify(paper));
   console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), learnedModels: learned.tasks.risk.graph.nodes.length, completed: engine.state.completed, terminal, paper,
     runtime: engine.runtime, report: engine.lastReportPath }));
   await quit();
@@ -428,6 +454,9 @@ else {
     const paperFetch = (marketDemo ? demoPaperFetch() : globalThis.fetch) as unknown as PaperFetch;
     desk = new StrategyDesk(path.join(app.getPath('userData'), marketDemo ? 'demo-market/paper.json' : 'paper.json'),
       new PaperBroker(() => market.credentials, paperFetch), market, {
+        notify: (title, body) => {
+          if (!selfTest && Notification.isSupported()) new Notification({ title, body, icon: path.join(app.getAppPath(), 'assets/app.png') }).show();
+        },
         dataRoot: () => engine.config.dataRoot,
         runTask: (stage, command, values) => engine.runTask(stage, command, values),
         stage,
@@ -442,6 +471,8 @@ else {
     };
     void market.start();
     void desk.loadSavedLab().then(() => { pushDesk(); if (market.credentials && desk.settings.enabled) void desk.refresh(); });
+    if (!selfTest) setInterval(() => { void dailyTick(); }, 10 * 60_000);
+    if (!selfTest) setTimeout(() => { void dailyTick(); }, 60_000);
     if (!selfTest) {
       const image = nativeImage.createFromPath(path.join(app.getAppPath(), 'assets/app.png'));
       if (!image.isEmpty()) {
