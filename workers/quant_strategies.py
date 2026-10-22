@@ -41,7 +41,26 @@ FAMILIES = {
     "sectors": {"grid": {"lookback": [126, 252], "top": [2, 3, 4], "trend_filter": [False, True], "rebalance": ["month"]},
                 "primary": {"lookback": 252, "top": 3, "trend_filter": False, "rebalance": "month"},
                 "benchmark": "Equal-weight all industries"},
+    # Registered 2026-10-22, before any run on real data (see REGISTERED_EXTRA and the git history).
+    # Buffett lesson: hold the most profitable companies patiently (Novy-Marx 2013; Frazzini, Kabiller & Pedersen 2018).
+    "quality": {"grid": {"portfolio": ["Hi 10", "Hi 20", "Hi 30"], "rebalance": ["month"]},
+                "primary": {"portfolio": "Hi 30", "rebalance": "month"},
+                "benchmark": "Buy and hold the US market"},
+    # Medallion lesson, retail version: combine several weakly related return sources (trend-timed market,
+    # sector momentum, quality, 10-year Treasuries), balance them by risk, then size the whole portfolio to a
+    # volatility target with at most modest borrowing, paying a realistic margin rate.
+    "ensemble": {"specs": [{"weighting": w, "target_vol": v, "leverage_cap": c, "rebalance": "month"}
+                           for w in ("equal", "inverse_vol") for v, c in ((None, 1.0), (.10, 1.0), (.10, 1.5), (.15, 1.0), (.15, 1.5))],
+                 "primary": {"weighting": "inverse_vol", "target_vol": .15, "leverage_cap": 1.5, "rebalance": "month"},
+                 "benchmark": "Buy and hold the US market"},
 }
+REGISTERED_EXTRA = "2026-10-22"  # quality and ensemble
+BORROW_SPREAD = 0.025  # Annual margin cost above the risk-free rate on any borrowed amount (registered with the families).
+QUALITY_COLUMNS = ["Hi 10", "Hi 20", "Hi 30"]
+# Asset layout for quality/ensemble backtests: market, 12 industries, quality (Hi 10, Hi 20, Hi 30), 10-year Treasury.
+ENSEMBLE_QUALITY = 13 + QUALITY_COLUMNS.index("Hi 30")
+ENSEMBLE_BONDS = 16
+LAB_LAYOUT = {"sectors": slice(1, 13), "quality": ENSEMBLE_QUALITY, "bonds": ENSEMBLE_BONDS}
 
 # Go/no-go gates for moving from backtest (stage 2) to paper trading (stage 3).
 # Version 2 (2026-10-21): every gate tests the strategy against simply holding its passive benchmark.
@@ -64,10 +83,13 @@ def spec_id(family: str, spec: dict) -> str:
 def registration_hash() -> str:
     """Hash of the registered families and gates; reports carry it so later edits are visible."""
     return hashlib.sha256(json.dumps({"families": FAMILIES, "gates": GATES, "gates_version": GATES_VERSION, "registered": REGISTERED,
+                                      "registered_extra": REGISTERED_EXTRA, "borrow_spread": BORROW_SPREAD,
                                       "skip": SKIP, "vol_window": VOL_WINDOW}, sort_keys=True, default=str).encode()).hexdigest()
 
 
 def specs(family: str) -> list[dict]:
+    if "specs" in FAMILIES[family]:
+        return [dict(s) for s in FAMILIES[family]["specs"]]
     grid = FAMILIES[family]["grid"]
     keys = sorted(grid)
     return [dict(zip(keys, values)) for values in itertools.product(*(grid[k] for k in keys))]
@@ -95,10 +117,11 @@ def _trailing_growth(returns: np.ndarray, window: int) -> np.ndarray:
     return np.expm1(out)
 
 
-def target_weights(family: str, spec: dict, market: np.ndarray, rf: np.ndarray, assets: np.ndarray | None = None) -> np.ndarray:
+def target_weights(family: str, spec: dict, market: np.ndarray, rf: np.ndarray, assets: np.ndarray | None = None,
+                   dates: list[str] | None = None, layout: dict | None = None) -> np.ndarray:
     """Weights wanted at the close of each day from data up to that close (rows: days, columns: assets)."""
     n = len(market)
-    lookback = spec["lookback"]
+    lookback = spec.get("lookback", 252)  # The ensemble's trend sleeve uses the registered 12-month trend.
     trend = _trailing_growth(market, lookback) - _trailing_growth(rf, lookback)
     if family == "trend":
         w = np.where(trend > 0, 1.0, 0.0)
@@ -125,14 +148,51 @@ def target_weights(family: str, spec: dict, market: np.ndarray, rf: np.ndarray, 
             weights[~(trend > 0)] = 0.0
         weights[~valid | np.isnan(trend)] = np.nan
         return weights
+    if family == "quality":
+        weights = np.zeros_like(assets)
+        weights[:, (layout or {}).get("quality", 13 + QUALITY_COLUMNS.index(spec["portfolio"]))] = 1.0
+        return weights
+    if family == "ensemble":
+        if dates is None or len(dates) != len(market):
+            raise ValueError("The ensemble needs dates to find month-ends.")
+        return _ensemble_weights(spec, assets, trend, rebalance_days(dates, spec["rebalance"]), layout or LAB_LAYOUT)
     raise ValueError(f"Unknown strategy family: {family}")
+
+
+def _ensemble_weights(spec: dict, assets, trend, signal_days: np.ndarray, layout: dict) -> np.ndarray:
+    """Four sleeves balanced by risk, then scaled to the volatility target. Computed on month-ends only."""
+    n, k = assets.shape
+    weights = np.full((n, k), np.nan)
+    sectors = layout["sectors"]
+    sector_scores = (1 + _trailing_growth(assets[:, sectors], 252)) / (1 + _trailing_growth(assets[:, sectors], SKIP)) - 1
+    for s in np.flatnonzero(signal_days):
+        if s < 252 or np.isnan(trend[s]) or np.isnan(sector_scores[s]).any():
+            continue
+        window = assets[s - VOL_WINDOW + 1:s + 1]
+        sleeves = []
+        trend_sleeve = np.zeros(k); trend_sleeve[0] = 1.0
+        sector_sleeve = np.zeros(k); sector_sleeve[sectors.start + np.argsort(-sector_scores[s])[:3]] = 1 / 3
+        quality_sleeve = np.zeros(k); quality_sleeve[layout["quality"]] = 1.0
+        bond_sleeve = np.zeros(k); bond_sleeve[layout["bonds"]] = 1.0
+        for sleeve in (trend_sleeve, sector_sleeve, quality_sleeve, bond_sleeve):
+            sleeves.append((sleeve, float(np.std(window @ sleeve, ddof=1) * math.sqrt(TRADING_DAYS))))
+        raw = np.array([1 / v if spec["weighting"] == "inverse_vol" else 1.0 for _, v in sleeves])
+        sleeve_weights = raw / raw.sum()
+        # The trend sleeve holds the market only while its trend is positive; otherwise its share sits in cash.
+        combined = sum(w * (sl if i or trend[s] > 0 else np.zeros(k)) for i, ((sl, _), w) in enumerate(zip(sleeves, sleeve_weights)))
+        if spec["target_vol"]:
+            vol = float(np.sqrt(combined @ np.cov(window, rowvar=False) @ combined) * math.sqrt(TRADING_DAYS))
+            combined = combined * (min(spec["leverage_cap"], spec["target_vol"] / vol) if vol > 0 else 1.0)
+        weights[s] = combined
+    return weights
+
 
 
 def backtest(family: str, spec: dict, dates: list[str], market: np.ndarray, rf: np.ndarray,
              assets: np.ndarray | None = None, cost_bps: float = 10.0) -> dict:
     """Daily net returns with next-close execution, cash at the risk-free rate and costs on turnover."""
-    wanted = target_weights(family, spec, market, rf, assets)
-    returns = assets if family == "sectors" else market[:, None]
+    wanted = target_weights(family, spec, market, rf, assets, dates)
+    returns = market[:, None] if family == "trend" else assets
     n, k = returns.shape
     signal = rebalance_days(dates, spec["rebalance"]) & ~np.isnan(wanted).any(axis=1)
     held = np.full((n, k), np.nan)
@@ -148,14 +208,15 @@ def backtest(family: str, spec: dict, dates: list[str], market: np.ndarray, rf: 
     start = int(np.flatnonzero(~np.isnan(held[:, 0]))[0])
     w = held[start:]
     gross = (w * returns[start:]).sum(axis=1) + (1 - w.sum(axis=1)) * rf[start:]
-    net = gross - turnover[start:] * cost_bps / 1e4
+    borrowed = np.maximum(w.sum(axis=1) - 1, 0)  # Borrowing pays the risk-free rate (above) plus the margin spread.
+    net = gross - turnover[start:] * cost_bps / 1e4 - borrowed * BORROW_SPREAD / TRADING_DAYS
     return {"start": start, "dates": dates[start:], "net": net, "gross": gross, "excess": net - rf[start:],
             "turnover_per_year": float(turnover[start:].sum() / (len(net) / TRADING_DAYS)),
-            "exposure": float(w.sum(axis=1).mean()), "weights_last": held[-1].tolist()}
+            "exposure": float(w.sum(axis=1).mean()), "max_exposure": float(w.sum(axis=1).max()), "weights_last": held[-1].tolist()}
 
 
 def benchmark_returns(family: str, market: np.ndarray, assets: np.ndarray | None) -> np.ndarray:
-    return market if family == "trend" else assets.mean(axis=1)
+    return assets.mean(axis=1) if family == "sectors" else market
 
 
 def walk_forward(family: str, dates: list[str], market, rf, assets, cost_bps: float, first_year: int) -> dict:
@@ -189,7 +250,8 @@ def walk_forward(family: str, dates: list[str], market, rf, assets, cost_bps: fl
 
 
 def evaluate(family: str, dates: list[str], market: np.ndarray, rf: np.ndarray, assets: np.ndarray | None = None, *,
-             cost_bps: float = 10.0, holdout_years: int = 10, first_walk_forward_year: int = 1950, bootstrap_draws: int = 1000) -> dict:
+             cost_bps: float = 10.0, holdout_years: int = 10, first_walk_forward_year: int = 1950, bootstrap_draws: int = 1000,
+             n_trials: int | None = None) -> dict:
     """Full evidence for one family: every variant, the primary rule, walk-forward, holdout and the gates."""
     family_specs = specs(family)
     bench_all = benchmark_returns(family, market, assets)
@@ -222,10 +284,14 @@ def evaluate(family: str, dates: list[str], market: np.ndarray, rf: np.ndarray, 
         "newey_west_excess": qs.newey_west_mean(excess),
         "newey_west_active": qs.newey_west_mean(primary["net"] - bench),
         "psr_excess": qs.probabilistic_sharpe(excess), "information_ratio": qs.sharpe(primary["net"] - bench),
-        "deflated": qs.deflated_sharpe(primary["net"] - bench, trial_sharpes),
+        "deflated": qs.deflated_sharpe(primary["net"] - bench, trial_sharpes, n_trials),
         "bootstrap": qs.bootstrap_sharpe(excess, draws=bootstrap_draws),
         "sharpe_vs_benchmark": qs.bootstrap_sharpe_difference(excess, bench_excess, draws=bootstrap_draws),
         "turnover_per_year": primary["turnover_per_year"], "average_exposure": primary["exposure"],
+        "max_exposure": primary["max_exposure"],
+        # Annual return if the strategy were scaled (up or down) to the benchmark's volatility: the fair "more return" comparison.
+        "return_at_benchmark_risk": float(np.mean(rf[primary["start"]:]) * TRADING_DAYS + qs.sharpe(excess) * qs.summary(bench)["annual_volatility"]),
+        "benchmark_return_arithmetic": float(np.mean(bench) * TRADING_DAYS),
         "cost_sensitivity_sharpe": costs,
         "holdout": {"from": cutoff, "sharpe": qs.sharpe(excess[in_holdout]), "benchmark_sharpe": qs.sharpe(bench_excess[in_holdout]),
                     "pre_holdout_sharpe": qs.sharpe(excess[~in_holdout]), "max_drawdown": qs.max_drawdown(primary["net"][in_holdout]),
@@ -250,6 +316,9 @@ def evaluate(family: str, dates: list[str], market: np.ndarray, rf: np.ndarray, 
         "robust": bool(result["spec_curve"]["beats_benchmark_share"] >= .75),
     }
     result["gates_version"] = GATES_VERSION
+    if assets is not None and assets.shape[1] > ENSEMBLE_BONDS:
+        mix = (.6 * market + .4 * assets[:, ENSEMBLE_BONDS])[primary["start"]:]
+        result["reference_60_40"] = {"summary": qs.summary(mix), "excess_sharpe": qs.sharpe(mix - rf[primary["start"]:])}
     result["go_to_paper"] = all(result["gates"].values())
     return result
 
@@ -279,8 +348,29 @@ def latest_signal(family: str, spec: dict, dates: list[str], closes: np.ndarray,
             "note": "Signal from closes up to as_of; the rule trades at the next close."}
 
 
-def lab_inputs(factors_zip: bytes, industries_zip: bytes):
-    """Daily dates, market total return, risk-free rate and 12 industry returns from the French library files."""
+def treasury_returns(trading_dates: list[str], fred_dates: list[str], yields) -> np.ndarray:
+    """Daily total return of a 10-year par Treasury from FRED DGS10 (percent), repriced each day at the new yield.
+
+    Buy a par bond (coupon = yesterday's yield, 10 years, semiannual) at price 1, earn a day of coupon, and
+    revalue at today's yield. Missing yields carry the last value (return = coupon only). A standard
+    approximation of a constant-maturity bond index; IEF (7-10 years) is the traded counterpart.
+    """
+    level = dict(zip(fred_dates, yields))
+    out = np.full(len(trading_dates), np.nan)
+    last = None
+    for i, d in enumerate(trading_dates):
+        y = level.get(d)
+        current = y / 100 if y is not None and np.isfinite(y) else last
+        if last is not None and current is not None:
+            c, h = last, current / 2
+            price = (c / 2) * (1 - (1 + h) ** -20) / h + (1 + h) ** -20 if h > 0 else 1.0
+            out[i] = price - 1 + c / TRADING_DAYS
+        last = current
+    return out
+
+
+def lab_inputs(factors_zip: bytes, industries_zip: bytes, op_zip: bytes | None = None, dgs10_csv: bytes | None = None) -> dict:
+    """Daily inputs. ``main`` covers 1926 onwards (trend, sectors); ``full`` adds quality and Treasuries from mid-1963."""
     try:
         from . import quant_data as qd
     except ImportError:
@@ -293,21 +383,43 @@ def lab_inputs(factors_zip: bytes, industries_zip: bytes):
     rf = factors["series"]["RF"]
     assets = np.column_stack([industries["series"][name] for name in industries["series"]])
     keep = np.isfinite(market) & np.isfinite(rf) & np.isfinite(assets).all(axis=1)
-    return [d.isoformat() for d, k in zip(factors["dates"], keep) if k], market[keep], rf[keep], assets[keep]
+    dates = [d.isoformat() for d, k in zip(factors["dates"], keep) if k]
+    out = {"main": (dates, market[keep], rf[keep], assets[keep]), "full": None}
+    if op_zip is not None and dgs10_csv is not None:
+        op = qd.parse_french(op_zip, "Average Value Weighted Returns -- Daily")
+        fred = qd.parse_fred(dgs10_csv)
+        op_index = {d.isoformat(): i for i, d in enumerate(op["dates"])}
+        rows = [i for i, d in enumerate(dates) if d in op_index]
+        full_dates = [dates[i] for i in rows]
+        quality = np.column_stack([op["series"][c][[op_index[d] for d in full_dates]] for c in QUALITY_COLUMNS])
+        bonds = treasury_returns(full_dates, [d.isoformat() for d in fred["dates"]], fred["series"]["DGS10"])
+        m, r, a = market[keep][rows], rf[keep][rows], assets[keep][rows]
+        matrix = np.column_stack([m, a, quality, bonds])
+        ok = np.isfinite(matrix).all(axis=1)
+        out["full"] = ([d for d, k in zip(full_dates, ok) if k], m[ok], r[ok], matrix[ok])
+    return out
 
 
-def run_lab(factors_zip: bytes, industries_zip: bytes, progress=None) -> dict:
-    dates, market, rf, assets = lab_inputs(factors_zip, industries_zip)
+def run_lab(factors_zip: bytes, industries_zip: bytes, op_zip: bytes | None = None, dgs10_csv: bytes | None = None, progress=None) -> dict:
+    inputs = lab_inputs(factors_zip, industries_zip, op_zip, dgs10_csv)
+    families = [f for f in FAMILIES if f in ("trend", "sectors") or inputs["full"] is not None]
+    total_trials = sum(len(specs(f)) for f in families)
     results = {}
-    for i, family in enumerate(FAMILIES):
+    for i, family in enumerate(families):
         if progress:
-            progress(f"Testing the {family} strategy family", i / len(FAMILIES))
-        results[family] = evaluate(family, dates, market, rf, assets if family == "sectors" else None)
+            progress(f"Testing the {family} strategy family", i / len(families))
+        dates, market, rf, assets = inputs["main"] if family in ("trend", "sectors") else inputs["full"]
+        # Families registered later are deflated by every variant tried so far, across all families.
+        results[family] = evaluate(family, dates, market, rf, assets if family != "trend" else None,
+                                   n_trials=total_trials if family in ("quality", "ensemble") else None)
         results[family]["variants"] = sorted(results[family]["variants"], key=lambda v: -v["sharpe"])
-    return {"registration": {"date": REGISTERED, "hash": registration_hash(), "gates": GATES, "gates_version": GATES_VERSION,
+    first, last = inputs["main"][0][0], inputs["main"][0][-1]
+    return {"registration": {"date": REGISTERED, "extra": REGISTERED_EXTRA, "hash": registration_hash(), "gates": GATES,
+                             "gates_version": GATES_VERSION, "borrow_spread": BORROW_SPREAD, "total_trials": total_trials,
                              "families": {k: {"primary": v["primary"], "benchmark": v["benchmark"]} for k, v in FAMILIES.items()}},
-            "data": {"first": dates[0], "last": dates[-1], "days": len(dates)}, "results": results,
-            "go_to_paper": {family: r["go_to_paper"] for family, r in results.items()}}
+            "data": {"first": first, "last": last, "days": len(inputs["main"][0]),
+                     "full_first": inputs["full"][0][0] if inputs["full"] else None},
+            "results": results, "go_to_paper": {family: r["go_to_paper"] for family, r in results.items()}}
 
 
 def paper_signal(family: str, dates: list[str], closes, symbols: list[str], rf_annual: float, since: str | None = None,
