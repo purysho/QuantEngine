@@ -243,6 +243,18 @@ class MultifactorTests(unittest.TestCase):
         np.testing.assert_allclose(matrix[:, 17], .004)             # Value Hi 10.
         self.assertEqual(st.lab_inputs(factors, industries, op, dgs10)["full"][3].shape[1], 17, "without the new files nothing changes")
 
+    def test_etf_check_compares_the_rule_with_spy_on_the_same_days(self):
+        dates, market, rf, assets = market_data(n=800, k=3)
+        closes = 100 * np.cumprod(1 + np.column_stack([market, assets]), axis=0)
+        out = st.etf_check("multifactor", dates, closes, st.PAPER_UNIVERSE["multifactor"], 0.04)
+        returns = closes[1:] / closes[:-1] - 1
+        start = dates.index(out["from"]) - 1
+        np.testing.assert_allclose(out["spy"]["growth_of_10000"], 10000 * np.prod(1 + returns[start:, 0]), rtol=1e-12)
+        self.assertEqual(sum(y["days"] for y in out["years"].values()), out["days"])
+        self.assertLessEqual(out["beat_spy_years"], out["full_years"])
+        with self.assertRaisesRegex(ValueError, "expects these symbols"):
+            st.etf_check("multifactor", dates, closes, ["SPY", "QUAL", "MTUM", "VLUE"], 0.04)
+
     def test_registration_names_the_multifactor_family(self):
         self.assertIn("multifactor", st.FAMILIES)
         self.assertEqual(st.REGISTERED_MULTIFACTOR, "2026-10-27")

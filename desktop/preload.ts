@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('quant', Object.freeze({
     refresh: () => call('desk-refresh'),
     daily: () => call('desk-daily'),
     exportProgress: () => call('desk-export'),
+    etfCheck: () => call('desk-etf-check'),
     propose: () => call('desk-propose'),
     submit: (proposalId: string) => call('desk-submit', proposalId),
     kill: (on: boolean) => call('desk-kill', on),

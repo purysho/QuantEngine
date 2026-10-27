@@ -102,8 +102,12 @@ def main():
             rf_annual = request.get("rf_annual", 0.0)
             if isinstance(rf_annual, bool) or not isinstance(rf_annual, (int, float)) or not -0.05 <= rf_annual <= 0.25:
                 raise ValueError("Risk-free rate must be a number between -5% and 25%.")
-            since = request.get("since")
-            result = {"signal": paper_signal(family, dates, closes, symbols, float(rf_annual), since if isinstance(since, str) else None)}
+            if request.get("check"):
+                from quant_strategies import etf_check
+                result = {"check": etf_check(family, dates, closes, symbols, float(rf_annual))}
+            else:
+                since = request.get("since")
+                result = {"signal": paper_signal(family, dates, closes, symbols, float(rf_annual), since if isinstance(since, str) else None)}
         elif command == "history":
             if request.get("recover"):
                 store.recover()

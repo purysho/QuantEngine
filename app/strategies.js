@@ -63,6 +63,24 @@ export function initStrategies({ $, esc, toast, receive }) {
     }).join('') + '<p class="term-note lab-foot">All of these ideas are well published, and industry momentum was already examined on this data earlier, so the last 10 years are not a pristine test. Later strategies are judged against all ' + (lab.registration.total_trials || '') + ' variants tried so far. Forward paper trading is the only clean test.</p>';
   }
 
+  function renderEtf() {
+    const check = state.etfCheck;
+    if (!check) return;
+    const rows = Object.entries(check.results || {}).map(([family, r]) => {
+      const better = (a, b) => a > b ? 'up' : a < b ? 'down' : '';
+      const cell = (a, b, f) => '<td class="num"><span class="' + better(a, b) + '">' + f(a) + '</span><div class="run-subline">SPY ' + f(b) + '</div></td>';
+      return '<tr><th scope="row">' + esc(NAMES[family] || family) + '<div class="run-subline">' + esc(r.symbols.slice(family === 'trend' ? 0 : 1).join(' ')) + '</div></th>' +
+        '<td>' + esc(r.from.slice(0, 7)) + '<div class="run-subline">to ' + esc(r.to) + '</div></td>' +
+        cell(r.rule.annual_return, r.spy.annual_return, pct) + cell(r.rule.sharpe, r.spy.sharpe, num) + cell(r.rule.max_drawdown, r.spy.max_drawdown, pct) +
+        cell(r.rule.growth_of_10000, r.spy.growth_of_10000, money) + '<td class="num">' + r.beat_spy_years + ' of ' + r.full_years + '</td></tr>';
+    }).join('');
+    const failed = Object.entries(check.errors || {}).map(([family, message]) => '<li>' + esc(NAMES[family] || family) + ': ' + esc(message) + '</li>').join('');
+    $('etf-results').innerHTML = (rows ? '<table class="term-table"><thead><tr><th scope="col">Strategy (ETFs)</th><th scope="col">Since</th><th scope="col" class="num">Annual return</th>' +
+      '<th scope="col" class="num">Sharpe</th><th scope="col" class="num">Worst fall</th><th scope="col" class="num">$10,000 became</th><th scope="col" class="num">Years ahead of SPY</th></tr></thead><tbody>' +
+      rows + '</tbody></table>' : '') + (failed ? '<ul class="term-note">' + failed + '</ul>' : '') +
+      '<p class="term-note">Run ' + esc(new Date(check.run_at).toLocaleString()) + '. Each strategy starts when all its ETFs have prices and its rule has enough history; SPY is measured over exactly the same days. 10 bps trading cost per trade; cash earns today\'s rate. Past results on a few years of data are noisy evidence, not a forecast.</p>';
+  }
+
   function renderPaper() {
     const s = state.settings;
     const go = state.lab?.go_to_paper?.[s.strategy];
@@ -147,6 +165,7 @@ export function initStrategies({ $, esc, toast, receive }) {
     renderLab();
     renderPaper();
     renderBrief();
+    renderEtf();
   }
 
   $('lab-run').addEventListener('click', async () => {
@@ -179,6 +198,12 @@ export function initStrategies({ $, esc, toast, receive }) {
     const ok = await act(() => desk.daily());
     button.disabled = false; button.textContent = 'Update now ↻';
     if (ok && state.brief) toast('Daily update recorded at ' + new Date(state.brief.updated).toLocaleTimeString() + ' · equity ' + money(state.brief.equity) + '.');
+  });
+  $('etf-run').addEventListener('click', async () => {
+    const button = $('etf-run');
+    button.disabled = true; button.textContent = 'Replaying on real ETFs…';
+    await act(() => desk.etfCheck(), 'Tradable check finished.');
+    button.disabled = false; button.textContent = 'Run tradable check';
   });
   $('paper-export').addEventListener('click', async () => {
     try {

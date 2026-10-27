@@ -516,3 +516,41 @@ def paper_signal(family: str, dates: list[str], closes, symbols: list[str], rf_a
     signal["market_returns"] = {d: float(r) for d, r in zip(dates[1:], returns[:, 0]) if since is None or d >= since}
     signal["prices"] = {s: float(p) for s, p in zip(symbols, prices[-1])}
     return signal
+
+
+def etf_check(family: str, dates: list[str], closes, symbols: list[str], rf_annual: float, cost_bps: float = 10.0) -> dict:
+    """The primary rule replayed on the ETFs it would really hold, against holding SPY, over the same days.
+
+    This is the tradable version of the research: the ETFs' own index rules and fees are in their prices, so the
+    gap to the Ken French results shows how much of the researched edge a real account could have kept.
+    Cash earns a constant ``rf_annual`` (today's rate), a simplification for this check only.
+    """
+    spec = FAMILIES[family]["primary"]
+    if symbols != PAPER_UNIVERSE[family]:
+        raise ValueError(f"The {family} check expects these symbols in order: {', '.join(PAPER_UNIVERSE[family])}.")
+    prices = np.asarray(closes, dtype=np.float64)
+    if prices.ndim != 2 or prices.shape[1] != len(symbols) or prices.shape[0] < 300 or (prices <= 0).any():
+        raise ValueError("Need positive closes for every symbol covering at least 300 days.")
+    returns = prices[1:] / prices[:-1] - 1
+    rf = np.full(len(returns), (1 + rf_annual) ** (1 / TRADING_DAYS) - 1)
+    assets = returns[:, 1:] if family == "sectors" else returns if family != "trend" else None
+    run = backtest(family, spec, dates[1:], returns[:, 0], rf, assets, cost_bps, PAPER_LAYOUT.get(family))
+    rule, spy = run["net"], returns[run["start"]:, 0]
+    days = run["dates"]
+
+    def stats(r):
+        summary = qs.summary(r)
+        return {"annual_return": summary["annual_return"], "annual_volatility": summary["annual_volatility"],
+                "sharpe": qs.sharpe(r - rf[run["start"]:]), "max_drawdown": qs.max_drawdown(r), "growth_of_10000": float(10000 * np.prod(1 + r))}
+
+    years = {}
+    for year in sorted({d[:4] for d in days}):
+        mask = np.array([d[:4] == year for d in days])
+        years[year] = {"rule": float(np.prod(1 + rule[mask]) - 1), "spy": float(np.prod(1 + spy[mask]) - 1), "days": int(mask.sum())}
+    active = rule - spy
+    return {"family": family, "primary": spec_id(family, spec), "symbols": symbols, "from": days[0], "to": days[-1], "days": len(days),
+            "rule": stats(rule), "spy": stats(spy), "years": years, "newey_west_active": qs.newey_west_mean(active),
+            "beat_spy_years": sum(1 for y in years.values() if y["days"] > 200 and y["rule"] > y["spy"]),
+            "full_years": sum(1 for y in years.values() if y["days"] > 200), "rf_annual": rf_annual, "cost_bps": cost_bps,
+            "note": "ETF prices include each fund's fees and index rules; cash earns today's rate throughout."}
+

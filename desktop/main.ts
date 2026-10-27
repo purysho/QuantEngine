@@ -326,6 +326,7 @@ async function command(method: string, values?: unknown): Promise<unknown> {
   if (method === 'desk-propose') { await desk.propose(); return desk.snapshot(); }
   if (method === 'desk-submit') { await desk.submit(values); return desk.snapshot(); }
   if (method === 'desk-daily') { await desk.dailyUpdate('manual'); return desk.snapshot(); }
+  if (method === 'desk-etf-check') { await desk.runEtfCheck(); return desk.snapshot(); }
   if (method === 'desk-export') {
     // One JSON file with the whole paper record (no keys), for backup or to share for review.
     const bundle = await desk.exportBundle(app.getVersion());
@@ -361,7 +362,7 @@ function dispatchCommand(method: string, values?: unknown): Promise<unknown> {
     settingsQueue = pending;
     return pending;
   }
-  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'refresh-source', 'calculate-options', 'learn-now', 'market-dataset', 'market-surface', 'desk-lab', 'desk-propose', 'desk-submit', 'desk-daily'].includes(method)) {
+  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'refresh-source', 'calculate-options', 'learn-now', 'market-dataset', 'market-surface', 'desk-lab', 'desk-propose', 'desk-submit', 'desk-daily', 'desk-etf-check'].includes(method)) {
     return Promise.reject(new Error('Settings or storage are still being saved. Wait before starting another operation.'));
   }
   return command(method, values);

@@ -204,3 +204,5 @@ input[type=time]{width:100%;background:#0d1823;color:#d6e3f1;border:1px solid #3
 .refresh-status{font:10px var(--mono);color:#8fd8b0;margin:6px 0 8px;padding:5px 8px;border-left:2px solid #3f7d63;background:#12261f}.refresh-status.failed{color:#efb0b0;border-left-color:#a65060;background:#2a1820}
 .refresh-status.flash{animation:refresh-flash 1.6s ease-out}@keyframes refresh-flash{0%{background:#2f7d5c;color:#fff}100%{background:#12261f}}
 @media (prefers-reduced-motion:reduce){.refresh-status.flash{animation:none}}
+#etf-results .term-table thead th:nth-child(1){width:26%}#etf-results .term-table thead th:nth-child(2){width:12%}#etf-results .term-table thead th:nth-child(n+3){width:auto}
+#etf-results .term-table tbody tr{cursor:default}#etf-results{padding:0 8px}#etf-results .term-table td .up{color:#35e0a1}#etf-results .term-table td .down{color:#ff4d6d}

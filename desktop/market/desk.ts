@@ -41,6 +41,8 @@ export class StrategyDesk {
   stage3: ReturnType<typeof stageThree> | null = null;
   brief: Record<string, unknown> | null = null;
   marketReturns: Record<string, number> = {};
+  /** Each strategy replayed on its real ETFs since 2016 (Alpaca prices), versus SPY. */
+  etfCheck: Record<string, unknown> | null = null;
   private backfilledOn: string | null = null;
   /** The last refresh: when, what started it, whether it worked and the equity it read (shown in the app). */
   lastRefresh: { at: string; trigger: RefreshTrigger; ok: boolean; equity: number | null; error: string | null } | null = null;
@@ -56,6 +58,7 @@ export class StrategyDesk {
     try { this.simulated = JSON.parse(await readFile(path.join(this.folder, 'simulated.json'), 'utf8')); } catch { this.simulated = {}; }
     try { this.marketReturns = JSON.parse(await readFile(path.join(this.folder, 'market.json'), 'utf8')); } catch { this.marketReturns = {}; }
     try { this.brief = JSON.parse(await readFile(path.join(this.folder, 'brief.json'), 'utf8')); } catch { this.brief = null; }
+    try { this.etfCheck = JSON.parse(await readFile(path.join(this.folder, 'etf-check.json'), 'utf8')); } catch { this.etfCheck = null; }
     this.journalTail = await this.journal.read(40);
   }
 
@@ -69,7 +72,7 @@ export class StrategyDesk {
   snapshot() {
     return { settings: this.settings, universe: UNIVERSE[this.settings.strategy], lab: this.lab, account: this.account,
       positions: this.positions, orders: this.orders.slice(0, 30), proposal: this.proposal, lastError: this.lastError,
-      updated: this.updated, lastRefresh: this.lastRefresh, journal: this.journalTail.slice(-25).reverse(), stage3: this.stage3, brief: this.brief,
+      updated: this.updated, lastRefresh: this.lastRefresh, etfCheck: this.etfCheck, journal: this.journalTail.slice(-25).reverse(), stage3: this.stage3, brief: this.brief,
       ladder: this.ladder() };
   }
 
@@ -248,6 +251,29 @@ export class StrategyDesk {
     return this.brief;
   }
 
+  /**
+   * Tradable check: every registered strategy's primary rule replayed on the ETFs it would hold, from the first
+   * day Alpaca has prices for all of them (2016 at the earliest), against holding SPY over the same days.
+   */
+  async runEtfCheck() {
+    const results: Record<string, unknown> = {}, errors: Record<string, string> = {};
+    for (const strategy of Object.keys(UNIVERSE) as Array<keyof typeof UNIVERSE>) {
+      try {
+        const universe = UNIVERSE[strategy];
+        const { dates, closes } = await this.market.dailyCloses(universe, 11);
+        const file = await this.host.stage('csv', 'date,' + universe.join(',') + '\n' + dates.map((d, i) => d + ',' + closes[i].join(',')).join('\n') + '\n');
+        results[strategy] = (await this.host.runTask(`Replaying ${strategy} on real ETFs`, 'strategy-signal', { path: file, family: strategy,
+          rf_annual: this.host.riskFreeAnnual(), check: true })).check;
+      } catch (error) { errors[strategy] = (error as Error).message; }
+    }
+    this.etfCheck = { run_at: new Date().toISOString(), results, errors };
+    await mkdir(this.folder, { recursive: true });
+    await writeFile(path.join(this.folder, 'etf-check.json'), JSON.stringify(this.etfCheck));
+    await this.journal.write({ type: 'etf-check', strategies: Object.keys(results), failed: Object.keys(errors) });
+    this.journalTail = await this.journal.read(40);
+    this.onChange();
+  }
+
   /** Today's orders for the chosen strategy, from the traded ETFs' own daily closes. Nothing is sent. */
   async propose(): Promise<Proposal> {
     const strategy = this.settings.strategy;
@@ -292,6 +318,7 @@ export class StrategyDesk {
       data_folder: this.folder, settings: this.settings, strategy_since: strategyStart(journal, this.settings.strategy),
       stage3: await this.stageThreeNow(), brief: this.brief, equity: await this.journal.equity(),
       equity_replaced: lines(await read('equity-replaced.jsonl')), journal, simulated: this.simulated, market_returns: this.marketReturns,
+      etf_check: this.etfCheck,
       lab: this.lab ? { registration: (this.lab.registration as JsonRecord)?.hash, data: this.lab.data, go_to_paper: this.lab.go_to_paper,
         gates: Object.fromEntries(Object.entries(results).map(([k, r]) => [k, r.gates])) } : null,
     };
