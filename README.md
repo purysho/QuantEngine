@@ -19,7 +19,14 @@ Research data is stored in `D:\Quant-Engine` by default. The app is not code-sig
 
 **Market terminal (new in 0.3):** a Bloomberg-style command line (`AAPL`, `AAPL N`, `AAPL OMON`, `MOST`, `ECO`, `HELP`), a live watchlist, candlestick charts, news, an economy panel and a live implied-volatility surface fitted to real option chains. Stock prices, news and option chains come from Alpaca with your own free keys (paper-trading keys work). Crypto, the FRED economy panel and one-click official datasets (S&P 500/Nasdaq/Dow from FRED, US market and industries from the Ken French library, ECB rates) need no account.
 
-**Strategies: the road to real money, honestly (new in 0.3):** two strategies with rules fixed in code before testing, a strategy lab that tests them on 100 years of US data after costs against simply holding the market, with walk-forward selection, a reserved final decade, Newey–West t-statistics and the Deflated Sharpe Ratio, and go/no-go gates. Then paper trading in an Alpaca **paper** account only: you approve every order list, risk limits and a kill switch apply, and every step is journaled and reconciled. **Current verdict: neither strategy passes its backtest gates** (trend cuts drawdowns but does not beat buy-and-hold; sector momentum's small edge does not survive the multiple-testing correction). QuantEngine cannot trade real money.
+**Strategies: the road to real money, honestly (new in 0.3):** five strategies with rules fixed in code before testing, a strategy lab that tests them on 100 years of US data after costs against simply holding the market, with walk-forward selection, a reserved final decade, Newey–West t-statistics and the Deflated Sharpe Ratio, and go/no-go gates. Then paper trading in an Alpaca **paper** account only: you approve every order list, risk limits and a kill switch apply, and every step is journaled and reconciled. **Current verdict: none of the five registered strategies passes all its backtest gates.**
+- **Multi-factor (quality + value + momentum)** is the strongest: 13.1% a year against the market's 10.9% since 1963, with a t-statistic of 5.4. It fails only the last-10-years gate, by 0.004 Sharpe.
+- **Quality** also passes 4 of 5.
+- **A tradable check** replays each strategy on the real ETFs since 2016.
+- **A daily update** (06:00 Beijing time by default) records the paper account from Alpaca's official closes and notifies you.
+- **[The January decision](docs/JANUARY_DECISION.md)** fixes in advance what would justify real money over an S&P 500 index fund.
+
+QuantEngine cannot trade real money.
 
 An independent local desktop application for continuous numerical research. It calculates covariance, constrained portfolios, Gaussian/block-bootstrap/Student-t risk with exact empirical tails, next-close costed momentum backtests, baselines, stress and parameter sensitivity, and prices options (Black–Scholes Greeks, CRR trees, Monte Carlo, implied volatility). Completed reports retain their source snapshots, seeds, parameters and software versions.
 

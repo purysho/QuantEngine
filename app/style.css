@@ -196,3 +196,13 @@ body.market-demo #page-terminal .term-grid{outline:1px dashed #ffb34799;outline-
 button.danger{border-color:#ff4d6d!important;color:#ff4d6d!important}
 @media (max-width:1360px){.ladder{grid-template-columns:repeat(2,minmax(0,1fr))}.lab-results,.paper-grid{grid-template-columns:1fr}}
 .ladder-step.failed{border-color:#ff4d6d88}.ladder-step.failed .ladder-state{color:#ff4d6d}
+.daily-brief{padding:8px 17px 4px}.brief-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.brief-tile{border:1px solid #ff2a5526;background:#07060a;padding:8px 10px;display:flex;flex-direction:column;gap:2px}.brief-tile .label{font-size:12px;color:var(--ink-muted)}
+.brief-tile .value{font:700 17px "Cascadia Mono",Consolas,monospace;color:#fff}.brief-foot{grid-column:1/-1;margin:4px 0 0}
+@media (max-width:1360px){.brief-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+input[type=time]{width:100%;background:#0d1823;color:#d6e3f1;border:1px solid #3b5164;border-radius:3px;min-height:36px;padding:7px 10px;font-family:var(--mono);font-size:12px;color-scheme:dark}
+.refresh-status{font:10px var(--mono);color:#8fd8b0;margin:6px 0 8px;padding:5px 8px;border-left:2px solid #3f7d63;background:#12261f}.refresh-status.failed{color:#efb0b0;border-left-color:#a65060;background:#2a1820}
+.refresh-status.flash{animation:refresh-flash 1.6s ease-out}@keyframes refresh-flash{0%{background:#2f7d5c;color:#fff}100%{background:#12261f}}
+@media (prefers-reduced-motion:reduce){.refresh-status.flash{animation:none}}
+#etf-results .term-table thead th:nth-child(1){width:26%}#etf-results .term-table thead th:nth-child(2){width:12%}#etf-results .term-table thead th:nth-child(n+3){width:auto}
+#etf-results .term-table tbody tr{cursor:default}#etf-results{padding:0 8px}#etf-results .term-table td .up{color:#35e0a1}#etf-results .term-table td .down{color:#ff4d6d}

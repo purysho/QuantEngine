@@ -81,7 +81,8 @@ jobs:
       - name: Prequential evolutionary learning on real data
         run: python experiments/evolution_real.py --offline
       - name: Strategy lab (stage 2 gates) on 100 years of data
-        run: python experiments/strategy_lab.py --offline
+        # Not offline: it also needs the profitability portfolios and Treasury yields, which the earlier steps do not cache.
+        run: python experiments/strategy_lab.py
       - name: Acceptance summary
         run: |
           python -c "import json; [print(p, json.load(open('experiments/results/'+p+'.json')).get('acceptance')) for p in ('real_world_backtest','evolution_real','strategy_lab')]"

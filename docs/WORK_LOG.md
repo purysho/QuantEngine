@@ -618,3 +618,158 @@ The README and user guide now cover the problems found on the first install: the
 **Next**
 - Run paper trading for at least 63 trading days if the user wants to learn from it, knowing neither strategy passed stage 2.
 - Look for better hypotheses with the same discipline, for example cross-asset trend across stocks, bonds and gold. Each new idea counts toward the deflated Sharpe ratio.
+
+---
+
+## Release 0.3.0 (PR #4 merged)
+
+PR #4 passed all 8 checks on `bd94928`, including the Windows packaged self-test with the terminal and the paper loop. It was merged as `4157a67`. The release run published **v0.3.0 "QuantEngine 0.3.0 for Windows"**: `QuantEngine-win-x64.zip`, 222,358,374 bytes, SHA-256 `7d03806e…7fb1`. I checked it from outside GitHub: the homepage link downloads it, the checksum matches `SHA256SUMS.txt`, the zip opens cleanly (3,518 files), and it contains the terminal bundle, the Lightweight Charts licence, the strategy modules, and `BUILD_INFO.json` with version 0.3.0.
+
+**Lesson recorded:** during Task 24, a chained `npm run build >/dev/null && …` hid a build failure (an apostrophe inside a single-quoted string), and a later step ran against a stale bundle. From now on, build output is never discarded: check with `node --check` and read the build's exit status.
+
+**Reproduced on the target laptop (user screenshot, 2026-10-21 19:26):** the strategy lab ran in the packaged 0.3.0 app on the Windows 11 laptop. It printed the same data range (1926-07-01 to 2026-08-31, 26,317 days), the same registration hash (`45cbcf4e541e…`) and identical statistics and gates to the CI and development runs, for example trend Sharpe 0.52 vs 0.45 and sectors deflated Sharpe 0.519. Paper trading was enabled and saved (badge PAPER · TREND). Suggested next step: paper-trade sector momentum, which passed 4 of 5 gates against trend's 2 of 5, explicitly as a learning exercise.
+
+
+---
+
+## Task 25: Ideas from Berkshire Hathaway and Medallion, and daily updates
+
+**Asked:** what QuantEngine can borrow from Berkshire Hathaway and Renaissance's Medallion to "bump up" returns, and to have it update daily.
+
+**What can honestly raise returns:** only more risk (leverage or concentration), better diversification (more return per unit of risk, which then affords a little more risk), or tilting toward premia that have paid historically. Copied from Berkshire: quality (the most profitable companies) plus modest borrowing at a realistic cost. Copied from Medallion, the retail version: several weakly related return sources balanced by risk.
+
+**Pre-registration.** Commit `434bf85` added the rules before any real-data run:
+- **Quality:** the Fama–French operating-profitability portfolios Hi 10, Hi 20 and Hi 30; the primary rule holds Hi 30.
+- **Ensemble:** trend-timed market, sector momentum, quality and 10-year Treasuries.
+  - Sleeves are weighted equally or by inverse volatility.
+  - The portfolio is sized to a target volatility (none, 10% or 15%) with a leverage cap of 1.0 or 1.5.
+  - The primary rule is inverse volatility, 15% target, cap 1.5.
+  - Borrowing costs the risk-free rate plus 2.5%.
+- **Trial count:** later strategies are deflated by every variant tried so far (43).
+- **Treasury data:** daily returns of a 10-year par bond repriced from FRED DGS10. A rise of 100 basis points costs about 7.8%, as expected.
+
+**Results** (`experiments/results/strategy_lab.json`; columns: return vs benchmark | at benchmark risk | max drawdown | Sharpe vs benchmark | deflated Sharpe | P(Sharpe beats) | gates)
+
+| family | annual | at market risk | drawdown | Sharpe | DSR | P(beat) | gates |
+|---|---|---|---|---|---|---|---|
+| trend | 8.4% vs 9.7% | 11.9% | -49% vs -84% | 0.52 vs 0.45 | 0.003 | 0.75 | 2/5 |
+| sectors | 11.8% vs 10.3% | 12.0% | -81% vs -84% | 0.54 vs 0.49 | 0.519 | 0.89 | 4/5 |
+| quality | 12.1% vs 10.9% | 12.8% | -50% vs -55% | 0.52 vs 0.45 | 0.907 | 1.00 | 4/5 |
+| ensemble | 10.0% vs 10.8% | 12.2% | -33% vs -55% | 0.48 vs 0.44 | 0.010 | 0.69 | 2/5 |
+
+- **Quality** is the best evidence so far. It beat the market's Sharpe ratio in 100% of bootstrap resamples, with a 95% range for the difference of 0.02 to 0.12 and a Newey–West t of 2.84. It held up over the last decade (0.81 vs 0.73). It narrowly fails the deflated Sharpe gate (0.907 vs 0.95) because of the 43-trial correction. The paper universe trades it as QUAL, whose quality definition (ROE, leverage, earnings stability) differs from the profitability sort; the tracking in stage 3 will show the size of that gap.
+- **Ensemble:** about 40% smaller worst fall (−33% vs −55%) and 12.2% a year at the market's risk. But at its own target it earned 10.0% vs 10.8%, and it lagged in the last decade (bonds in 2022, trend whipsaws).
+- **How much returns can be raised:** about +1 to +2 percentage points a year at the same risk is what the evidence supports. Anything claiming much more needs extraordinary proof.
+
+**Daily updates**
+- **When:** a scheduler runs about 20 minutes after each US close (never during the session) or when the app next opens.
+- **What it does:**
+  - refreshes the account;
+  - fills missed days from Alpaca's portfolio history (a new read-only GET);
+  - computes the rule's proposal, never submitting it;
+  - finds the next rebalance from Alpaca's calendar (read-only GET);
+  - writes `paper/brief.json` and a `daily-update` journal entry;
+  - shows a Windows notification.
+- **Strategies page:** a **Daily update** panel and an **Update now** button.
+
+**Borrowing:** opt-in only. Max total exposure defaults to 100%. A rule asking for more is scaled down, and risk checks allow borrowing only up to the chosen limit (at most 150%).
+
+**What went wrong first and why**
+- **FRED timeout:** the full-history DGS10 request failed (HTTP 504 gateway timeout, twice). Fix: `fred_long` downloads in three date ranges and joins them.
+- **Worker rejected the new strategies:** it still accepted only the original two, so the daily rule check failed for quality ("Unknown strategy family"). The screenshot run caught it, and the fix was made before commit.
+- **Two paper tests were wrong, not the code.** One assumed a 60% order should pass, but the 50% max-order limit correctly blocked it. The other expected an error for a 140% target that is now scaled down.
+
+**Next:** keep paper-trading. If paper-trading quality, compare QUAL's tracking against the rule over at least 63 days. Do not add more variants without counting them in the deflated Sharpe ratio.
+
+## Task 26: Keep the paper record safe; daily update at 06:00 Beijing time
+
+**Request:**
+- Fix the issues found in the first tester's exported paper record without losing any progress.
+- Refresh automatically at 06:00 Beijing time while the app is open.
+- Make a manual refresh visibly confirm itself.
+
+**What the record showed (0.3.0):**
+- **Misdated equity:** entries were dated by the New York day the app was opened, not the trading day they reflected. For example, "2026-10-25" is a Sunday and holds Friday's value, and readings taken during the session were stored as if they were closes. Stage 3 pairs each day's equity with that day's simulated return, so this would have inflated the measured tracking error.
+- **Untracked switch:** a change of strategy (trend → sectors) was not journaled.
+
+**Changes:**
+- **Readings:** dated by the last completed US session (from Alpaca's calendar). No reading is taken while the market is open.
+- **Official closes:**
+  - Once a day, Alpaca's end-of-day portfolio history replaces readings and fills missed days.
+  - Entries dated on closed-market days are removed.
+  - Every replaced or removed entry is first appended to `paper/equity-replaced.jsonl`, so nothing is discarded.
+  - A test runs the tester's actual 0.3.0 history through the merge and checks that every original value survives somewhere.
+- **Stage 3 per strategy:** stage 3 compares only whole days held by the current strategy. It starts from the first fill after a switch; a batch sent after 4 p.m. New York time fills the next weekday.
+- **Journal:** strategy, limit and enable/disable changes are journaled.
+- **Export progress:** one JSON file with settings (never keys), the whole journal, equity, replaced readings, simulated returns, the tradable check and the lab verdict.
+- **Daily update:**
+  - Runs at a chosen time and zone, 06:00 Beijing time by default, which is after the US close in both summer and winter. The scheduler checks every minute.
+  - Each slot runs once, later if the app was closed or asleep.
+  - A slot inside US trading hours waits for 4:20 p.m. New York time.
+  - Runs that see no new close (Sunday and Monday mornings in Asia) only refresh, with no repeat notification.
+  - Settings saved by 0.3.0 load with the new default.
+- **Refresh feedback:**
+  - The button shows *Refreshing…*, then a message with the time and equity read.
+  - A "last refreshed" line under the account flashes for every refresh and says whether the user, the schedule or start-up started it.
+
+**What went wrong first and why:**
+- **Schedule bug (caught by a test):**
+  - The first version tied each run to today's date in Beijing. A slot set inside US trading hours (for example 22:00 Beijing) waits for the 4:20 p.m. New York close, which is after midnight in Beijing.
+  - By then it was "tomorrow", that day's slot had not been reached, and the update would never have run.
+  - Fix: each run is tied to the most recent slot that has passed.
+
+**Next:** watch the first scheduled 06:00 run on the laptop. The journal shows an `equity-closes` entry when readings are replaced.
+
+## Task 27: Multi-factor strategy, tradable check and the January decision
+
+**Request:** "I need a reason by the end of January to invest in/through this as opposed to just putting it into the S&P 500."
+
+**Registered first (commit 154b7de, before any real-data run):**
+- **Rule:** equal thirds of three value-weighted Ken French US portfolios, rebalanced monthly, long-only:
+  - high operating profitability;
+  - high book-to-market;
+  - top prior 12–2-month return (momentum).
+- **Grid:** top 30/20/10% cut × equal or inverse-volatility weights, 6 variants. Primary: top 30%, equal.
+- **Momentum cuts:** "Hi 30" is the mean of momentum deciles 8–10.
+- **Paper version:** QUAL, VLUE, MTUM.
+- **Trial count:** all 49 variants tried across families now deflate the later families. Quality's deflated Sharpe moves from 0.907 to 0.901.
+- **New data:** Portfolios_Formed_on_BE-ME_Daily and 10_Portfolios_Prior_12_2_Daily (raw files not committed).
+
+**Result** (`experiments/results/strategy_lab.json`, data 1963-08 to 2026-08):
+
+| | annual | Sharpe (excess) | max drawdown | IR | NW t (active) | DSR | holdout Sharpe | gates |
+|---|---|---|---|---|---|---|---|---|
+| multi-factor | 13.1% vs 10.9% | 0.57 vs 0.45 | −53.5% vs −54.6% | 0.75 | 5.41 | 1.000 | 0.728 vs 0.732 | 4/5 |
+
+- **Variants:** all 6 beat the market. The walk-forward Sharpe was 0.58 against 0.43, and P(Sharpe beats the market) was 1.00, with a 95% range for the difference of 0.07 to 0.17.
+- **Gate result:** it fails only the holdout gate, by 0.004 Sharpe. The gate was fixed in advance, so this is a no-go. Neither the gate nor the rule was changed after seeing it.
+- **Interpretation:** this is the strongest evidence in the project. Value's long slump against large-cap growth stocks over the last decade is why the holdout is a tie rather than a win.
+- **Cost caveat:**
+  - The French portfolio returns exclude their own internal trading costs. Momentum's are the largest; value and profitability turn over slowly.
+  - The backtest charges costs only on the strategy's own rebalancing.
+  - The ETFs' prices include their costs and 0.15% fees, so the tradable check measures this.
+
+**Tradable check (new):**
+- Replays each strategy's primary rule on the ETFs it would actually buy, using Alpaca daily closes since 2016 with fees included, against SPY over the same days.
+- Reports annual return, Sharpe, worst fall, growth of $10,000 and years ahead of SPY.
+- Runs in the app because this sandbox cannot download ETF prices (Stooq connections were reset).
+- Not yet run on real data.
+
+**January decision:** written in advance in `docs/JANUARY_DECISION.md`.
+- **Default:** an S&P 500 index fund.
+- **A strategy needs all of:**
+  - every backtest gate passing on January's data;
+  - a tradable version no more than 1 point a year behind SPY since 2016;
+  - all five stage-3 checks.
+- **If all pass:** at most a satellite of up to 20% of the money invested.
+- **If it passes by a hair:** a holdout that flips by a hair is treated as borderline.
+- **Paper timetable:** switching the paper account to multi-factor this week makes the 63rd compared day Friday Jan 29 (first fill Oct 28) or Monday Feb 1 (first fill Oct 29).
+
+**What went wrong first and why:**
+- **Table too wide:** the tradable-check table overflowed its panel. The shared `.term-table` styles give columns 1–4 fixed widths that add up to 100%, so columns 5–7 collapsed to zero width. Fix: the table gets its own column widths.
+
+**Next:**
+- Run the tradable check on the laptop and record the result here.
+- Switch paper trading to multi-factor.
+- Re-run the lab in late January.
+- Do not add strategies or variants before the decision; each one would also have to be counted in the deflation.

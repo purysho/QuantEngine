@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, ipcMain, shell, safeStorage } from 'electron';
+import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, ipcMain, shell, safeStorage, Notification } from 'electron';
 import fs from 'node:fs';
 import { readFile, writeFile, mkdir, rename, unlink, appendFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -11,7 +11,7 @@ import { WorkerTransport, type JsonRecord } from './transport.js';
 import { MarketService } from './market/service.js';
 import { demoFetch, demoSocket, demoPaperFetch, DEMO_KEYS } from './market/demo.js';
 import { StrategyDesk } from './market/desk.js';
-import { PaperBroker, type PaperFetch } from './market/paper.js';
+import { PaperBroker, dailySchedule, type PaperFetch } from './market/paper.js';
 import { SecretStore } from './market/secrets.js';
 import { validSymbol, type Fetch } from './market/alpaca.js';
 import type { SocketLike } from './market/stream.js';
@@ -75,6 +75,23 @@ function pushState() {
 
 function pushMarket() {
   if (window && !window.isDestroyed()) window.webContents.send('quant:market', market.snapshot());
+}
+
+/**
+ * Daily paper update at the time the user chose (default 06:00 Beijing time), checked every minute while the app
+ * is open or in the tray; if the app opens later that day it runs once then. Never while the US market is open.
+ * It refreshes, records equity, checks the rule and notifies; it never submits orders.
+ */
+let lastDaily = '';
+let dailyFailures = { key: '', count: 0 };
+async function dailyTick() {
+  if (!desk?.settings.enabled || !desk.settings.dailyUpdate || !market.credentials || quitting) return;
+  const { key, due } = dailySchedule(new Date(), desk.settings.dailyTime, desk.settings.dailyZone);
+  if (!due || lastDaily === key || engine.state.busy) return;
+  if (dailyFailures.key !== key) dailyFailures = { key, count: 0 };
+  if (dailyFailures.count >= 5) return;  // Retried each minute up to five times a day, then left for tomorrow.
+  try { await desk.dailyUpdate('scheduled'); lastDaily = key; }
+  catch (error) { dailyFailures.count++; desk.lastError = 'Scheduled update: ' + (error as Error).message; pushDesk(); }
 }
 
 function pushDesk() {
@@ -305,9 +322,23 @@ async function command(method: string, values?: unknown): Promise<unknown> {
   if (method === 'desk-state') return desk.snapshot();
   if (method === 'desk-lab') { await desk.runLab(); return desk.snapshot(); }
   if (method === 'desk-configure') { await desk.configure(values); return desk.snapshot(); }
-  if (method === 'desk-refresh') { await desk.refresh(); return desk.snapshot(); }
+  if (method === 'desk-refresh') { await desk.refresh('manual'); return desk.snapshot(); }
   if (method === 'desk-propose') { await desk.propose(); return desk.snapshot(); }
   if (method === 'desk-submit') { await desk.submit(values); return desk.snapshot(); }
+  if (method === 'desk-daily') { await desk.dailyUpdate('manual'); return desk.snapshot(); }
+  if (method === 'desk-etf-check') { await desk.runEtfCheck(); return desk.snapshot(); }
+  if (method === 'desk-export') {
+    // One JSON file with the whole paper record (no keys), for backup or to share for review.
+    const bundle = await desk.exportBundle(app.getVersion());
+    const selected = await dialog.showSaveDialog(window!, { title: 'Export paper-trading progress',
+      defaultPath: path.join(app.getPath('documents'), `QuantEngine-progress-${new Date().toISOString().slice(0, 10)}.json`),
+      filters: [{ name: 'QuantEngine progress', extensions: ['json'] }] });
+    if (selected.canceled || !selected.filePath) return null;
+    const temporary = selected.filePath + '.' + randomUUID() + '.tmp';
+    try { await writeFile(temporary, JSON.stringify(bundle, null, 2) + '\n', 'utf8'); await rename(temporary, selected.filePath); }
+    finally { await unlink(temporary).catch(() => {}); }
+    return { path: selected.filePath };
+  }
   if (method === 'desk-kill') {
     if (typeof values !== 'boolean') throw new Error('Kill switch must be on or off.');
     await desk.kill(values);
@@ -331,7 +362,7 @@ function dispatchCommand(method: string, values?: unknown): Promise<unknown> {
     settingsQueue = pending;
     return pending;
   }
-  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'refresh-source', 'calculate-options', 'learn-now', 'market-dataset', 'market-surface', 'desk-lab', 'desk-propose', 'desk-submit'].includes(method)) {
+  if (settingsPending && ['start', 'run-once', 'import-csv', 'refresh-ecb', 'refresh-source', 'calculate-options', 'learn-now', 'market-dataset', 'market-surface', 'desk-lab', 'desk-propose', 'desk-submit', 'desk-daily', 'desk-etf-check'].includes(method)) {
     return Promise.reject(new Error('Settings or storage are still being saved. Wait before starting another operation.'));
   }
   return command(method, values);
@@ -379,10 +410,12 @@ async function nativeSelfTest() {
     const proposed = await d.propose();
     const submitted = await d.submit(proposed.proposal.id);
     const again = await d.refresh();
+    const daily = await d.daily();
     return { orders: proposed.proposal.orders.length, positions: submitted.positions.length,
-      reconciled: again.journal.some(e => e.type === 'reconcile' && e.ok === true) };
+      reconciled: again.journal.some(e => e.type === 'reconcile' && e.ok === true),
+      daily: Boolean(daily.brief && daily.brief.next_rebalance && daily.brief.days >= 2) };
   })()`);
-  if (paper.orders < 1 || paper.positions < 1 || !paper.reconciled) throw new Error('Self-test paper loop failed: ' + JSON.stringify(paper));
+  if (paper.orders < 1 || paper.positions < 1 || !paper.reconciled || !paper.daily) throw new Error('Self-test paper loop failed: ' + JSON.stringify(paper));
   console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), learnedModels: learned.tasks.risk.graph.nodes.length, completed: engine.state.completed, terminal, paper,
     runtime: engine.runtime, report: engine.lastReportPath }));
   await quit();
@@ -428,6 +461,9 @@ else {
     const paperFetch = (marketDemo ? demoPaperFetch() : globalThis.fetch) as unknown as PaperFetch;
     desk = new StrategyDesk(path.join(app.getPath('userData'), marketDemo ? 'demo-market/paper.json' : 'paper.json'),
       new PaperBroker(() => market.credentials, paperFetch), market, {
+        notify: (title, body) => {
+          if (!selfTest && Notification.isSupported()) new Notification({ title, body, icon: path.join(app.getAppPath(), 'assets/app.png') }).show();
+        },
         dataRoot: () => engine.config.dataRoot,
         runTask: (stage, command, values) => engine.runTask(stage, command, values),
         stage,
@@ -441,7 +477,9 @@ else {
       return marketDataset(meta.symbols as string[], meta.years, true);
     };
     void market.start();
-    void desk.loadSavedLab().then(() => { pushDesk(); if (market.credentials && desk.settings.enabled) void desk.refresh(); });
+    void desk.loadSavedLab().then(() => { pushDesk(); if (market.credentials && desk.settings.enabled) void desk.refresh('startup'); });
+    if (!selfTest) setInterval(() => { void dailyTick(); }, 60_000);
+    if (!selfTest) setTimeout(() => { void dailyTick(); }, 60_000);
     if (!selfTest) {
       const image = nativeImage.createFromPath(path.join(app.getAppPath(), 'assets/app.png'));
       if (!image.isEmpty()) {

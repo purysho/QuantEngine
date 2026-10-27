@@ -8,9 +8,7 @@ from __future__ import annotations
 import argparse
 import time
 
-import numpy as np
-
-from _common import ROOT, array_hash, write
+from _common import ROOT, write
 from workers import quant_data as qd
 from workers import quant_strategies as st
 
@@ -20,29 +18,24 @@ args = parser.parse_args()
 started = time.perf_counter()
 cache = ROOT / ".cache" / "data"
 
-factors, factors_meta = qd.french("F-F_Research_Data_Factors_daily", cache, offline=args.offline)
-industries, industries_meta = qd.french("12_Industry_Portfolios_daily", cache, section="Average Value Weighted Returns -- Daily", offline=args.offline)
-if factors["dates"] != industries["dates"]:
-    raise SystemExit("Market and industry files cover different dates.")
-market = factors["series"]["Mkt-RF"] + factors["series"]["RF"]
-rf = factors["series"]["RF"]
-assets = np.column_stack([industries["series"][name] for name in industries["series"]])
-keep = np.isfinite(market) & np.isfinite(rf) & np.isfinite(assets).all(axis=1)
-dates = [d.isoformat() for d, k in zip(factors["dates"], keep) if k]
-market, rf, assets = market[keep], rf[keep], assets[keep]
-
-families = {name: st.evaluate(name, dates, market, rf, assets if name == "sectors" else None) for name in st.FAMILIES}
-for result in families.values():  # Keep the JSON small: variant lists are summarised by the spec curve.
-    result["variants"] = sorted(result["variants"], key=lambda v: -v["sharpe"])
+raw = {}
+for name, kind in (("F-F_Research_Data_Factors_daily", "french"), ("12_Industry_Portfolios_daily", "french"),
+                   ("Portfolios_Formed_on_OP_Daily", "french"), ("DGS10", "fred"),
+                   ("Portfolios_Formed_on_BE-ME_Daily", "french"), ("10_Portfolios_Prior_12_2_Daily", "french")):
+    raw[name] = (qd.fetch(qd.FRENCH_URL.format(name=name), cache, f"french-{name}", offline=args.offline) if kind == "french"
+                 else qd.fred_long(name, cache, offline=args.offline))
+lab = st.run_lab(*(raw[n][0] for n in ("F-F_Research_Data_Factors_daily", "12_Industry_Portfolios_daily", "Portfolios_Formed_on_OP_Daily", "DGS10",
+                                       "Portfolios_Formed_on_BE-ME_Daily", "10_Portfolios_Prior_12_2_Daily")))
+families = lab["results"]
 
 finished = time.perf_counter()
 payload = {
-    "registration": {"date": st.REGISTERED, "hash": st.registration_hash(), "families": st.FAMILIES, "gates": st.GATES,
-                     "gates_version": st.GATES_VERSION,
+    "registration": {**lab["registration"], "families": st.FAMILIES,
                      "gates_history": "Version 1 compared returns with cash; buy-and-hold passes that, so version 2 compares with the benchmark."},
-    "data": {"source": "Kenneth R. French Data Library: Mkt-RF + RF and 12 value-weighted industries (daily)",
-             "first": dates[0], "last": dates[-1], "days": len(dates), "sha256": array_hash(market, rf, assets),
-             "files": [factors_meta["sha256"], industries_meta["sha256"]]},
+    "data": {"source": "Kenneth R. French Data Library (market, risk-free rate, 12 industries, portfolios on operating profitability, "
+                       "book-to-market and prior 12-2 month return) "
+                       "and FRED DGS10 (10-year Treasury yield, converted to daily par-bond returns)",
+             **lab["data"], "files": {n: raw[n][1]["sha256"] for n in raw}},
     "contamination_note": ("Industry momentum on this data was already examined in Task 16 (real_world_backtest), and trend-following "
                            "is widely published, so the reserved final decade is not a pristine holdout. The only clean "
                            "out-of-sample test is forward paper trading (stage 3)."),
@@ -56,5 +49,7 @@ for name, result in families.items():
         result["excess_sharpe"], result["benchmark_excess_sharpe"], result["information_ratio"], result["deflated"]["dsr"], result["newey_west_active"]["t"],
         result["walk_forward"]["sharpe"], result["walk_forward"]["benchmark_sharpe"], result["holdout"]["sharpe"], result["holdout"]["benchmark_sharpe"],
         100 * result["spec_curve"]["beats_benchmark_share"], 100 * result["summary"]["max_drawdown"], 100 * result["benchmark_summary"]["max_drawdown"]))
-    print("  P(Sharpe beats benchmark) %.2f, difference CI95 %s" % (result["sharpe_vs_benchmark"]["p_better"], [round(x, 2) for x in result["sharpe_vs_benchmark"]["ci95"]]))
+    print("  P(Sharpe beats benchmark) %.2f, difference CI95 %s | annual %.1f%% vs %.1f%% | at benchmark risk %.1f%% | max exposure %.2f" % (
+        result["sharpe_vs_benchmark"]["p_better"], [round(x, 2) for x in result["sharpe_vs_benchmark"]["ci95"]],
+        100 * result["summary"]["annual_return"], 100 * result["benchmark_summary"]["annual_return"], 100 * result["return_at_benchmark_risk"], result["max_exposure"]))
 print(path)
