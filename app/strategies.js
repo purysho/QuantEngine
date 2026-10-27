@@ -75,7 +75,9 @@ export function initStrategies({ $, esc, toast, receive }) {
       $('limit-loss').value = +(s.limits.dailyLossStop * 100).toFixed(2); $('limit-min').value = s.limits.minOrderNotional;
       $('limit-gross').value = Math.round((s.limits.maxGrossExposure ?? 1) * 100);
       $('paper-daily').checked = s.dailyUpdate !== false; $('paper-notify').checked = s.notify !== false;
+      $('paper-daily-time').value = s.dailyTime || '06:00'; $('paper-daily-zone').value = s.dailyZone || 'Asia/Shanghai';
     }
+    renderRefreshed();
     $('paper-kill').textContent = s.killSwitch ? 'Turn kill switch off' : 'Kill switch';
     $('paper-kill').setAttribute('aria-pressed', String(s.killSwitch));
     const warning = go === false ? 'This strategy did not pass the backtest gates. Paper trading it is for learning and tracking only; it is not evidence of an edge.' :
@@ -100,7 +102,28 @@ export function initStrategies({ $, esc, toast, receive }) {
     $('paper-checks').innerHTML = c ? Object.entries(c).map(([k, v]) => '<li class="' + (v.pass ? 'pass' : 'fail') + '"><span>' + (v.pass ? '✓' : '·') + '</span>' + esc(v.detail) + '</li>').join('') :
       '<li class="fail"><span>·</span>Starts with the first paper account reading.</li>';
     $('paper-journal').innerHTML = state.journal.map(e => '<li><time>' + esc(new Date(e.at).toLocaleString()) + '</time> <strong>' + esc(e.type) + '</strong> ' +
-      esc(e.symbol ? e.side + ' ' + e.qty + ' ' + e.symbol + ' (' + (e.status || e.error) + ')' : e.problems ? e.problems.join(' ') : e.type === 'reconcile' ? (e.ok ? 'matches plan' : 'DIFFERENCES: ' + JSON.stringify(e.differences)) : e.type === 'kill-switch' ? (e.on ? 'on' : 'off') : '') + '</li>').join('') || '<li class="term-note">Empty.</li>';
+      esc(e.symbol ? e.side + ' ' + e.qty + ' ' + e.symbol + ' (' + (e.status || e.error) + ')' : e.problems ? e.problems.join(' ') : e.type === 'reconcile' ? (e.ok ? 'matches plan' : 'DIFFERENCES: ' + JSON.stringify(e.differences)) : e.type === 'kill-switch' ? (e.on ? 'on' : 'off') :
+        e.type === 'strategy' ? (NAMES[e.from] || e.from) + ' → ' + (NAMES[e.to] || e.to) + ' (the paper test restarts at the first trade)' :
+        e.type === 'equity-closes' ? e.replaced + ' readings replaced and ' + e.removed + ' removed by official closes (kept in equity-replaced.jsonl)' :
+        e.type === 'enabled' || e.type === 'disabled' ? (NAMES[e.strategy] || e.strategy || '') : '') + '</li>').join('') || '<li class="term-note">Empty.</li>';
+  }
+
+  const TRIGGERS = { manual: 'by you', scheduled: 'scheduled daily update', startup: 'when the app opened', automatic: 'automatically' };
+  const ZONES = { 'Asia/Shanghai': 'Beijing time', 'America/New_York': 'New York time', 'Europe/London': 'London time',
+    'Europe/Berlin': 'Central European time', 'Asia/Tokyo': 'Tokyo time', 'Australia/Sydney': 'Sydney time' };
+  let shownRefresh = null;
+  /** "Last refreshed" line under the account; it flashes whenever a new refresh lands, whoever started it. */
+  function renderRefreshed() {
+    const r = state.lastRefresh, s = state.settings;
+    const next = s.enabled && s.dailyUpdate !== false ? ' · next automatic update ' + (s.dailyTime || '06:00') + ' ' + (ZONES[s.dailyZone] || 'Beijing time') : '';
+    const el = $('paper-refreshed');
+    el.textContent = r ? (r.ok ? '✓ Refreshed ' : '✕ Refresh failed ') + new Date(r.at).toLocaleTimeString() + ' (' + (TRIGGERS[r.trigger] || r.trigger) + ')' + next
+      : 'Not refreshed yet' + next;
+    el.classList.toggle('failed', Boolean(r && !r.ok));
+    if (r && r.at !== shownRefresh) {
+      if (shownRefresh !== null) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+      shownRefresh = r.at;
+    }
   }
 
   function renderBrief() {
@@ -113,7 +136,7 @@ export function initStrategies({ $, esc, toast, receive }) {
       tile('Since ' + (b.since || 'start'), signed(b.since_start), tone(b.since_start)) + tile('SPY, same days', signed(b.spy_since_start), tone(b.spy_since_start)) +
       tile('The rule, simulated', signed(b.rule_since_start), tone(b.rule_since_start)) + tile('Next rebalance', b.next_rebalance || '—') +
       tile('Orders proposed', b.orders_needed === null ? '—' : String(b.orders_needed)) + tile('Stage 3', b.stage3 || '—') +
-      '<p class="term-note brief-foot">Updated ' + esc(new Date(b.updated).toLocaleString()) + ' · ' + esc(NAMES[b.strategy] || b.strategy) + ' · ' + b.days + ' days recorded' +
+      '<p class="term-note brief-foot">Updated ' + esc(new Date(b.updated).toLocaleString()) + (b.trigger ? ' (' + esc(TRIGGERS[b.trigger] || b.trigger) + ')' : '') + ' · ' + esc(NAMES[b.strategy] || b.strategy) + ' · ' + b.days + ' days recorded' +
       (b.backfilled ? ' · ' + b.backfilled + ' missed days filled from Alpaca' : '') + (b.signal_error ? ' · rule check failed: ' + esc(b.signal_error) : '') +
       (b.orders_needed ? ' · <strong>orders are waiting for your approval below</strong>' : '') + '</p>';
   }
@@ -136,14 +159,32 @@ export function initStrategies({ $, esc, toast, receive }) {
     void act(() => desk.configure({ enabled: $('paper-enabled').checked, strategy: $('paper-strategy').value, killSwitch: state.settings.killSwitch,
       limits: { maxOrderFraction: Number($('limit-order').value) / 100, maxOrdersPerDay: Number($('limit-orders').value),
         dailyLossStop: Number($('limit-loss').value) / 100, minOrderNotional: Number($('limit-min').value),
-        maxGrossExposure: Number($('limit-gross').value) / 100 }, dailyUpdate: $('paper-daily').checked, notify: $('paper-notify').checked }), 'Paper settings saved.');
+        maxGrossExposure: Number($('limit-gross').value) / 100 }, dailyUpdate: $('paper-daily').checked, notify: $('paper-notify').checked,
+      dailyTime: $('paper-daily-time').value, dailyZone: $('paper-daily-zone').value }), 'Paper settings saved.');
   });
   $('paper-kill').addEventListener('click', () => { void act(() => desk.kill(!state.settings.killSwitch), state.settings.killSwitch ? 'Kill switch off.' : 'Kill switch on: open paper orders cancelled.'); });
-  $('paper-refresh').addEventListener('click', () => { void act(() => desk.refresh()); });
+  // Manual refresh: the button shows progress, then a message says exactly what was read and when.
+  $('paper-refresh').addEventListener('click', async () => {
+    const button = $('paper-refresh');
+    button.disabled = true; button.textContent = 'Refreshing…';
+    await act(() => desk.refresh());
+    button.disabled = false; button.textContent = 'Refresh ↻';
+    const r = state.lastRefresh;
+    if (r?.ok) toast('Paper account refreshed at ' + new Date(r.at).toLocaleTimeString() + (r.equity !== null ? ' · equity ' + money(r.equity) : '') + '.');
+    else if (r) toast('Refresh failed: ' + (r.error || 'unknown error'), true);
+  });
   $('paper-daily-now').addEventListener('click', async () => {
-    $('paper-daily-now').textContent = 'Updating…';
-    await act(() => desk.daily(), 'Daily update recorded.');
-    $('paper-daily-now').textContent = 'Update now ↻';
+    const button = $('paper-daily-now');
+    button.disabled = true; button.textContent = 'Updating…';
+    const ok = await act(() => desk.daily());
+    button.disabled = false; button.textContent = 'Update now ↻';
+    if (ok && state.brief) toast('Daily update recorded at ' + new Date(state.brief.updated).toLocaleTimeString() + ' · equity ' + money(state.brief.equity) + '.');
+  });
+  $('paper-export').addEventListener('click', async () => {
+    try {
+      const saved = await desk.exportProgress();
+      if (saved?.path) toast('Progress saved to ' + saved.path + '. It holds no keys, so it is safe to back up or share.');
+    } catch (error) { toast(error.message, true); }
   });
   $('paper-propose').addEventListener('click', async () => {
     confirming = false;

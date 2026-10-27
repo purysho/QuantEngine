@@ -26,8 +26,12 @@ export interface RiskLimits { maxOrderFraction: number; maxOrdersPerDay: number;
   maxGrossExposure: number }
 export type Strategy = 'trend' | 'sectors' | 'quality' | 'ensemble';
 export interface PaperSettings { enabled: boolean; strategy: Strategy; limits: RiskLimits; killSwitch: boolean;
-  /** After each US close: refresh, record equity, check the rule (never submits) and show a notification. */
-  dailyUpdate: boolean; notify: boolean }
+  /** Once a day at dailyTime in dailyZone: refresh, record equity, check the rule (never submits) and notify. */
+  dailyUpdate: boolean; notify: boolean; dailyTime: string; dailyZone: string }
+
+/** Time zones offered for the daily update (the first is the default). */
+export const DAILY_ZONES: Record<string, string> = { 'Asia/Shanghai': 'Beijing time', 'America/New_York': 'New York time',
+  'Europe/London': 'London time', 'Europe/Berlin': 'Central European time', 'Asia/Tokyo': 'Tokyo time', 'Australia/Sydney': 'Sydney time' };
 export interface ProposedOrder { symbol: string; side: 'buy' | 'sell'; qty: number; price: number; notional: number; reason: string }
 export interface Proposal { id: string; created: string; strategy: string; asOf: string; equity: number; targets: Record<string, number>;
   orders: ProposedOrder[]; blocked: string[] }
@@ -41,6 +45,7 @@ export const UNIVERSE: Record<Strategy, string[]> = {
   ensemble: ['SPY', ...SECTOR_ETFS, 'QUAL', 'IEF'],
 };
 export const DEFAULT_SETTINGS: PaperSettings = { enabled: false, strategy: 'trend', killSwitch: false, dailyUpdate: true, notify: true,
+  dailyTime: '06:00', dailyZone: 'Asia/Shanghai',
   limits: { maxOrderFraction: 1.0, maxOrdersPerDay: 24, dailyLossStop: 0.03, minOrderNotional: 50, maxGrossExposure: 1.0 } };
 
 export function validateSettings(value: unknown): PaperSettings {
@@ -52,12 +57,42 @@ export function validateSettings(value: unknown): PaperSettings {
   };
   if (!['trend', 'sectors', 'quality', 'ensemble'].includes(v.strategy as string)) throw new Error('Choose one of the registered strategies.');
   return { enabled: v.enabled === true, strategy: v.strategy as Strategy, killSwitch: v.killSwitch === true,
-    dailyUpdate: v.dailyUpdate !== false, notify: v.notify !== false, limits: {
+    dailyUpdate: v.dailyUpdate !== false, notify: v.notify !== false,
+    // Settings saved before 0.3.2 have no time: they get the default (06:00 Beijing time).
+    dailyTime: v.dailyTime === undefined ? DEFAULT_SETTINGS.dailyTime : validTime(v.dailyTime),
+    dailyZone: v.dailyZone === undefined ? DEFAULT_SETTINGS.dailyZone : validZone(v.dailyZone), limits: {
     maxOrderFraction: num(l.maxOrderFraction, 0.01, 1.5, 'Maximum order (share of equity)'),
     maxOrdersPerDay: num(l.maxOrdersPerDay, 1, 200, 'Maximum orders per day'),
     dailyLossStop: num(l.dailyLossStop, 0.005, 0.5, 'Daily loss stop'),
     minOrderNotional: num(l.minOrderNotional, 1, 10_000, 'Minimum order size'),
     maxGrossExposure: num(l.maxGrossExposure ?? 1.0, 1.0, 1.5, 'Maximum total exposure') } };
+}
+
+function validTime(x: unknown): string {
+  if (typeof x !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(x)) throw new Error('Daily update time must be HH:MM (24-hour).');
+  return x;
+}
+function validZone(x: unknown): string {
+  if (typeof x !== 'string' || !(x in DAILY_ZONES)) throw new Error('Choose one of the listed time zones for the daily update.');
+  return x;
+}
+
+/**
+ * The scheduled daily update. Each day's slot is the chosen time in the chosen zone; ``key`` names the most recent
+ * slot that has passed, so it runs once per slot, including later if the app was closed or asleep at that time.
+ * Never while the US market is open, when daily bars are still forming: it then waits for 4:20 p.m. New York time.
+ */
+export function dailySchedule(now: Date, time: string, zone: string): { key: string; due: boolean; waitingForClose: boolean } {
+  const parts = (timeZone: string) => Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit',
+    day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'short', hourCycle: 'h23' }).formatToParts(now).map(p => [p.type, p.value]));
+  const local = parts(zone), ny = parts('America/New_York');
+  const today = `${local.year}-${local.month}-${local.day}`;
+  const [h, m] = time.split(':').map(Number);
+  const reached = Number(local.hour) * 60 + Number(local.minute) >= h * 60 + m;
+  const key = reached ? today : new Date(Date.parse(today + 'T12:00:00Z') - 86_400_000).toISOString().slice(0, 10);
+  const nyMinutes = Number(ny.hour) * 60 + Number(ny.minute);
+  const session = !['Sat', 'Sun'].includes(ny.weekday) && nyMinutes >= 9 * 60 + 30 && nyMinutes < 16 * 60 + 20;
+  return { key, due: !session, waitingForClose: session };
 }
 
 /** Orders that move current positions to the target weights: whole shares, sells before buys, no shorts, no leverage. */
@@ -168,25 +203,99 @@ export class Journal {
       return lines.slice(-limit).map(line => JSON.parse(line));
     } catch { return []; }
   }
-  /** One equity point per New York date (the latest reading wins). */
-  async recordEquity(date: string, equity: number, cash: number) {
+  get replacedFile() { return path.join(this.folder, 'equity-replaced.jsonl'); }
+  /**
+   * One equity point per trading day. A 'close' comes from Alpaca's own end-of-day history; a 'reading' is the
+   * account value seen when the app refreshed. A reading never overwrites a close for the same day.
+   */
+  async recordEquity(date: string, equity: number, cash: number, source: EquitySource = 'reading') {
     const points = await this.equity();
-    const next = [...points.filter(p => p.date !== date), { date, equity, cash }].sort((a, b) => a.date.localeCompare(b.date));
+    const existing = points.find(p => p.date === date);
+    if (existing?.source === 'close' && source === 'reading') return;
+    if (existing && existing.source !== source) await this.keepReplaced([existing], `replaced by a ${source}`);
+    await this.writeEquity([...points.filter(p => p.date !== date), { date, equity, cash, source }]);
+  }
+  /**
+   * Merges Alpaca's official daily closes: each replaces any reading for the same day, and readings dated on
+   * days the market was shut (inside the calendar range given) are removed. Nothing is lost: every replaced or
+   * removed entry is appended to equity-replaced.jsonl first.
+   */
+  async mergeCloses(closes: Array<{ date: string; equity: number }>, sessions: { first: string; last: string; dates: Set<string> }) {
+    const byDate = new Map((await this.equity()).map(p => [p.date, p]));
+    const replaced: EquityPoint[] = [], removed: EquityPoint[] = [];
+    let added = 0;
+    for (const close of closes) {
+      if (!sessions.dates.has(close.date) || !(close.equity > 0)) continue;
+      const existing = byDate.get(close.date);
+      if (existing?.source === 'close' && existing.equity === close.equity) continue;
+      if (existing) replaced.push(existing); else added++;
+      byDate.set(close.date, { date: close.date, equity: close.equity, cash: existing?.cash ?? null, source: 'close' });
+    }
+    for (const [date, point] of byDate) {
+      if (point.source !== 'close' && date >= sessions.first && date <= sessions.last && !sessions.dates.has(date)) { removed.push(point); byDate.delete(date); }
+    }
+    if (!added && !replaced.length && !removed.length) return { added, replaced: 0, removed: 0 };
+    await this.keepReplaced(replaced, 'replaced by the official close');
+    await this.keepReplaced(removed, 'dated on a day the market was closed');
+    await this.writeEquity([...byDate.values()]);
+    return { added, replaced: replaced.length, removed: removed.length };
+  }
+  private async keepReplaced(points: EquityPoint[], reason: string) {
+    if (!points.length) return;
+    await mkdir(this.folder, { recursive: true });
+    const at = new Date().toISOString();
+    await appendFile(this.replacedFile, points.map(p => JSON.stringify({ at, reason, ...p })).join('\n') + '\n', 'utf8');
+  }
+  private async writeEquity(points: EquityPoint[]) {
+    const next = [...points].sort((a, b) => a.date.localeCompare(b.date));
     await mkdir(this.folder, { recursive: true });
     const temporary = this.equityFile + '.' + randomUUID() + '.tmp';
     try { await writeFile(temporary, next.map(p => JSON.stringify(p)).join('\n') + '\n'); await rename(temporary, this.equityFile); }
     finally { await unlink(temporary).catch(() => {}); }
   }
-  async equity(): Promise<Array<{ date: string; equity: number; cash: number }>> {
+  async equity(): Promise<EquityPoint[]> {
     try { return (await readFile(this.equityFile, 'utf8')).trim().split('\n').filter(Boolean).map(l => JSON.parse(l)); } catch { return []; }
   }
 }
 
+export type EquitySource = 'close' | 'reading';
+/** Entries written before 0.3.2 have no source; they are treated as readings. */
+export interface EquityPoint { date: string; equity: number; cash: number | null; source?: EquitySource }
+
+/**
+ * The New York date the current strategy started trading: the first submitted batch after the last batch of a
+ * different strategy. Stage 3 compares only the days after it, so switching strategy restarts the paper test.
+ */
+export function strategyStart(journal: Array<Record<string, unknown>>, strategy: string): string | null {
+  const strategyOf = new Map<string, string>();
+  let start: string | null = null;
+  for (const entry of journal) {
+    if (entry.type === 'proposal') strategyOf.set(String(entry.proposal), String(entry.strategy));
+    if (entry.type !== 'submitted') continue;
+    if (strategyOf.get(String(entry.proposal)) !== strategy) start = null;
+    else if (!start) start = fillDate(new Date(String(entry.at)));
+  }
+  return start;
+}
+
+/** New York date on which an order sent at this moment fills: the same weekday before 4 p.m., otherwise the next weekday. */
+export function fillDate(at: Date): string {
+  const part = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', ...options }).format(at);
+  let date = part({ year: 'numeric', month: '2-digit', day: '2-digit' });
+  const hour = Number(part({ hour: '2-digit', hourCycle: 'h23' }));
+  const weekday = () => new Date(date + 'T12:00:00Z').getUTCDay();
+  const next = () => { date = new Date(Date.parse(date + 'T12:00:00Z') + 86_400_000).toISOString().slice(0, 10); };
+  if (hour >= 16 && weekday() % 6) next();
+  while (!(weekday() % 6)) next();
+  return date;
+}
+
 /** Stage 3 checklist from the journal and equity history versus the simulated strategy. */
 export function stageThree(equity: Array<{ date: string; equity: number }>, simulated: Record<string, number>,
-                           journal: Array<Record<string, unknown>>) {
+                           journal: Array<Record<string, unknown>>, start: string | null = null) {
   const paired: Array<[number, number]> = [];
   for (let i = 1; i < equity.length; i++) {
+    if (start && equity[i - 1].date < start) continue;  // Only whole days held by the current strategy (fills land mid-day on the start date).
     const sim = simulated[equity[i].date];
     if (sim !== undefined && equity[i - 1].equity > 0) paired.push([equity[i].equity / equity[i - 1].equity - 1, sim]);
   }

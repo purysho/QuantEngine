@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { PaperBroker, PAPER_HOST, planOrders, riskCheck, stageThree, validateSettings, Journal, DEFAULT_SETTINGS,
+import { PaperBroker, PAPER_HOST, planOrders, riskCheck, stageThree, strategyStart, fillDate, dailySchedule, validateSettings, Journal, DEFAULT_SETTINGS,
   type Account, type PaperFetch, type Proposal } from '../desktop/market/paper.js';
 
 const KEYS = { keyId: 'PKTESTKEY1234567890A', secret: 'abcdefghijklmnopqrstuvwxyz0123456789ABCD' };
@@ -98,4 +98,78 @@ test('stage 3 needs 63 tracked days, low tracking error, reconciliation and a te
     await journal.recordEquity('2026-03-01', 2, 2);
     assert.deepEqual((await journal.equity()).map(p => p.equity), [2]);
   } finally { await rm(folder, { recursive: true, force: true }); }
+});
+
+test('official closes replace mis-dated readings without losing anything (a real 0.3.0 history)', async () => {
+  const folder = await mkdtemp(path.join(os.tmpdir(), 'quant-paper-'));
+  try {
+    // equity.jsonl exactly as 0.3.0 wrote it on the first tester's laptop: readings dated by the day the app was opened.
+    const original = [
+      { date: '2026-10-21', equity: 100148.39, cash: 139.08 }, { date: '2026-10-22', equity: 99427.73, cash: 139.07 },
+      { date: '2026-10-25', equity: 100075.74, cash: 139.07 }, { date: '2026-10-26', equity: 100001.34, cash: 139.07 },
+      { date: '2026-10-27', equity: 100805.64, cash: 139.07 }];
+    await writeFile(path.join(folder, 'equity.jsonl'), original.map(p => JSON.stringify(p)).join('\n') + '\n');
+    const journal = new Journal(folder);
+    const sessions = { first: '2026-10-20', last: '2026-10-26', dates: new Set(['2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-26']) };
+    const closes = [{ date: '2026-10-20', equity: 100000 }, { date: '2026-10-21', equity: 100148.39 }, { date: '2026-10-22', equity: 99427.73 },
+      { date: '2026-10-23', equity: 100075.74 }, { date: '2026-10-26', equity: 100010.5 }];
+    const merged = await journal.mergeCloses(closes, sessions);
+    assert.deepEqual(merged, { added: 2, replaced: 3, removed: 1 });
+    const after = await journal.equity();
+    assert.deepEqual(after.map(p => p.date), ['2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-26', '2026-10-27']);
+    assert.equal(after.find(p => p.date === '2026-10-26')!.equity, 100010.5);
+    assert.equal(after.find(p => p.date === '2026-10-21')!.cash, 139.08, 'cash from the reading is kept');
+    assert.equal(after.at(-1)!.source, undefined, 'a day not yet in the official history stays a reading');
+    // Every original entry still exists, either in equity.jsonl unchanged or in equity-replaced.jsonl.
+    const replaced = (await readFile(path.join(folder, 'equity-replaced.jsonl'), 'utf8')).trim().split('\n').map(l => JSON.parse(l));
+    for (const point of original) {
+      assert.ok(replaced.some(r => r.date === point.date && r.equity === point.equity) || after.some(a => a.date === point.date && a.equity === point.equity && !a.source),
+        `${point.date} must be preserved`);
+    }
+    assert.equal(replaced.find(r => r.date === '2026-10-25').reason, 'dated on a day the market was closed');
+    // A later reading never overwrites an official close; merging the same closes again changes nothing.
+    await journal.recordEquity('2026-10-26', 1, 1);
+    assert.equal((await journal.equity()).find(p => p.date === '2026-10-26')!.equity, 100010.5);
+    assert.deepEqual(await journal.mergeCloses(closes, sessions), { added: 0, replaced: 0, removed: 0 });
+  } finally { await rm(folder, { recursive: true, force: true }); }
+});
+
+test('switching strategy restarts the paper test from the first fill of the new strategy', () => {
+  const entries = [
+    { at: '2026-10-21T11:29:53Z', type: 'proposal', proposal: 'a', strategy: 'sectors' },
+    { at: '2026-10-21T11:30:20Z', type: 'submitted', proposal: 'a' },              // 07:30 New York: fills at that day's open.
+    { at: '2026-10-31T02:00:00Z', type: 'strategy', from: 'sectors', to: 'quality' },
+    { at: '2026-10-31T02:01:00Z', type: 'proposal', proposal: 'b', strategy: 'quality' },
+    { at: '2026-10-31T02:02:00Z', type: 'submitted', proposal: 'b' },              // Friday 10 p.m. New York: fills Monday.
+  ];
+  assert.equal(strategyStart(entries.slice(0, 2), 'sectors'), '2026-10-21');
+  assert.equal(strategyStart(entries, 'sectors'), null);
+  assert.equal(strategyStart(entries, 'quality'), '2026-11-02');
+  assert.equal(strategyStart(entries.slice(0, 4), 'quality'), null, 'no trades yet under the new strategy');
+  assert.equal(fillDate(new Date('2026-10-23T19:59:00Z')), '2026-10-23');   // Friday 3:59 p.m. New York.
+  assert.equal(fillDate(new Date('2026-10-23T20:00:00Z')), '2026-10-26');   // Friday 4 p.m. → Monday.
+  assert.equal(fillDate(new Date('2026-10-25T03:00:00Z')), '2026-10-26');   // Saturday night.
+  const equity = ['2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23'].map((date, i) => ({ date, equity: 100 + i }));
+  const simulated = { '2026-10-21': 0.5, '2026-10-22': 0.0099, '2026-10-23': 0.0098 };
+  assert.equal(stageThree(equity, simulated, [], null).days, 3);
+  assert.equal(stageThree(equity, simulated, [], '2026-10-21').days, 2, 'the partial first day is not compared');
+  assert.equal(stageThree(equity, simulated, [], '9999-12-31').days, 0);
+});
+
+test('the daily update runs once a day from 06:00 Beijing time, never during the US session', () => {
+  const at = (iso: string) => dailySchedule(new Date(iso), '06:00', 'Asia/Shanghai');
+  assert.equal(at('2026-10-27T21:59:00Z').key, '2026-10-27', '05:59 Beijing still belongs to yesterday\'s slot');
+  assert.deepEqual(at('2026-10-27T22:00:00Z'), { key: '2026-10-28', due: true, waitingForClose: false });   // 06:00 Beijing = 6 p.m. New York.
+  assert.equal(at('2026-10-28T03:00:00Z').key, '2026-10-28', 'opening the app later that day catches up once, not twice');
+  assert.equal(at('2026-11-02T22:00:00Z').due, true, 'after the US clock change 06:00 Beijing is 5 p.m. New York, still after the close');
+  // A slot inside US trading hours (22:00 Beijing = 10 a.m. New York) waits for the close, past Beijing midnight.
+  assert.deepEqual(dailySchedule(new Date('2026-10-28T14:00:00Z'), '22:00', 'Asia/Shanghai'), { key: '2026-10-28', due: false, waitingForClose: true });
+  assert.deepEqual(dailySchedule(new Date('2026-10-28T20:25:00Z'), '22:00', 'Asia/Shanghai'), { key: '2026-10-28', due: true, waitingForClose: false });
+  assert.equal(dailySchedule(new Date('2026-10-31T14:00:00Z'), '22:00', 'Asia/Shanghai').due, true, 'Saturday: no session to wait for');
+  // Settings saved by 0.3.0/0.3.1 load with the new default; bad values are refused.
+  const legacy = validateSettings({ enabled: true, strategy: 'sectors', killSwitch: false, dailyUpdate: true, notify: true,
+    limits: { maxOrderFraction: .5, maxOrdersPerDay: 24, dailyLossStop: .03, minOrderNotional: 50, maxGrossExposure: 1 } });
+  assert.equal(legacy.dailyTime, '06:00'); assert.equal(legacy.dailyZone, 'Asia/Shanghai'); assert.equal(legacy.limits.maxOrderFraction, .5);
+  assert.throws(() => validateSettings({ ...legacy, dailyTime: '6am' }), /HH:MM/);
+  assert.throws(() => validateSettings({ ...legacy, dailyZone: 'Mars/Base' }), /time zones/);
 });

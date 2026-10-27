@@ -91,7 +91,7 @@
       <article class="panel"><div class="panel-heading"><div><h2>Stages 1–2 · Strategy lab</h2><p id="lab-meta">Pre-registered rules tested on 100 years of US data (Kenneth R. French library), after costs, against the passive benchmark.</p></div><button type="button" id="lab-run" class="primary">Run strategy lab</button></div>
         <div id="lab-results" class="lab-results"><p class="term-note">Run the lab to download the data and test both strategies (about 30 seconds).</p></div></article>
       <article class="panel" id="paper-panel"><div class="panel-heading"><div><h2>Stage 3 · Paper trading</h2><p>Orders go only to your Alpaca paper account, and only after you approve them. Every step is written to <code>paper/journal.jsonl</code> in your storage folder.</p></div><span id="paper-badge" class="tag neutral">OFF</span></div>
-        <div class="daily-brief"><div class="panel-heading inner"><h3>Daily update</h3><button type="button" id="paper-daily-now" class="text-button">Update now ↻</button></div><div id="paper-brief" class="brief-grid"><p class="term-note">The first update runs after the next US close (4:20 p.m. New York time) while QuantEngine is open, or press Update now.</p></div></div>
+        <div class="daily-brief"><div class="panel-heading inner"><h3>Daily update</h3><button type="button" id="paper-daily-now" class="text-button">Update now ↻</button></div><div id="paper-brief" class="brief-grid"><p class="term-note">The first update runs at the daily time set below (06:00 Beijing time by default) while QuantEngine is open, or press Update now.</p></div></div>
         <div class="paper-grid">
           <form id="paper-form" class="paper-settings" autocomplete="off">
             <label class="checkbox-row"><input type="checkbox" id="paper-enabled"><span>Enable paper trading<small>I understand this places simulated orders in my Alpaca paper account after I approve each list.</small></span></label>
@@ -102,17 +102,20 @@
             <div><label for="limit-min">Min order ($)</label><input id="limit-min" type="number" min="1" max="10000" step="1"></div>
             <div><label for="limit-gross">Max total exposure (%)</label><input id="limit-gross" type="number" min="100" max="150" step="5"></div></div>
             <p class="field-help">100% means no borrowing. Above 100% lets the ensemble use margin in the paper account, as its rule allows (up to 150%); borrowing raises both gains and losses and costs interest.</p>
-            <label class="checkbox-row"><input type="checkbox" id="paper-daily"><span>Daily update after each US close<small>Refreshes the account, records the day's value, checks whether the rule wants trades (never submits them) and fills missed days from Alpaca. Runs while QuantEngine is open or in the tray.</small></span></label>
+            <label class="checkbox-row"><input type="checkbox" id="paper-daily"><span>Automatic daily update<small>Refreshes the account, records the day's value, checks whether the rule wants trades (never submits them) and fills missed days from Alpaca. Runs while QuantEngine is open or in the tray; if it was closed at that time, it runs once when you next open it that day.</small></span></label>
+            <div class="form-grid"><div><label for="paper-daily-time">Daily update at</label><input id="paper-daily-time" type="time" step="60" required></div>
+            <div><label for="paper-daily-zone">Time zone</label><select id="paper-daily-zone"><option value="Asia/Shanghai">Beijing time</option><option value="America/New_York">New York time</option><option value="Europe/London">London time</option><option value="Europe/Berlin">Central European time</option><option value="Asia/Tokyo">Tokyo time</option><option value="Australia/Sydney">Sydney time</option></select></div></div>
+            <p class="field-help">06:00 Beijing time is after every US close (4 p.m. New York is 4–5 a.m. in Beijing). A time that falls while the US market is open waits until 4:20 p.m. New York time.</p>
             <label class="checkbox-row"><input type="checkbox" id="paper-notify"><span>Windows notification with the daily summary</span></label>
             <div class="inline-actions"><button type="submit" class="secondary">Save settings</button><button type="button" id="paper-kill" class="secondary danger">Kill switch</button></div>
             <p id="paper-warning" class="paper-warning hidden" role="status"></p>
           </form>
-          <div class="paper-account"><div class="panel-heading inner"><h3>Paper account</h3><button type="button" id="paper-refresh" class="text-button">Refresh ↻</button></div><dl id="paper-account" class="term-stats"></dl>
+          <div class="paper-account"><div class="panel-heading inner"><h3>Paper account</h3><button type="button" id="paper-refresh" class="text-button">Refresh ↻</button></div><p id="paper-refreshed" class="refresh-status" role="status" aria-live="polite"></p><dl id="paper-account" class="term-stats"></dl>
             <h3>Positions</h3><table class="term-table"><thead><tr><th scope="col">Symbol</th><th scope="col" class="num">Shares</th><th scope="col" class="num">Value</th><th scope="col" class="num">P/L</th></tr></thead><tbody id="paper-positions"></tbody></table></div>
         </div>
         <div class="paper-orders"><div class="inline-actions"><button type="button" id="paper-propose" class="primary">Compute today's orders</button><button type="button" id="paper-submit" class="secondary" disabled>Submit to paper account</button></div>
           <div id="paper-proposal"><p class="term-note">The rule uses yesterday's closes and the targets are traded as market orders for whole shares.</p></div></div>
-        <div class="paper-grid"><div><h3>Stage 3 checks</h3><ul id="paper-checks" class="checks"></ul></div><div><h3>Journal</h3><ol id="paper-journal" class="journal"></ol></div></div>
+        <div class="paper-grid"><div><h3>Stage 3 checks</h3><ul id="paper-checks" class="checks"></ul></div><div><div class="panel-heading inner"><h3>Journal</h3><button type="button" id="paper-export" class="text-button">Export progress ↗</button></div><ol id="paper-journal" class="journal"></ol></div></div>
       </article>
     </section>
 
