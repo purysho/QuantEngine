@@ -773,3 +773,12 @@ PR #4 passed all 8 checks on `bd94928`, including the Windows packaged self-test
 - Switch paper trading to multi-factor.
 - Re-run the lab in late January.
 - Do not add strategies or variants before the decision; each one would also have to be counted in the deflation.
+
+## Release 0.3.1 ([purysho/QuantEngine#5](https://github.com/purysho/QuantEngine/pull/5) merged)
+
+- **Merge:** all 8 checks passed on the final commit 86373f9, including the Windows portable package, the packaged self-test and the online strategy lab. Squash-merged as 10739b5.
+- **Release:** the Release workflow published [v0.3.1](https://github.com/purysho/QuantEngine/releases/tag/v0.3.1).
+  - `QuantEngine-win-x64.zip`: 222,483,899 bytes.
+  - SHA-256 `bb376074acaf7fe700cf9de5818810f66dc2e5aef345b4e3cf761e90d1bd4304`, which matches GitHub's own digest of the uploaded file and `SHA256SUMS.txt`.
+- **Fixed afterwards:** the release notes still said QuantEngine "has no brokerage connection and cannot trade", which has been untrue since paper trading (0.3.0). The template now says it cannot trade real money and sends simulated orders to an Alpaca paper account only after approval. This takes effect from the next release.
+- **Upgrading keeps progress:** extract to a new folder. The storage folder (`D:\Quant-Engine`, including `paper/`) and the Windows app-data folder (settings, encrypted keys) are untouched.

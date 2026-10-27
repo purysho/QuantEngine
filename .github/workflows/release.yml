@@ -81,7 +81,7 @@ jobs:
           2. Open ``QuantEngine\QuantEngine.exe``. Nothing else needs installing: Python, NumPy and SciPy are included.
           3. Windows SmartScreen may say the app is unrecognised because it is not code-signed yet. Choose **More info, then Run anyway**.
 
-          Research data is kept in ``D:\Quant-Engine`` by default. QuantEngine has no brokerage connection and cannot trade.
+          Research data is kept in ``D:\Quant-Engine`` by default. QuantEngine cannot trade real money: it can only send simulated orders to an Alpaca paper account, and only after you approve each list.
 
           ## Verify
           SHA-256: ``$env:SHA256`` (also in ``SHA256SUMS.txt``).
