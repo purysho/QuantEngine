@@ -24,7 +24,7 @@ export interface Order { id: string; client_order_id: string; symbol: string; si
 export interface RiskLimits { maxOrderFraction: number; maxOrdersPerDay: number; dailyLossStop: number; minOrderNotional: number;
   /** Total positions as a share of equity. 1.0 = no borrowing (default); up to 1.5 only if you opt in to margin. */
   maxGrossExposure: number }
-export type Strategy = 'trend' | 'sectors' | 'quality' | 'ensemble';
+export type Strategy = 'trend' | 'sectors' | 'quality' | 'ensemble' | 'multifactor';
 export interface PaperSettings { enabled: boolean; strategy: Strategy; limits: RiskLimits; killSwitch: boolean;
   /** Once a day at dailyTime in dailyZone: refresh, record equity, check the rule (never submits) and notify. */
   dailyUpdate: boolean; notify: boolean; dailyTime: string; dailyZone: string }
@@ -43,6 +43,7 @@ export const UNIVERSE: Record<Strategy, string[]> = {
   sectors: ['SPY', ...SECTOR_ETFS],
   quality: ['SPY', 'QUAL'],
   ensemble: ['SPY', ...SECTOR_ETFS, 'QUAL', 'IEF'],
+  multifactor: ['SPY', 'QUAL', 'VLUE', 'MTUM'],
 };
 export const DEFAULT_SETTINGS: PaperSettings = { enabled: false, strategy: 'trend', killSwitch: false, dailyUpdate: true, notify: true,
   dailyTime: '06:00', dailyZone: 'Asia/Shanghai',
@@ -55,7 +56,7 @@ export function validateSettings(value: unknown): PaperSettings {
     if (typeof x !== 'number' || !Number.isFinite(x) || x < lo || x > hi) throw new Error(`${name} must be between ${lo} and ${hi}.`);
     return x;
   };
-  if (!['trend', 'sectors', 'quality', 'ensemble'].includes(v.strategy as string)) throw new Error('Choose one of the registered strategies.');
+  if (!['trend', 'sectors', 'quality', 'ensemble', 'multifactor'].includes(v.strategy as string)) throw new Error('Choose one of the registered strategies.');
   return { enabled: v.enabled === true, strategy: v.strategy as Strategy, killSwitch: v.killSwitch === true,
     dailyUpdate: v.dailyUpdate !== false, notify: v.notify !== false,
     // Settings saved before 0.3.2 have no time: they get the default (06:00 Beijing time).

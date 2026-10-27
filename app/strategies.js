@@ -1,5 +1,5 @@
 // Strategies page: go/no-go ladder, strategy lab (stages 1–2) and paper trading (stage 3).
-const NAMES = { trend: 'Trend + volatility target', sectors: 'Sector momentum', quality: 'Quality (most profitable companies)', ensemble: 'Diversified ensemble' };
+const NAMES = { trend: 'Trend + volatility target', sectors: 'Sector momentum', quality: 'Quality (most profitable companies)', ensemble: 'Diversified ensemble', multifactor: 'Multi-factor (quality + value + momentum)' };
 const GATE_LABELS = { deflated_sharpe: 'Survives the multiple-testing correction', newey_west: 'Edge over the benchmark is significant',
   walk_forward: 'Beats the benchmark out of sample', holdout: 'Holds up in the last 10 years', robust: 'Most parameter choices beat the benchmark' };
 
@@ -40,7 +40,7 @@ export function initStrategies({ $, esc, toast, receive }) {
     const lab = state.lab;
     if (!lab) return;
     $('lab-meta').textContent = 'Data ' + lab.data.first + ' to ' + lab.data.last + ' (' + lab.data.days.toLocaleString() + ' days) · rules registered ' + lab.registration.date +
-      (lab.registration.extra ? ' (quality and ensemble ' + lab.registration.extra + ')' : '') + ' · gates v' + lab.registration.gates_version + ' · hash ' + lab.registration.hash.slice(0, 12) + (lab.completed_at ? ' · run ' + new Date(lab.completed_at).toLocaleString() : '');
+      (lab.registration.extra ? ' (quality and ensemble ' + lab.registration.extra + ')' : '') + (lab.registration.multifactor ? ' (multi-factor ' + lab.registration.multifactor + ')' : '') + ' · gates v' + lab.registration.gates_version + ' · hash ' + lab.registration.hash.slice(0, 12) + (lab.completed_at ? ' · run ' + new Date(lab.completed_at).toLocaleString() : '');
     $('lab-results').innerHTML = Object.values(lab.results).map(r => {
       const rows = [
         ['Sharpe (after costs)', num(r.excess_sharpe), num(r.benchmark_excess_sharpe)],
@@ -60,7 +60,7 @@ export function initStrategies({ $, esc, toast, receive }) {
         num(r.sharpe_vs_benchmark.ci95[0]) + ' to ' + num(r.sharpe_vs_benchmark.ci95[1]) + ') · deflated Sharpe ' + num(r.deflated.dsr, 3) + ' · t-stat ' + num(r.newey_west_active.t) + '</p>' +
         specCurve(r) + '<p class="term-note">Each bar is one of ' + r.variants.length + ' parameter choices; green beats the benchmark (dashed line).</p>' +
         '<ul class="checks">' + Object.entries(r.gates).map(([k, ok]) => '<li class="' + (ok ? 'pass' : 'fail') + '"><span>' + (ok ? '✓' : '✗') + '</span>' + esc(GATE_LABELS[k] || k) + '</li>').join('') + '</ul></div>';
-    }).join('') + '<p class="term-note lab-foot">All four ideas are well published, and industry momentum was already examined on this data earlier, so the last 10 years are not a pristine test. Later strategies are judged against all ' + (lab.registration.total_trials || '') + ' variants tried so far. Forward paper trading is the only clean test.</p>';
+    }).join('') + '<p class="term-note lab-foot">All of these ideas are well published, and industry momentum was already examined on this data earlier, so the last 10 years are not a pristine test. Later strategies are judged against all ' + (lab.registration.total_trials || '') + ' variants tried so far. Forward paper trading is the only clean test.</p>';
   }
 
   function renderPaper() {

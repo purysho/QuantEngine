@@ -20,17 +20,20 @@ cache = ROOT / ".cache" / "data"
 
 raw = {}
 for name, kind in (("F-F_Research_Data_Factors_daily", "french"), ("12_Industry_Portfolios_daily", "french"),
-                   ("Portfolios_Formed_on_OP_Daily", "french"), ("DGS10", "fred")):
+                   ("Portfolios_Formed_on_OP_Daily", "french"), ("DGS10", "fred"),
+                   ("Portfolios_Formed_on_BE-ME_Daily", "french"), ("10_Portfolios_Prior_12_2_Daily", "french")):
     raw[name] = (qd.fetch(qd.FRENCH_URL.format(name=name), cache, f"french-{name}", offline=args.offline) if kind == "french"
                  else qd.fred_long(name, cache, offline=args.offline))
-lab = st.run_lab(*(raw[n][0] for n in ("F-F_Research_Data_Factors_daily", "12_Industry_Portfolios_daily", "Portfolios_Formed_on_OP_Daily", "DGS10")))
+lab = st.run_lab(*(raw[n][0] for n in ("F-F_Research_Data_Factors_daily", "12_Industry_Portfolios_daily", "Portfolios_Formed_on_OP_Daily", "DGS10",
+                                       "Portfolios_Formed_on_BE-ME_Daily", "10_Portfolios_Prior_12_2_Daily")))
 families = lab["results"]
 
 finished = time.perf_counter()
 payload = {
     "registration": {**lab["registration"], "families": st.FAMILIES,
                      "gates_history": "Version 1 compared returns with cash; buy-and-hold passes that, so version 2 compares with the benchmark."},
-    "data": {"source": "Kenneth R. French Data Library (market, risk-free rate, 12 industries, portfolios on operating profitability) "
+    "data": {"source": "Kenneth R. French Data Library (market, risk-free rate, 12 industries, portfolios on operating profitability, "
+                       "book-to-market and prior 12-2 month return) "
                        "and FRED DGS10 (10-year Treasury yield, converted to daily par-bond returns)",
              **lab["data"], "files": {n: raw[n][1]["sha256"] for n in raw}},
     "contamination_note": ("Industry momentum on this data was already examined in Task 16 (real_world_backtest), and trend-following "

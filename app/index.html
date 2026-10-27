@@ -95,7 +95,7 @@
         <div class="paper-grid">
           <form id="paper-form" class="paper-settings" autocomplete="off">
             <label class="checkbox-row"><input type="checkbox" id="paper-enabled"><span>Enable paper trading<small>I understand this places simulated orders in my Alpaca paper account after I approve each list.</small></span></label>
-            <label for="paper-strategy">Strategy</label><select id="paper-strategy"><option value="trend">Trend + volatility target (SPY vs cash)</option><option value="sectors">Sector momentum (top 3 SPDR sector ETFs)</option><option value="quality">Quality: most profitable companies (QUAL)</option><option value="ensemble">Diversified ensemble (SPY, sectors, QUAL, IEF)</option></select>
+            <label for="paper-strategy">Strategy</label><select id="paper-strategy"><option value="trend">Trend + volatility target (SPY vs cash)</option><option value="sectors">Sector momentum (top 3 SPDR sector ETFs)</option><option value="quality">Quality: most profitable companies (QUAL)</option><option value="ensemble">Diversified ensemble (SPY, sectors, QUAL, IEF)</option><option value="multifactor">Multi-factor: quality + value + momentum (QUAL, VLUE, MTUM)</option></select>
             <div class="form-grid"><div><label for="limit-order">Max order (% of equity)</label><input id="limit-order" type="number" min="1" max="150" step="1"></div>
             <div><label for="limit-orders">Max orders per day</label><input id="limit-orders" type="number" min="1" max="200" step="1"></div>
             <div><label for="limit-loss">Daily loss stop (%)</label><input id="limit-loss" type="number" min="0.5" max="50" step="0.5"></div>

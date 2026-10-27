@@ -14,6 +14,7 @@ const BASE: Record<string, [number, string]> = {
   XLU: [86, 'Utilities Select Sector SPDR'], XLV: [140, 'Health Care Select Sector SPDR'], XLY: [235, 'Consumer Discretionary Select Sector SPDR'],
   XLRE: [42, 'Real Estate Select Sector SPDR'], XLC: [115, 'Communication Services Select Sector SPDR'],
   QUAL: [190, 'iShares MSCI USA Quality Factor ETF'], IEF: [95, 'iShares 7-10 Year Treasury Bond ETF'],
+  VLUE: [120, 'iShares MSCI USA Value Factor ETF'], MTUM: [230, 'iShares MSCI USA Momentum Factor ETF'],
 };
 
 function seeded(text: string) {

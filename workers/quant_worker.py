@@ -73,13 +73,14 @@ def main():
             emit({"type": "progress", "stage": "Downloading 100 years of US market data", "fraction": 0.02})
             from quant_data import FRED_URL, FRED_CHUNKS, join_fred_csv
             contents = [download(FRENCH_URL.format(name=name), 32 * 1024 * 1024)
-                        for name in ("F-F_Research_Data_Factors_daily", "12_Industry_Portfolios_daily", "Portfolios_Formed_on_OP_Daily")]
+                        for name in ("F-F_Research_Data_Factors_daily", "12_Industry_Portfolios_daily", "Portfolios_Formed_on_OP_Daily",
+                                     "Portfolios_Formed_on_BE-ME_Daily", "10_Portfolios_Prior_12_2_Daily")]
             emit({"type": "progress", "stage": "Downloading 10-year Treasury yields since 1962", "fraction": 0.06})
             # FRED can time out on full histories, so the yields come in date chunks.
             treasury = join_fred_csv([download(FRED_URL.format(ids="DGS10") + f"&cosd={a}&coed={b}", 8 * 1024 * 1024, "text/csv")
                                       for a, b in FRED_CHUNKS])
             raw = [store.save_source(f"french-lab-{i}", c) for i, c in enumerate(contents)] + [store.save_source("fred-dgs10", treasury)]
-            lab = run_lab(*contents, treasury, progress=lambda stage, fraction: emit({"type": "progress", "stage": stage, "fraction": 0.1 + 0.9 * fraction}))
+            lab = run_lab(*contents[:3], treasury, *contents[3:], progress=lambda stage, fraction: emit({"type": "progress", "stage": stage, "fraction": 0.1 + 0.9 * fraction}))
             lab["data"]["raw"] = raw
             lab["completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             folder = store.root / "strategies"

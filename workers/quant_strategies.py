@@ -53,14 +53,28 @@ FAMILIES = {
                            for w in ("equal", "inverse_vol") for v, c in ((None, 1.0), (.10, 1.0), (.10, 1.5), (.15, 1.0), (.15, 1.5))],
                  "primary": {"weighting": "inverse_vol", "target_vol": .15, "leverage_cap": 1.5, "rebalance": "month"},
                  "benchmark": "Buy and hold the US market"},
+    # Registered 2026-10-27, before any run on real data (see REGISTERED_MULTIFACTOR and the git history).
+    # Quality, value and momentum, held together: each has a long published record (Novy-Marx 2013; Fama & French
+    # 1992; Jegadeesh & Titman 1993) and value and momentum tend to do well at different times (Asness, Moskowitz &
+    # Pedersen 2013), so the blend should beat the market more steadily than any one of them. Long-only, no borrowing.
+    "multifactor": {"grid": {"cut": ["Hi 30", "Hi 20", "Hi 10"], "weighting": ["equal", "inverse_vol"], "rebalance": ["month"]},
+                    "primary": {"cut": "Hi 30", "weighting": "equal", "rebalance": "month"},
+                    "benchmark": "Buy and hold the US market"},
 }
 REGISTERED_EXTRA = "2026-10-22"  # quality and ensemble
+REGISTERED_MULTIFACTOR = "2026-10-27"
 BORROW_SPREAD = 0.025  # Annual margin cost above the risk-free rate on any borrowed amount (registered with the families).
 QUALITY_COLUMNS = ["Hi 10", "Hi 20", "Hi 30"]
 # Asset layout for quality/ensemble backtests: market, 12 industries, quality (Hi 10, Hi 20, Hi 30), 10-year Treasury.
 ENSEMBLE_QUALITY = 13 + QUALITY_COLUMNS.index("Hi 30")
 ENSEMBLE_BONDS = 16
 LAB_LAYOUT = {"sectors": slice(1, 13), "quality": ENSEMBLE_QUALITY, "bonds": ENSEMBLE_BONDS}
+# Multi-factor sleeves (value-weighted Ken French portfolios, US): profitability = Portfolios_Formed_on_OP,
+# value = Portfolios_Formed_on_BE-ME (book-to-market), momentum = 10_Portfolios_Prior_12_2 (return from 12 to
+# 2 months ago). "Hi 30" for momentum is the average of the top three deciles, "Hi 20" of the top two, "Hi 10" the
+# top decile. In the full lab matrix value sits in columns 17-19 and momentum in 20-22 (Hi 10, Hi 20, Hi 30).
+MOMENTUM_CUTS = {"Hi 10": ["Hi PRIOR"], "Hi 20": ["PRIOR 9", "Hi PRIOR"], "Hi 30": ["PRIOR 8", "PRIOR 9", "Hi PRIOR"]}
+MULTIFACTOR_COLUMNS = {cut: [13 + i, 17 + i, 20 + i] for i, cut in enumerate(QUALITY_COLUMNS)}
 
 # Go/no-go gates for moving from backtest (stage 2) to paper trading (stage 3).
 # Version 2 (2026-10-21): every gate tests the strategy against simply holding its passive benchmark.
@@ -83,7 +97,8 @@ def spec_id(family: str, spec: dict) -> str:
 def registration_hash() -> str:
     """Hash of the registered families and gates; reports carry it so later edits are visible."""
     return hashlib.sha256(json.dumps({"families": FAMILIES, "gates": GATES, "gates_version": GATES_VERSION, "registered": REGISTERED,
-                                      "registered_extra": REGISTERED_EXTRA, "borrow_spread": BORROW_SPREAD,
+                                      "registered_extra": REGISTERED_EXTRA, "registered_multifactor": REGISTERED_MULTIFACTOR,
+                                      "momentum_cuts": MOMENTUM_CUTS, "borrow_spread": BORROW_SPREAD,
                                       "skip": SKIP, "vol_window": VOL_WINDOW}, sort_keys=True, default=str).encode()).hexdigest()
 
 
@@ -151,6 +166,23 @@ def target_weights(family: str, spec: dict, market: np.ndarray, rf: np.ndarray, 
     if family == "quality":
         weights = np.zeros_like(assets)
         weights[:, (layout or {}).get("quality", 13 + QUALITY_COLUMNS.index(spec["portfolio"]))] = 1.0
+        return weights
+    if family == "multifactor":
+        # Three sleeves (profitability, value, momentum): equal thirds, or weights inversely proportional to each
+        # sleeve's volatility over the last 63 days. Fully invested, never borrowed.
+        columns = (layout or {}).get("sleeves") or MULTIFACTOR_COLUMNS[spec["cut"]]
+        sleeves = assets[:, columns]
+        weights = np.zeros_like(assets)
+        if spec["weighting"] == "equal":
+            weights[:, columns] = 1 / len(columns)
+            return weights
+        s1, s2 = (np.cumsum(np.vstack([np.zeros(len(columns)), x]), axis=0) for x in (sleeves, sleeves * sleeves))
+        a, b = s1[VOL_WINDOW:] - s1[:-VOL_WINDOW], s2[VOL_WINDOW:] - s2[:-VOL_WINDOW]
+        vol = np.full(sleeves.shape, np.nan)
+        vol[VOL_WINDOW - 1:] = np.sqrt(np.maximum(b - a * a / VOL_WINDOW, 0) / (VOL_WINDOW - 1))
+        inverse = 1 / np.where(vol > 0, vol, np.nan)
+        weights[:, columns] = inverse / inverse.sum(axis=1, keepdims=True)
+        weights[np.isnan(inverse).any(axis=1)] = np.nan
         return weights
     if family == "ensemble":
         if dates is None or len(dates) != len(market):
@@ -329,8 +361,12 @@ PAPER_UNIVERSE = {
     "sectors": ["SPY", "XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY", "XLRE", "XLC"],
     "quality": ["SPY", "QUAL"],
     "ensemble": ["SPY", "XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY", "XLRE", "XLC", "QUAL", "IEF"],
+    # iShares MSCI USA factor ETFs (2013 onwards) stand in for the three Ken French sleeves; their index rules
+    # differ, so paper trading measures how closely the tradable version follows the researched one.
+    "multifactor": ["SPY", "QUAL", "VLUE", "MTUM"],
 }
-PAPER_LAYOUT = {"quality": {"quality": 1}, "ensemble": {"sectors": slice(1, 12), "quality": 12, "bonds": 13}}
+PAPER_LAYOUT = {"quality": {"quality": 1}, "ensemble": {"sectors": slice(1, 12), "quality": 12, "bonds": 13},
+                "multifactor": {"sleeves": [1, 2, 3]}}
 
 
 def latest_signal(family: str, spec: dict, dates: list[str], closes: np.ndarray, symbols: list[str], rf_annual: float = 0.0) -> dict:
@@ -338,7 +374,7 @@ def latest_signal(family: str, spec: dict, dates: list[str], closes: np.ndarray,
 
     The first column is always the market proxy (SPY): ``trend`` trades it; ``sectors`` uses it only for the
     trend filter and ranks the other columns; ``quality`` holds QUAL; ``ensemble`` uses SPY, the sector ETFs,
-    QUAL and IEF in the PAPER_UNIVERSE order. Same rules as the backtest; the decision is for the next close.
+    QUAL and IEF in the PAPER_UNIVERSE order; ``multifactor`` holds QUAL, VLUE and MTUM. Same rules as the backtest; the decision is for the next close.
     """
     prices = np.asarray(closes, dtype=np.float64)
     if prices.ndim != 2 or prices.shape[1] != len(symbols) or prices.shape[0] < spec.get("lookback", 252) + 30 or (prices <= 0).any():
@@ -353,7 +389,7 @@ def latest_signal(family: str, spec: dict, dates: list[str], closes: np.ndarray,
         if assets.shape[1] < spec["top"] + 1:
             raise ValueError("Sector momentum needs more sectors than it holds.")
     else:
-        assets = returns if family in ("quality", "ensemble") else None
+        assets = returns if family in ("quality", "ensemble", "multifactor") else None
     signal_dates = dates[1:]
     weights = target_weights(family, spec, market, rf, assets, signal_dates, PAPER_LAYOUT.get(family))
     if family == "ensemble":
@@ -395,8 +431,10 @@ def treasury_returns(trading_dates: list[str], fred_dates: list[str], yields) ->
     return out
 
 
-def lab_inputs(factors_zip: bytes, industries_zip: bytes, op_zip: bytes | None = None, dgs10_csv: bytes | None = None) -> dict:
-    """Daily inputs. ``main`` covers 1926 onwards (trend, sectors); ``full`` adds quality and Treasuries from mid-1963."""
+def lab_inputs(factors_zip: bytes, industries_zip: bytes, op_zip: bytes | None = None, dgs10_csv: bytes | None = None,
+               bm_zip: bytes | None = None, momentum_zip: bytes | None = None) -> dict:
+    """Daily inputs. ``main`` covers 1926 onwards (trend, sectors); ``full`` adds quality and Treasuries from mid-1963,
+    and value and momentum portfolios (columns 17-22) when those files are given."""
     try:
         from . import quant_data as qd
     except ImportError:
@@ -417,18 +455,32 @@ def lab_inputs(factors_zip: bytes, industries_zip: bytes, op_zip: bytes | None =
         op_index = {d.isoformat(): i for i, d in enumerate(op["dates"])}
         rows = [i for i, d in enumerate(dates) if d in op_index]
         full_dates = [dates[i] for i in rows]
+        if bm_zip is not None and momentum_zip is not None:
+            bm = qd.parse_french(bm_zip, "Average Value Weighted Returns -- Daily")
+            mom = qd.parse_french(momentum_zip, "Average Value Weighted Returns -- Daily")
+            bm_index = {d.isoformat(): i for i, d in enumerate(bm["dates"])}
+            mom_index = {d.isoformat(): i for i, d in enumerate(mom["dates"])}
+            rows = [i for i in rows if dates[i] in bm_index and dates[i] in mom_index]
+            full_dates = [dates[i] for i in rows]
         quality = np.column_stack([op["series"][c][[op_index[d] for d in full_dates]] for c in QUALITY_COLUMNS])
         bonds = treasury_returns(full_dates, [d.isoformat() for d in fred["dates"]], fred["series"]["DGS10"])
         m, r, a = market[keep][rows], rf[keep][rows], assets[keep][rows]
-        matrix = np.column_stack([m, a, quality, bonds])
+        parts = [m, a, quality, bonds]
+        if bm_zip is not None and momentum_zip is not None:
+            parts.append(np.column_stack([bm["series"][c][[bm_index[d] for d in full_dates]] for c in QUALITY_COLUMNS]))
+            parts.append(np.column_stack([np.mean([mom["series"][c][[mom_index[d] for d in full_dates]] for c in MOMENTUM_CUTS[cut]], axis=0)
+                                          for cut in QUALITY_COLUMNS]))
+        matrix = np.column_stack(parts)
         ok = np.isfinite(matrix).all(axis=1)
         out["full"] = ([d for d, k in zip(full_dates, ok) if k], m[ok], r[ok], matrix[ok])
     return out
 
 
-def run_lab(factors_zip: bytes, industries_zip: bytes, op_zip: bytes | None = None, dgs10_csv: bytes | None = None, progress=None) -> dict:
-    inputs = lab_inputs(factors_zip, industries_zip, op_zip, dgs10_csv)
-    families = [f for f in FAMILIES if f in ("trend", "sectors") or inputs["full"] is not None]
+def run_lab(factors_zip: bytes, industries_zip: bytes, op_zip: bytes | None = None, dgs10_csv: bytes | None = None,
+            bm_zip: bytes | None = None, momentum_zip: bytes | None = None, progress=None) -> dict:
+    inputs = lab_inputs(factors_zip, industries_zip, op_zip, dgs10_csv, bm_zip, momentum_zip)
+    full = inputs["full"]
+    families = [f for f in FAMILIES if f in ("trend", "sectors") or (full is not None and (f != "multifactor" or full[3].shape[1] > 20))]
     total_trials = sum(len(specs(f)) for f in families)
     results = {}
     for i, family in enumerate(families):
@@ -437,10 +489,11 @@ def run_lab(factors_zip: bytes, industries_zip: bytes, op_zip: bytes | None = No
         dates, market, rf, assets = inputs["main"] if family in ("trend", "sectors") else inputs["full"]
         # Families registered later are deflated by every variant tried so far, across all families.
         results[family] = evaluate(family, dates, market, rf, assets if family != "trend" else None,
-                                   n_trials=total_trials if family in ("quality", "ensemble") else None)
+                                   n_trials=total_trials if family in ("quality", "ensemble", "multifactor") else None)
         results[family]["variants"] = sorted(results[family]["variants"], key=lambda v: -v["sharpe"])
     first, last = inputs["main"][0][0], inputs["main"][0][-1]
-    return {"registration": {"date": REGISTERED, "extra": REGISTERED_EXTRA, "hash": registration_hash(), "gates": GATES,
+    return {"registration": {"date": REGISTERED, "extra": REGISTERED_EXTRA, "multifactor": REGISTERED_MULTIFACTOR,
+                             "hash": registration_hash(), "gates": GATES,
                              "gates_version": GATES_VERSION, "borrow_spread": BORROW_SPREAD, "total_trials": total_trials,
                              "families": {k: {"primary": v["primary"], "benchmark": v["benchmark"]} for k, v in FAMILIES.items()}},
             "data": {"first": first, "last": last, "days": len(inputs["main"][0]),
@@ -456,7 +509,7 @@ def paper_signal(family: str, dates: list[str], closes, symbols: list[str], rf_a
     prices = np.asarray(closes, dtype=np.float64)
     returns = prices[1:] / prices[:-1] - 1
     rf = np.full(len(returns), (1 + rf_annual) ** (1 / TRADING_DAYS) - 1)
-    assets = returns[:, 1:] if family == "sectors" else returns if family in ("quality", "ensemble") else None
+    assets = returns[:, 1:] if family == "sectors" else returns if family in ("quality", "ensemble", "multifactor") else None
     run = backtest(family, spec, dates[1:], returns[:, 0], rf, assets, cost_bps, PAPER_LAYOUT.get(family))
     simulated = {d: float(r) for d, r in zip(run["dates"], run["net"]) if since is None or d >= since}
     signal["simulated"] = simulated

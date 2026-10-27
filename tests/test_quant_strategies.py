@@ -32,13 +32,31 @@ def market_data(n=3000, seed=5, k=12):
 
 
 def layout(family, market, assets, seed=9):
-    """Asset matrix each family expects: industries for sectors; market, industries, 3 quality portfolios and bonds otherwise."""
+    """Asset matrix each family expects: industries for sectors; otherwise market, industries, 3 quality portfolios,
+    bonds, 3 value and 3 momentum portfolios (columns 17-22)."""
     if family in ("trend", "sectors"):
         return assets
     rng = np.random.default_rng(seed)
     quality = market[:, None] * .9 + rng.normal(.0002, .004, (len(market), 3))
     bonds = rng.normal(.0002, .004, len(market))[:, None]
-    return np.column_stack([market, assets, quality, bonds])
+    value = market[:, None] * 1.1 + rng.normal(.0001, .006, (len(market), 3))
+    momentum = market[:, None] + rng.normal(.0002, .012, (len(market), 3))
+    return np.column_stack([market, assets, quality, bonds, value, momentum])
+
+
+def french_zip(body: str) -> bytes:
+    import io
+    import zipfile
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("test.csv", body)
+    return buffer.getvalue()
+
+
+def french_file(columns, rows, section="Average Value Weighted Returns -- Daily"):
+    lines = ["Header", "", f"  {section}" if section else "", "," + ",".join(columns)]
+    lines += [d + "," + ",".join(f"{v:.2f}" for v in values) for d, values in rows]
+    return french_zip("\n".join(lines) + "\n\nCopyright\n")
 
 
 class StatsTests(unittest.TestCase):
@@ -176,6 +194,60 @@ class StrategyTests(unittest.TestCase):
         run = st.backtest("quality", {"portfolio": "Hi 20", "rebalance": "month"}, dates, market, rf, data, cost_bps=0)
         s = run["start"]
         np.testing.assert_allclose(run["net"], data[s:, 14])
+
+
+class MultifactorTests(unittest.TestCase):
+    def test_equal_weights_hold_a_third_of_each_sleeve(self):
+        dates, market, rf, assets = market_data(n=400)
+        data = layout("multifactor", market, assets)
+        for cut, columns in (("Hi 30", [15, 19, 22]), ("Hi 10", [13, 17, 20])):
+            run = st.backtest("multifactor", {"cut": cut, "weighting": "equal", "rebalance": "month"}, dates, market, rf, data, cost_bps=0)
+            np.testing.assert_allclose(run["net"], data[run["start"]:, columns].mean(axis=1), rtol=0, atol=1e-15)
+            self.assertEqual(run["max_exposure"], 1.0)
+
+    def test_inverse_volatility_favours_the_calmer_sleeve_and_stays_fully_invested(self):
+        dates, market, rf, assets = market_data(n=400)
+        data = layout("multifactor", market, assets)
+        w = st.target_weights("multifactor", {"cut": "Hi 30", "weighting": "inverse_vol", "rebalance": "month"}, market, rf, data)
+        self.assertTrue(np.isnan(w[st.VOL_WINDOW - 2]).all())
+        row = w[300]
+        np.testing.assert_allclose(row.sum(), 1.0, atol=1e-12)
+        self.assertGreater(row[15], row[22])  # Quality sleeve is calmer than the momentum sleeve in this data.
+        window = data[300 - st.VOL_WINDOW + 1:301, [15, 19, 22]]
+        inverse = 1 / window.std(axis=0, ddof=1)
+        np.testing.assert_allclose(row[[15, 19, 22]], inverse / inverse.sum(), rtol=1e-9)
+
+    def test_paper_signal_holds_qual_vlue_and_mtum(self):
+        dates, market, rf, assets = market_data(n=400, k=3)
+        closes = 100 * np.cumprod(1 + np.column_stack([market, assets]), axis=0)
+        out = st.paper_signal("multifactor", dates, closes, st.PAPER_UNIVERSE["multifactor"], 0.04, since=dates[350])
+        self.assertEqual(out["targets"], {"QUAL": 1 / 3, "VLUE": 1 / 3, "MTUM": 1 / 3})
+        self.assertTrue(all(d >= dates[350] for d in out["simulated"]))
+
+    def test_lab_inputs_add_value_and_averaged_momentum_columns(self):
+        days = ["19630701", "19630702", "19630703", "19630705", "19630708"]
+        factors = french_file(["Mkt-RF", "SMB", "HML", "RF"], [(d, [1.0, 0, 0, .01]) for d in days], section=None)
+        industries = french_file([f"I{i}" for i in range(12)], [(d, [float(i)] * 12) for i, d in enumerate(days)])
+        cuts = ["Lo 30", "Med 40", "Hi 30", "Lo 20", "Qnt 2", "Qnt 3", "Qnt 4", "Hi 20", "Lo 10", "Dec 2", "Hi 10"]
+        op = french_file(cuts, [(d, [.1] * len(cuts)) for d in days])
+        bm = french_file(["<= 0"] + cuts, [(d, [9.0] + [.2] * 7 + [.3, 0, 0, .4]) for d in days])
+        deciles = ["Lo PRIOR"] + [f"PRIOR {i}" for i in range(2, 10)] + ["Hi PRIOR"]
+        mom = french_file(deciles, [(d, [0.0] * 7 + [1.0, 2.0, 6.0]) for d in days])
+        dgs10 = b"observation_date,DGS10\n" + b"".join(f"{d[:4]}-{d[4:6]}-{d[6:]},4.0\n".encode() for d in days)
+        out = st.lab_inputs(factors, industries, op, dgs10, bm, mom)
+        dates, m, r, matrix = out["full"]
+        self.assertEqual(matrix.shape[1], 23)
+        np.testing.assert_allclose(matrix[:, 20], .06)              # Hi 10 = top decile (6%).
+        np.testing.assert_allclose(matrix[:, 21], .04)              # Hi 20 = mean of deciles 9-10.
+        np.testing.assert_allclose(matrix[:, 22], .03)              # Hi 30 = mean of deciles 8-10.
+        np.testing.assert_allclose(matrix[:, 17], .004)             # Value Hi 10.
+        self.assertEqual(st.lab_inputs(factors, industries, op, dgs10)["full"][3].shape[1], 17, "without the new files nothing changes")
+
+    def test_registration_names_the_multifactor_family(self):
+        self.assertIn("multifactor", st.FAMILIES)
+        self.assertEqual(st.REGISTERED_MULTIFACTOR, "2026-10-27")
+        self.assertEqual(len(st.specs("multifactor")), 6)
+        self.assertEqual(sum(len(st.specs(f)) for f in st.FAMILIES), 49)
 
 
 if __name__ == "__main__":
