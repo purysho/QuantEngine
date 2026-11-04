@@ -47,11 +47,11 @@ The multi-factor result is the strongest evidence QuantEngine has produced:
 
 ## Timetable
 
-- **This week:** switch the paper account to Multi-factor. It holds QUAL, VLUE and MTUM in equal thirds, so it does not need to wait for a month-end, and switching restarts the paper test.
-  - If the first fill is on Wednesday Oct 28 New York time, the 63rd day is **Friday Jan 29, 2027**.
-  - If it is on Thursday Oct 29, the 63rd day is **Monday Feb 1**.
+- **Switch to Multi-factor** (it holds QUAL, VLUE and MTUM in equal thirds, so it does not need to wait for a month-end; switching restarts the paper test).
+  - The first attempt (Nov 1, version 0.3.1) did not switch. A background update reset the unsaved choice, and 0.3.1 could not sell the old sector funds. Both are fixed in 0.3.2 (see the work log, Task 28).
+  - With a first fill on Thursday Nov 5 New York time, the 63rd day is **Monday Feb 8, 2027**; with Nov 6, **Tuesday Feb 9**.
 - **Any time:** run the tradable check (one click, about a minute). It is criterion 2 and does not depend on the paper test.
-- **Weekend of Jan 30–31 (or Feb 1–2):** re-run the strategy lab, read the stage-3 checks, export your progress and decide.
+- **Late January:** re-run the strategy lab and the tradable check. Decide once the paper test reaches 63 days (about **Feb 8–9**), after reading the stage-3 checks and exporting your progress.
 
 ## What could still change the answer
 

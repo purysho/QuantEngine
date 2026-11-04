@@ -5,7 +5,8 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { JsonRecord } from '../transport.js';
 import type { MarketService } from './service.js';
-import { PaperBroker, Journal, planOrders, riskCheck, stageThree, strategyStart, validateSettings, proposalId, DEFAULT_SETTINGS, UNIVERSE,
+import { PaperBroker, Journal, planOrders, riskCheck, stageThree, strategyStart, historyDate, validateSettings, proposalId, DEFAULT_SETTINGS, UNIVERSE,
+  STRATEGY_SYMBOLS,
   type Account, type Order, type PaperSettings, type Position, type Proposal } from './paper.js';
 
 export interface DeskHost {
@@ -44,6 +45,7 @@ export class StrategyDesk {
   /** Each strategy replayed on its real ETFs since 2016 (Alpaca prices), versus SPY. */
   etfCheck: Record<string, unknown> | null = null;
   private backfilledOn: string | null = null;
+  private submitting = false;
   /** The last refresh: when, what started it, whether it worked and the equity it read (shown in the app). */
   lastRefresh: { at: string; trigger: RefreshTrigger; ok: boolean; equity: number | null; error: string | null } | null = null;
   onChange: () => void = () => {};
@@ -188,8 +190,7 @@ export class StrategyDesk {
     const history = await this.broker.portfolioHistory('3M');
     const session = await this.sessionNow();
     if (!session.last || !history.timestamp.length) return 0;
-    // Daily points are left-labelled (start of the day); +12 h lands mid-day whether that start is midnight in New York or UTC.
-    const closes = history.timestamp.map((t, i) => ({ date: nyDate(new Date(t * 1000 + 12 * 3_600_000)), equity: history.equity[i] }))
+    const closes = history.timestamp.map((t, i) => ({ date: historyDate(t), equity: history.equity[i] }))
       .filter((c): c is { date: string; equity: number } => typeof c.equity === 'number' && c.equity > 0 && c.date <= session.last!);
     if (!closes.length) return 0;
     const first = closes[0].date;
@@ -274,7 +275,21 @@ export class StrategyDesk {
     this.onChange();
   }
 
-  /** Today's orders for the chosen strategy, from the traded ETFs' own daily closes. Nothing is sent. */
+  /** Whether a date is the last trading day of its month, from Alpaca's calendar (null if it cannot be read). */
+  private async isMonthEnd(date: string): Promise<boolean | null> {
+    try {
+      const monthEnd = new Date(Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)), 0)).toISOString().slice(0, 10);
+      const sessions = (await this.broker.calendar(date, monthEnd)).map(d => d.date).filter(d => d >= date);
+      return sessions.length > 0 && sessions.every(d => d === date);
+    } catch { return null; }
+  }
+
+  /**
+   * Orders for the chosen strategy, from the traded ETFs' own daily closes. Nothing is sent.
+   * The rules decide on the last trading day of each month. Between those days the targets are the last month-end
+   * decision, and no orders are proposed just because prices drifted; orders appear only on a rebalance day, or
+   * when the account does not yet hold this strategy's funds (first entry or a switch of strategy).
+   */
   async propose(): Promise<Proposal> {
     const strategy = this.settings.strategy;
     const universe = UNIVERSE[strategy];
@@ -282,8 +297,9 @@ export class StrategyDesk {
     const file = await this.host.stage('csv', 'date,' + universe.join(',') + '\n' + dates.map((d, i) => d + ',' + closes[i].join(',')).join('\n') + '\n');
     const equityHistory = await this.journal.equity();
     const since = strategyStart(await this.journal.read(1e9), strategy) ?? equityHistory[0]?.date ?? null;
+    const monthEnd = await this.isMonthEnd(dates[dates.length - 1]);
     const signal = (await this.host.runTask('Computing today\'s strategy signal', 'strategy-signal', { path: file, family: strategy,
-      rf_annual: this.host.riskFreeAnnual(), since })).signal as {
+      rf_annual: this.host.riskFreeAnnual(), since, month_end: monthEnd })).signal as {
       targets: Record<string, number>; as_of: string; simulated: Record<string, number>; prices: Record<string, number>;
       market_returns: Record<string, number> };
     this.simulated = { ...this.simulated, ...signal.simulated };
@@ -294,11 +310,22 @@ export class StrategyDesk {
     const [account, positions, snaps] = await Promise.all([this.broker.account(), this.broker.positions(), this.market.client.snapshots(universe, this.market.settings.feed)]);
     this.account = account; this.positions = positions;
     const prices = Object.fromEntries(universe.map(s => [s, snaps[s]?.latestTrade?.p ?? signal.prices[s]]));
-    const { orders, blocked } = planOrders(signal.targets, positions, prices, Number(account.equity), universe,
+    for (const p of positions) if (!(p.symbol in prices) && Number(p.current_price) > 0) prices[p.symbol] = Number(p.current_price);
+    let { orders, blocked } = planOrders(signal.targets, positions, prices, Number(account.equity), universe,
       this.settings.limits.minOrderNotional, this.settings.limits.maxGrossExposure);
+    const heldFunds = new Set(positions.filter(p => Number(p.qty) !== 0 && STRATEGY_SYMBOLS.includes(p.symbol)).map(p => p.symbol));
+    const wanted = new Set(Object.entries(signal.targets).filter(([, w]) => w > 1e-9).map(([s]) => s));
+    const entered = heldFunds.size === wanted.size && [...wanted].every(s => heldFunds.has(s));
+    let note: string | null = null;
+    if (monthEnd !== true && entered && orders.length) {
+      note = `Holding: the account already holds this strategy's funds, and the rule only rebalances on the last trading day of the month` +
+        (monthEnd === null ? ' (the calendar could not be read)' : '') + `. Small differences from the targets are price drift.`;
+      orders = [];
+    }
     this.proposal = { id: proposalId(strategy, signal.as_of), created: new Date().toISOString(), strategy, asOf: signal.as_of,
-      equity: Number(account.equity), targets: signal.targets, orders, blocked };
-    await this.journal.write({ type: 'proposal', proposal: this.proposal.id, strategy, as_of: signal.as_of, targets: signal.targets, orders, blocked });
+      equity: Number(account.equity), targets: signal.targets, orders, blocked, monthEnd, note };
+    await this.journal.write({ type: 'proposal', proposal: this.proposal.id, strategy, as_of: signal.as_of, month_end: monthEnd,
+      targets: signal.targets, orders, blocked, note });
     this.journalTail = await this.journal.read(40);
     this.onChange();
     return this.proposal;
@@ -326,9 +353,17 @@ export class StrategyDesk {
 
   /** Submits the current proposal after the user approved it. Risk checks can block the whole batch. */
   async submit(id: unknown) {
+    // One batch at a time: a second confirm while orders are being sent is refused, not sent twice.
+    if (this.submitting) throw new Error('These orders are already being sent.');
     const proposal = this.proposal;
     if (!proposal || proposal.id !== id) throw new Error('That order list is no longer current. Compute it again.');
     if (!proposal.orders.length) throw new Error('Nothing to trade: the paper account already matches the targets.');
+    if (proposal.strategy !== this.settings.strategy) throw new Error('This order list was computed for a different strategy. Compute it again.');
+    this.submitting = true;
+    try { await this.send(proposal); } finally { this.submitting = false; }
+  }
+
+  private async send(proposal: Proposal) {
     const account = await this.broker.account();
     const today = nyDate();
     const ordersToday = (await this.journal.read(5000)).filter(e => e.type === 'order' && nyDate(new Date(String(e.at))) === today).length;
@@ -341,6 +376,7 @@ export class StrategyDesk {
     }
     const held = new Map(this.positions.map(p => [p.symbol, Number(p.qty)]));
     const expected = Object.fromEntries(proposal.orders.map(o => [o.symbol, (held.get(o.symbol) ?? 0) + (o.side === 'buy' ? o.qty : -o.qty)]));
+    this.proposal = null;  // Used up: it cannot be approved again.
     await this.journal.write({ type: 'approved', proposal: proposal.id, orders: proposal.orders.length });
     for (const order of proposal.orders) {
       try {
@@ -351,7 +387,6 @@ export class StrategyDesk {
       }
     }
     await this.journal.write({ type: 'submitted', proposal: proposal.id, expected });
-    this.proposal = null;
     await this.refresh();
   }
 }

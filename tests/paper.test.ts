@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { PaperBroker, PAPER_HOST, planOrders, riskCheck, stageThree, strategyStart, fillDate, dailySchedule, validateSettings, Journal, DEFAULT_SETTINGS,
+import { PaperBroker, PAPER_HOST, planOrders, riskCheck, stageThree, strategyStart, fillDate, dailySchedule, historyDate, STRATEGY_SYMBOLS, validateSettings, Journal, DEFAULT_SETTINGS,
   type Account, type PaperFetch, type Proposal } from '../desktop/market/paper.js';
 
 const KEYS = { keyId: 'PKTESTKEY1234567890A', secret: 'abcdefghijklmnopqrstuvwxyz0123456789ABCD' };
@@ -38,7 +38,7 @@ test('orders are whole shares, sells first, long-only and never exceed equity', 
   assert.ok(scaled.orders.reduce((a, o) => a + o.notional, 0) <= 1000);
   assert.throws(() => planOrders({ XLK: -.5 }, [], { XLK: 1 }, 1000, ['XLK'], 1), /long-only/);
   const outside = planOrders({}, [{ symbol: 'TSLA', qty: '5', market_value: '1', current_price: '1', avg_entry_price: '1', unrealized_pl: '0' }], {}, 1000, ['SPY'], 1);
-  assert.match(outside.blocked[0], /outside the strategy universe/);
+  assert.match(outside.blocked[0], /not a QuantEngine strategy fund/);
 });
 
 test('rules asking for more than 100% are scaled down unless margin is opted in', () => {
@@ -172,4 +172,36 @@ test('the daily update runs once a day from 06:00 Beijing time, never during the
   assert.equal(legacy.dailyTime, '06:00'); assert.equal(legacy.dailyZone, 'Asia/Shanghai'); assert.equal(legacy.limits.maxOrderFraction, .5);
   assert.throws(() => validateSettings({ ...legacy, dailyTime: '6am' }), /HH:MM/);
   assert.throws(() => validateSettings({ ...legacy, dailyZone: 'Mars/Base' }), /time zones/);
+});
+
+test('Alpaca daily history is dated by the trading day it closes (0.3.1 dated it a day late)', () => {
+  const at = (iso: string) => historyDate(Date.parse(iso) / 1000);
+  assert.equal(at('2026-10-30T20:00:00Z'), '2026-10-30', 'Friday 4 p.m. New York (summer time) is Friday, not Saturday');
+  assert.equal(at('2026-11-02T21:00:00Z'), '2026-11-02', 'Monday 4 p.m. New York (winter time)');
+  assert.equal(at('2026-10-31T00:00:00Z'), '2026-10-30', 'a stamp at midnight UTC still belongs to Friday');
+  assert.equal(at('2026-10-31T04:00:00Z'), '2026-10-30', 'and so does midnight New York');
+  // One week of closes stamped at 4 p.m. New York: 0.3.1's rule (+12 hours) moved each to the next day, so Monday never
+  // appeared and Friday became Saturday (then dropped as a closed day), exactly as in the tester's record.
+  const week = ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30'];
+  const stamps = week.map(d => Date.parse(d + 'T20:00:00Z') / 1000);
+  const old = stamps.map(t => new Date(t * 1000 + 12 * 3_600_000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }));
+  assert.deepEqual(old, ['2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31']);
+  assert.deepEqual(stamps.map(historyDate), week);
+});
+
+test('switching strategy sells the old strategy\'s funds but never funds bought by hand', () => {
+  const pos = (symbol: string, qty: number, price: number) => ({ symbol, qty: String(qty), market_value: String(qty * price), current_price: String(price),
+    avg_entry_price: String(price), unrealized_pl: '0' });
+  const held = [pos('XLE', 479, 66.7), pos('XLK', 186, 176.5), pos('XLV', 181, 184), pos('AAPL', 3, 200)];
+  const prices = { SPY: 680, QUAL: 190, VLUE: 120, MTUM: 230, XLE: 66.7, XLK: 176.5, XLV: 184, AAPL: 200 };
+  const { orders, blocked } = planOrders({ QUAL: 1 / 3, VLUE: 1 / 3, MTUM: 1 / 3 }, held, prices, 98_409, ['SPY', 'QUAL', 'VLUE', 'MTUM'], 50);
+  assert.deepEqual(orders.filter(o => o.side === 'sell').map(o => [o.symbol, o.qty]), [['XLE', 479], ['XLK', 186], ['XLV', 181]]);
+  assert.deepEqual(orders.filter(o => o.side === 'buy').map(o => o.symbol), ['MTUM', 'QUAL', 'VLUE']);
+  assert.ok(blocked.some(b => b.startsWith('AAPL')), 'a fund QuantEngine never trades is left alone');
+  assert.ok(STRATEGY_SYMBOLS.includes('XLE') && !STRATEGY_SYMBOLS.includes('AAPL'));
+  const proposal: Proposal = { id: 'x', created: new Date().toISOString(), strategy: 'multifactor', asOf: '2026-11-03', equity: 98_409, targets: {}, orders, blocked: [] };
+  const settings = { ...enabled, strategy: 'multifactor' as const, limits: { ...enabled.limits, maxOrderFraction: .5 } };
+  assert.deepEqual(riskCheck(proposal, settings, account(98_409, 98_409, 379), 0), [], 'sells of the old funds fund the new buys');
+  const sneaky = { ...proposal, orders: [{ symbol: 'XLE', side: 'buy' as const, qty: 1, price: 66.7, notional: 66.7, reason: '' }] };
+  assert.ok(riskCheck(sneaky, settings, account(98_409, 98_409, 379), 0).some(p => /outside the strategy universe/.test(p)), 'but buying them is refused');
 });

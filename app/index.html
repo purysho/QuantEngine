@@ -20,7 +20,7 @@
       <button class="nav-item" data-page="runs"><svg viewBox="0 0 24 24"><path d="m7 4 13 8-13 8Z"/></svg>Runs</button>
       <button class="nav-item" data-page="preferences"><svg viewBox="0 0 24 24"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z"/><circle cx="12" cy="12" r="3"/></svg>Preferences</button>
     </nav>
-    <div class="sidebar-note"><span class="eyebrow">YOUR MACHINE. YOUR RESEARCH.</span><p>Numerical work stays on this computer.</p><span class="version">v0.3.1 · Windows x64</span></div>
+    <div class="sidebar-note"><span class="eyebrow">YOUR MACHINE. YOUR RESEARCH.</span><p>Numerical work stays on this computer.</p><span class="version">v0.3.2 · Windows x64</span></div>
     <div class="sidebar-status"><span id="status-dot" class="dot"></span><span id="sidebar-status">Engine paused</span></div>
   </aside>
   <main>
@@ -110,6 +110,7 @@
             <p class="field-help">06:00 Beijing time is after every US close (4 p.m. New York is 4–5 a.m. in Beijing). A time that falls while the US market is open waits until 4:20 p.m. New York time.</p>
             <label class="checkbox-row"><input type="checkbox" id="paper-notify"><span>Windows notification with the daily summary</span></label>
             <div class="inline-actions"><button type="submit" class="secondary">Save settings</button><button type="button" id="paper-kill" class="secondary danger">Kill switch</button></div>
+            <p id="paper-unsaved" class="paper-warning hidden" role="status">Unsaved changes: press <strong>Save settings</strong> before computing orders.</p>
             <p id="paper-warning" class="paper-warning hidden" role="status"></p>
           </form>
           <div class="paper-account"><div class="panel-heading inner"><h3>Paper account</h3><button type="button" id="paper-refresh" class="text-button">Refresh ↻</button></div><p id="paper-refreshed" class="refresh-status" role="status" aria-live="polite"></p><dl id="paper-account" class="term-stats"></dl>

@@ -206,3 +206,4 @@ input[type=time]{width:100%;background:#0d1823;color:#d6e3f1;border:1px solid #3
 @media (prefers-reduced-motion:reduce){.refresh-status.flash{animation:none}}
 #etf-results .term-table thead th:nth-child(1){width:26%}#etf-results .term-table thead th:nth-child(2){width:12%}#etf-results .term-table thead th:nth-child(n+3){width:auto}
 #etf-results .term-table tbody tr{cursor:default}#etf-results{padding:0 8px}#etf-results .term-table td .up{color:#35e0a1}#etf-results .term-table td .down{color:#ff4d6d}
+.proposal-head{margin:4px 0;font-size:13px;display:flex;gap:10px;align-items:center}

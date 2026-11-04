@@ -94,7 +94,13 @@ export class AlpacaClient {
     }
     for (let attempt = 0; ; attempt++) {
       await this.limiter.take();
-      const response = await this.fetcher(url, { method: 'GET', headers, signal: AbortSignal.timeout(20_000) });
+      let response: Awaited<ReturnType<Fetch>>;
+      try { response = await this.fetcher(url, { method: 'GET', headers, signal: AbortSignal.timeout(20_000) }); }
+      catch (error) {
+        // A dropped connection or timeout (Node reports "fetch failed"): read-only requests are safe to retry.
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 1500 * 2 ** attempt)); continue; }
+        throw new Error(`Could not reach Alpaca market data after 4 tries (${(error as Error).message}). Check your internet or VPN connection.`);
+      }
       if (response.status === 429 && attempt < 3) {
         const reset = Number(response.headers.get('X-RateLimit-Reset')) * 1000;
         const wait = Number.isFinite(reset) && reset > this.now() ? Math.min(reset - this.now(), 60_000) : 2000 * 2 ** attempt;

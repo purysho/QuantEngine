@@ -123,7 +123,14 @@ The **Strategies** page follows four stages. QuantEngine automates stages 1–3 
      - **quality:** the most profitable US companies, traded as QUAL;
      - **diversified ensemble:** trend-timed SPY, sector momentum, QUAL and 7–10-year Treasuries via IEF, balanced by risk and sized to 15% volatility;
      - **multi-factor:** equal thirds of QUAL, VLUE and MTUM, rebalanced monthly.
-   - **Switching strategy restarts the paper test.** Stage 3 compares only the days after the new strategy's first fill, and the journal records the switch.
+   - **Switching strategy:**
+     - **Steps:** choose the new strategy, press **Save settings** (the badge then shows it), then **Compute today's orders**. Unsaved changes are kept until you save, and orders cannot be computed until you do.
+     - **Orders:** the list sells the old strategy's funds and buys the new ones. Funds QuantEngine never trades (bought by hand) are left alone.
+     - **The paper test restarts:** stage 3 compares only the days after the new strategy's first fill, and the journal records the switch.
+   - **Orders follow the monthly rule:**
+     - **Month-ends only:** all five strategies decide on the last trading day of each month. Between month-ends, the targets are the last month-end decision, and no orders are proposed just because prices drifted.
+     - **Other days:** orders appear only when the account does not yet hold the strategy's funds.
+     - **Each order list says which strategy it is for.** Sending it twice is impossible: a second confirm is refused.
    - **Tradable check** (above the paper panel) replays every strategy on the ETFs it would actually buy since 2016, using Alpaca prices with fund fees included, against holding SPY over the same days. The lab uses research portfolios; this check shows how much of their edge real funds kept.
    - **Borrowing is off by default.** The ensemble's rule may ask for up to 150% exposure. With **Max total exposure** at 100% it is scaled down to no borrowing. Raising the limit (up to 150%) lets it use margin in the paper account, which costs interest and makes losses bigger too.
    - **Daily update** (on by default) runs at the time you choose, **06:00 Beijing time** by default (after every US close, which is 4–5 a.m. in Beijing). If QuantEngine was closed or asleep then, it runs once when the app is next open. A time inside US trading hours waits until 4:20 p.m. New York time. QuantEngine:

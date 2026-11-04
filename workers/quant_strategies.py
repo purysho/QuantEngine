@@ -369,12 +369,17 @@ PAPER_LAYOUT = {"quality": {"quality": 1}, "ensemble": {"sectors": slice(1, 12),
                 "multifactor": {"sleeves": [1, 2, 3]}}
 
 
-def latest_signal(family: str, spec: dict, dates: list[str], closes: np.ndarray, symbols: list[str], rf_annual: float = 0.0) -> dict:
+def latest_signal(family: str, spec: dict, dates: list[str], closes: np.ndarray, symbols: list[str], rf_annual: float = 0.0,
+                  month_end: bool | None = None) -> dict:
     """Target weights for live/paper trading from the traded instruments' own adjusted closes.
 
     The first column is always the market proxy (SPY): ``trend`` trades it; ``sectors`` uses it only for the
     trend filter and ranks the other columns; ``quality`` holds QUAL; ``ensemble`` uses SPY, the sector ETFs,
-    QUAL and IEF in the PAPER_UNIVERSE order; ``multifactor`` holds QUAL, VLUE and MTUM. Same rules as the backtest; the decision is for the next close.
+    QUAL and IEF in the PAPER_UNIVERSE order; ``multifactor`` holds QUAL, VLUE and MTUM.
+
+    Monthly rules decide only on the last trading day of a month. ``month_end`` says whether the latest close is
+    one (from the exchange calendar). When it is False, the targets are the decision from the previous month-end,
+    which is what the rule holds until the next one; when None (unknown), the latest close decides. Same rules as the backtest; the decision is for the next close.
     """
     prices = np.asarray(closes, dtype=np.float64)
     if prices.ndim != 2 or prices.shape[1] != len(symbols) or prices.shape[0] < spec.get("lookback", 252) + 30 or (prices <= 0).any():
@@ -392,20 +397,27 @@ def latest_signal(family: str, spec: dict, dates: list[str], closes: np.ndarray,
         assets = returns if family in ("quality", "ensemble", "multifactor") else None
     signal_dates = dates[1:]
     weights = target_weights(family, spec, market, rf, assets, signal_dates, PAPER_LAYOUT.get(family))
-    if family == "ensemble":
-        # The ensemble decides on month-ends only; between them it keeps the latest month-end targets.
-        decided = np.flatnonzero(~np.isnan(weights).any(axis=1))
+    row = len(weights) - 1
+    if spec.get("rebalance") == "month" and month_end is False:
+        # Between month-ends the rule holds the last month-end decision (the last day before a change of month).
+        month = [d[:7] for d in signal_dates]
+        ends = [i for i in range(len(month) - 1) if month[i] != month[i + 1] and not np.isnan(weights[i]).any()]
+        if not ends:
+            raise ValueError("Not enough history for this rule yet.")
+        row = ends[-1]
+    if family == "ensemble" and np.isnan(weights[row]).any():
+        decided = np.flatnonzero(~np.isnan(weights[:row + 1]).any(axis=1))
         if not len(decided):
             raise ValueError("Not enough history for this rule yet.")
-        weights = weights[decided[-1]]
-    else:
-        weights = weights[-1]
+        row = int(decided[-1])
+    decided_on = signal_dates[row]
+    weights = weights[row]
     if np.isnan(weights).any():
         raise ValueError("Not enough history for this rule yet.")
     columns = symbols[1:] if family == "sectors" else symbols
     targets = {symbols[0]: float(weights[0])} if family == "trend" else {s: float(w) for s, w in zip(columns, weights) if w > 1e-9}
     trend = float(_trailing_growth(market, spec.get("lookback", 252))[-1] - _trailing_growth(rf, spec.get("lookback", 252))[-1])
-    return {"family": family, "spec": spec, "as_of": dates[-1], "targets": targets, "cash": 1 - sum(targets.values()),
+    return {"family": family, "spec": spec, "as_of": dates[-1], "decided_on": decided_on, "month_end": month_end, "targets": targets, "cash": 1 - sum(targets.values()),
             "gross_exposure": float(sum(targets.values())), "market_trend": trend, "registration": registration_hash(),
             "note": "Signal from closes up to as_of; the rule trades at the next close."}
 
@@ -502,10 +514,10 @@ def run_lab(factors_zip: bytes, industries_zip: bytes, op_zip: bytes | None = No
 
 
 def paper_signal(family: str, dates: list[str], closes, symbols: list[str], rf_annual: float, since: str | None = None,
-                 cost_bps: float = 10.0) -> dict:
+                 cost_bps: float = 10.0, month_end: bool | None = None) -> dict:
     """Today's targets for the traded ETFs plus the rule's simulated daily returns on the same ETFs (tracking benchmark)."""
     spec = FAMILIES[family]["primary"]
-    signal = latest_signal(family, spec, dates, closes, symbols, rf_annual)
+    signal = latest_signal(family, spec, dates, closes, symbols, rf_annual, month_end)
     prices = np.asarray(closes, dtype=np.float64)
     returns = prices[1:] / prices[:-1] - 1
     rf = np.full(len(returns), (1 + rf_annual) ** (1 / TRADING_DAYS) - 1)

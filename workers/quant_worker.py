@@ -107,7 +107,9 @@ def main():
                 result = {"check": etf_check(family, dates, closes, symbols, float(rf_annual))}
             else:
                 since = request.get("since")
-                result = {"signal": paper_signal(family, dates, closes, symbols, float(rf_annual), since if isinstance(since, str) else None)}
+                month_end = request.get("month_end")
+                result = {"signal": paper_signal(family, dates, closes, symbols, float(rf_annual), since if isinstance(since, str) else None,
+                                                 month_end=month_end if isinstance(month_end, bool) else None)}
         elif command == "history":
             if request.get("recover"):
                 store.recover()

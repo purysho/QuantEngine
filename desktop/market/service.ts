@@ -367,12 +367,14 @@ export class MarketService {
   /** Daily adjusted closes for several symbols on common dates, for a research dataset. */
   async dailyCloses(symbols: string[], years: number) {
     const start = new Date(this.now() - years * 365.25 * 86_400_000).toISOString().slice(0, 10);
-    const series = await Promise.all(symbols.map(async symbol => {
+    // One symbol at a time: many parallel downloads are what broke over slower connections ("fetch failed").
+    const series: Array<Map<string, number>> = [];
+    for (const symbol of symbols) {
       const bars = await this.client.bars(symbol, '1Day', start, { feed: 'sip' });
       if (bars.length < 40) throw new Error(`${symbol} has only ${bars.length} daily bars.`);
       // Crypto trades every day; dates are taken in New York time so stock and crypto rows line up.
-      return new Map(bars.map(bar => [new Date(bar.t).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }), bar.c]));
-    }));
+      series.push(new Map(bars.map(bar => [new Date(bar.t).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }), bar.c])));
+    }
     const dates = [...series[0].keys()].filter(date => series.every(map => map.has(date))).sort();
     if (dates.length < 40) throw new Error('These symbols share fewer than 40 trading days.');
     return { dates, closes: dates.map(date => series.map(map => map.get(date)!)) };

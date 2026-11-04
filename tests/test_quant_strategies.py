@@ -196,6 +196,24 @@ class StrategyTests(unittest.TestCase):
         np.testing.assert_allclose(run["net"], data[s:, 14])
 
 
+class MonthEndTests(unittest.TestCase):
+    def test_between_month_ends_the_targets_are_the_last_month_end_decision(self):
+        dates, market, rf, assets = market_data(n=700, k=11)
+        closes = 100 * np.cumprod(1 + np.column_stack([market, assets]), axis=0)
+        symbols = st.PAPER_UNIVERSE["sectors"]
+        spec = st.FAMILIES["sectors"]["primary"]
+        last_end = max(i for i in range(len(dates) - 1) if dates[i][:7] != dates[i + 1][:7])
+        assert last_end < len(dates) - 3, "test data must end mid-month"
+        held = st.latest_signal("sectors", spec, dates, closes, symbols, 0.04, month_end=False)
+        decided = st.latest_signal("sectors", spec, dates[:last_end + 1], closes[:last_end + 1], symbols, 0.04)
+        self.assertEqual(held["targets"], decided["targets"])
+        self.assertEqual(held["decided_on"], dates[last_end])
+        today = st.latest_signal("sectors", spec, dates, closes, symbols, 0.04, month_end=True)
+        self.assertEqual(today["decided_on"], dates[-1])
+        trend = st.latest_signal("trend", st.FAMILIES["trend"]["primary"], dates, closes[:, :1], ["SPY"], 0.04, month_end=False)
+        self.assertEqual(trend["decided_on"], dates[last_end])
+
+
 class MultifactorTests(unittest.TestCase):
     def test_equal_weights_hold_a_third_of_each_sleeve(self):
         dates, market, rf, assets = market_data(n=400)

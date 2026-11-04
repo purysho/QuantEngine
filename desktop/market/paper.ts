@@ -34,7 +34,11 @@ export const DAILY_ZONES: Record<string, string> = { 'Asia/Shanghai': 'Beijing t
   'Europe/London': 'London time', 'Europe/Berlin': 'Central European time', 'Asia/Tokyo': 'Tokyo time', 'Australia/Sydney': 'Sydney time' };
 export interface ProposedOrder { symbol: string; side: 'buy' | 'sell'; qty: number; price: number; notional: number; reason: string }
 export interface Proposal { id: string; created: string; strategy: string; asOf: string; equity: number; targets: Record<string, number>;
-  orders: ProposedOrder[]; blocked: string[] }
+  orders: ProposedOrder[]; blocked: string[];
+  /** Whether as_of is the last trading day of its month (the rule's rebalance day); null if the calendar was unavailable. */
+  monthEnd?: boolean | null;
+  /** Why no orders are proposed even though holdings drifted from the targets. */
+  note?: string | null }
 
 const SECTOR_ETFS = ['XLB', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLU', 'XLV', 'XLY', 'XLRE', 'XLC'];
 /** Same order as PAPER_UNIVERSE in workers/quant_strategies.py; SPY is always first. */
@@ -45,6 +49,8 @@ export const UNIVERSE: Record<Strategy, string[]> = {
   ensemble: ['SPY', ...SECTOR_ETFS, 'QUAL', 'IEF'],
   multifactor: ['SPY', 'QUAL', 'VLUE', 'MTUM'],
 };
+/** Every fund any QuantEngine strategy trades: holdings of these belong to the strategies and may be sold on a switch. */
+export const STRATEGY_SYMBOLS = [...new Set(Object.values(UNIVERSE).flat())];
 export const DEFAULT_SETTINGS: PaperSettings = { enabled: false, strategy: 'trend', killSwitch: false, dailyUpdate: true, notify: true,
   dailyTime: '06:00', dailyZone: 'Asia/Shanghai',
   limits: { maxOrderFraction: 1.0, maxOrdersPerDay: 24, dailyLossStop: 0.03, minOrderNotional: 50, maxGrossExposure: 1.0 } };
@@ -96,7 +102,11 @@ export function dailySchedule(now: Date, time: string, zone: string): { key: str
   return { key, due: !session, waitingForClose: session };
 }
 
-/** Orders that move current positions to the target weights: whole shares, sells before buys, no shorts, no leverage. */
+/**
+ * Orders that move current positions to the target weights: whole shares, sells before buys, no shorts, no leverage.
+ * Funds another QuantEngine strategy bought (STRATEGY_SYMBOLS) but this one does not hold are sold, so switching
+ * strategy works; anything else in the account (bought by hand) is left alone.
+ */
 export function planOrders(targets: Record<string, number>, positions: Position[], prices: Record<string, number>, equity: number,
                            universe: string[], minNotional: number, maxGross = 1.0): { orders: ProposedOrder[]; blocked: string[] } {
   const blocked: string[] = [];
@@ -112,7 +122,8 @@ export function planOrders(targets: Record<string, number>, positions: Position[
     const price = prices[symbol];
     const have = held.get(symbol) ?? 0;
     const want = universe.includes(symbol) ? targets[symbol] ?? 0 : 0;
-    if (!universe.includes(symbol) && have !== 0) { blocked.push(`${symbol}: held outside the strategy universe; left unchanged`); continue; }
+    const strategyOwned = universe.includes(symbol) || STRATEGY_SYMBOLS.includes(symbol);
+    if (!strategyOwned && have !== 0) { blocked.push(`${symbol}: not a QuantEngine strategy fund; left unchanged`); continue; }
     if (!(price > 0)) { if (want > 0 || have !== 0) blocked.push(`${symbol}: no current price`); continue; }
     const wantQty = Math.floor((equity * want) / price);
     const delta = wantQty - have;
@@ -138,7 +149,10 @@ export function riskCheck(proposal: Proposal, settings: PaperSettings, account: 
   if (ordersToday + proposal.orders.length > settings.limits.maxOrdersPerDay) problems.push('This would exceed the maximum orders per day.');
   for (const o of proposal.orders) {
     if (o.notional > settings.limits.maxOrderFraction * equity) problems.push(`${o.symbol}: $${o.notional.toFixed(0)} is over ${(settings.limits.maxOrderFraction * 100).toFixed(0)}% of equity, the maximum order size.`);
-    if (!UNIVERSE[settings.strategy].includes(o.symbol)) problems.push(`${o.symbol} is outside the strategy universe.`);
+    // Buys only within the chosen strategy's funds; sells may also close another strategy's leftover funds.
+    if (o.side === 'buy' ? !UNIVERSE[settings.strategy].includes(o.symbol) : !STRATEGY_SYMBOLS.includes(o.symbol)) {
+      problems.push(`${o.symbol} is outside the strategy universe.`);
+    }
   }
   const buys = proposal.orders.filter(o => o.side === 'buy').reduce((a, o) => a + o.notional, 0);
   const borrowing = Math.max(0, settings.limits.maxGrossExposure - 1) * equity;
@@ -157,10 +171,20 @@ export class PaperBroker {
     const credentials = this.credentials();
     if (!credentials) throw new Error('Add Alpaca paper-trading keys in Preferences first.');
     const params = new URLSearchParams(query);
-    const response = await this.fetcher(PAPER_HOST + pathname + (params.size ? '?' + params : ''), {
+    const send = () => this.fetcher(PAPER_HOST + pathname + (params.size ? '?' + params : ''), {
       method, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(20_000),
       headers: { 'APCA-API-KEY-ID': credentials.keyId, 'APCA-API-SECRET-KEY': credentials.secret, Accept: 'application/json',
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) } });
+    let response: Awaited<ReturnType<PaperFetch>>;
+    for (let attempt = 0; ; attempt++) {
+      try { response = await send(); break; }
+      catch (error) {
+        // Only reads are retried after a dropped connection. An order is never resent automatically: its
+        // client_order_id would make a resend harmless, but the user decides.
+        if (method === 'GET' && attempt < 3) { await new Promise(r => setTimeout(r, 1500 * 2 ** attempt)); continue; }
+        throw new Error(`Could not reach Alpaca's paper host (${(error as Error).message}). Check your internet or VPN connection.`);
+      }
+    }
     const text = await response.text();
     if (response.status === 401 || response.status === 403 && pathname === '/v2/account') {
       throw new Error('Alpaca\'s paper host rejected these keys. Paper trading needs keys from the paper-trading dashboard (live-account keys never work here).');
@@ -257,6 +281,16 @@ export class Journal {
   async equity(): Promise<EquityPoint[]> {
     try { return (await readFile(this.equityFile, 'utf8')).trim().split('\n').filter(Boolean).map(l => JSON.parse(l)); } catch { return []; }
   }
+}
+
+/**
+ * The trading day a daily point of Alpaca's portfolio history belongs to. With timeframe=1D Alpaca stamps each value
+ * at that trading day's close (its docs: "start is set to the closing time of the current trading day"), so 12 hours
+ * earlier is always the same New York day, whatever the exact stamp between noon and the next noon.
+ * (0.3.1 added 12 hours instead, which dated every close one day late and dropped Fridays; found in a tester's export.)
+ */
+export function historyDate(timestampSeconds: number): string {
+  return new Date(timestampSeconds * 1000 - 12 * 3_600_000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }
 
 export type EquitySource = 'close' | 'reading';

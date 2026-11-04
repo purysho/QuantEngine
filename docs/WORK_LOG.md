@@ -782,3 +782,44 @@ PR #4 passed all 8 checks on `bd94928`, including the Windows packaged self-test
   - SHA-256 `bb376074acaf7fe700cf9de5818810f66dc2e5aef345b4e3cf761e90d1bd4304`, which matches GitHub's own digest of the uploaded file and `SHA256SUMS.txt`.
 - **Fixed afterwards:** the release notes still said QuantEngine "has no brokerage connection and cannot trade", which has been untrue since paper trading (0.3.0). The template now says it cannot trade real money and sends simulated orders to an Alpaca paper account only after approval. This takes effect from the next release.
 - **Upgrading keeps progress:** extract to a new folder. The storage folder (`D:\Quant-Engine`, including `paper/`) and the Windows app-data folder (settings, encrypted keys) are untouched.
+
+## Task 28: What the first exported paper record showed, and the fixes (0.3.2)
+
+The tester sent `QuantEngine-progress-2026-11-04.json` after trying to switch to multi-factor. **The switch had not happened:** settings still said `sectors`, and the batch approved on Nov 1 was a small sector rebalance.
+
+**Problems found, and why:**
+1. **Closes dated a day late (data error):**
+   - Alpaca stamps 1D portfolio-history points at the session's close. Its docs say "start is set to the closing time of the current trading day".
+   - 0.3.1 added 12 hours before taking the New York date, so every close landed on the next day: no label was ever a Monday, and Fridays became Saturdays and were dropped.
+   - The evidence: shifted back a day, the paper's daily changes matched the rule's simulated returns to within 0.02 points (for example −0.96% vs −0.95%, +0.48% vs +0.48%).
+   - The consequence: stage 3 compared each day with the wrong day and reported a 15.9% tracking error.
+   - **Fix:** subtract 12 hours. The next daily merge rewrites the stored closes, and the old values go to `equity-replaced.jsonl`, so the record heals itself.
+2. **The switch could not have worked:**
+   - The planner left alone any holding outside the new strategy's funds, so the sector ETFs would never be sold.
+   - The cash check would then have blocked the QUAL, VLUE and MTUM buys.
+   - **Fix:** funds that any QuantEngine strategy trades are sold when the new strategy does not hold them. Funds bought by hand are still left alone. The risk check allows those sells, but buys only within the chosen strategy.
+3. **The choice was undone before it was saved:** every background update (refresh, tradable check) refilled the settings form whenever focus was outside it, so an unsaved strategy choice snapped back.
+   - **Fix:** unsaved changes are kept and flagged. **Compute today's orders** refuses to run until they are saved. A list computed for another strategy cannot be submitted.
+4. **The daily update armed Submit with drift trades:**
+   - The 06:00 check proposed small rebalancing trades every day ($500–$1,300), because targets were recomputed daily and drift counted as "orders needed". That is the list the tester approved.
+   - The rules only trade at month-ends. For sector momentum, a mid-month ranking change could even have proposed switching sectors early.
+   - **Fix:** between month-ends, the targets are the last month-end decision, using `month_end` from Alpaca's calendar. Drift orders are suppressed (with a note), and orders appear only on a rebalance day or on first entry or a switch.
+5. **Confirmed twice:** the batch was approved twice, 1.5 s apart. Alpaca rejected the second set (`client_order_id must be unique`), so nothing was doubled, but the journal shows two submissions.
+   - **Fix:** a send lock, the proposal is used up before sending, and the button is disabled while sending.
+6. **Two 06:00 runs at once:** the start-up timer and the minute timer fired together. One run's rule check failed with "A numerical worker is already active".
+   - **Fix:** only one run at a time.
+7. **Tradable check: "fetch failed"** for the 4–14-symbol strategies over the tester's connection.
+   - **Fix:** symbols are downloaded one at a time, and dropped connections are retried (reads only; orders are never resent automatically).
+
+**Also seen:**
+- **Kill switch:** never tested (no journal entries).
+- **Strategy lab:** the copy on the laptop is the 0.3.0 run (trend and sectors only).
+
+**Tests:**
+- Date alignment, reproducing the tester's no-Mondays pattern.
+- A switch that sells the old funds and leaves a manually bought fund alone, with the risk check allowing it.
+- Month-end targets equal to the decision made with data up to that month-end.
+- **Self-test:** a hold with no drift orders, then a full switch from sectors to multi-factor on the demo account.
+- Totals: TypeScript 52, Python 21 in the strategies suite, all passing.
+
+**Next:** release 0.3.2, then switch to multi-factor and test the kill switch. The 63rd paper day moves to about Feb 8–9, 2027.

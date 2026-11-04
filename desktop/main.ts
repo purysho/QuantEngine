@@ -84,14 +84,17 @@ function pushMarket() {
  */
 let lastDaily = '';
 let dailyFailures = { key: '', count: 0 };
+let dailyRunning = false;  // The start-up timer and the minute timer can fire together; only one run at a time.
 async function dailyTick() {
-  if (!desk?.settings.enabled || !desk.settings.dailyUpdate || !market.credentials || quitting) return;
+  if (dailyRunning || !desk?.settings.enabled || !desk.settings.dailyUpdate || !market.credentials || quitting) return;
   const { key, due } = dailySchedule(new Date(), desk.settings.dailyTime, desk.settings.dailyZone);
   if (!due || lastDaily === key || engine.state.busy) return;
   if (dailyFailures.key !== key) dailyFailures = { key, count: 0 };
   if (dailyFailures.count >= 5) return;  // Retried each minute up to five times a day, then left for tomorrow.
+  dailyRunning = true;
   try { await desk.dailyUpdate('scheduled'); lastDaily = key; }
   catch (error) { dailyFailures.count++; desk.lastError = 'Scheduled update: ' + (error as Error).message; pushDesk(); }
+  finally { dailyRunning = false; }
 }
 
 function pushDesk() {
@@ -411,11 +414,23 @@ async function nativeSelfTest() {
     const submitted = await d.submit(proposed.proposal.id);
     const again = await d.refresh();
     const daily = await d.daily();
+    // Between month-ends an account that already holds the strategy gets no drift orders.
+    const hold = (await d.propose()).proposal;
+    // Switching strategy sells the old strategy's funds and buys the new one's.
+    const switched = await d.configure({ ...daily.settings, strategy: 'multifactor' });
+    const plan = (await d.propose()).proposal;
+    const after = await d.submit(plan.id);
+    const mf = ['SPY', 'QUAL', 'VLUE', 'MTUM'];
     return { orders: proposed.proposal.orders.length, positions: submitted.positions.length,
       reconciled: again.journal.some(e => e.type === 'reconcile' && e.ok === true),
-      daily: Boolean(daily.brief && daily.brief.next_rebalance && daily.brief.days >= 2) };
+      daily: Boolean(daily.brief && daily.brief.next_rebalance && daily.brief.days >= 2),
+      hold: hold.monthEnd === true || hold.orders.length === 0,
+      switched: switched.settings.strategy === 'multifactor' && plan.orders.some(o => o.side === 'sell') &&
+        after.positions.length >= 3 && after.positions.every(p => mf.includes(p.symbol)) };
   })()`);
-  if (paper.orders < 1 || paper.positions < 1 || !paper.reconciled || !paper.daily) throw new Error('Self-test paper loop failed: ' + JSON.stringify(paper));
+  if (paper.orders < 1 || paper.positions < 1 || !paper.reconciled || !paper.daily || !paper.hold || !paper.switched) {
+    throw new Error('Self-test paper loop failed: ' + JSON.stringify(paper));
+  }
   console.log('QUANT_SELF_TEST_OK ' + JSON.stringify({ ...ready, option, assistant: asked.slice(0, 80), learnedModels: learned.tasks.risk.graph.nodes.length, completed: engine.state.completed, terminal, paper,
     runtime: engine.runtime, report: engine.lastReportPath }));
   await quit();

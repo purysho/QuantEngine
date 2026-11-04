@@ -7,7 +7,7 @@ export function initStrategies({ $, esc, toast, receive }) {
   const desk = window.quant?.desk;
   if (!desk) return { shown() {} };
   let state = null;
-  let confirming = false;
+  let confirming = false, sending = false, formDirty = false;
   const pct = (v, d = 1) => Number.isFinite(v) ? (v * 100).toFixed(d) + '%' : '—';
   const num = (v, d = 2) => Number.isFinite(v) ? v.toFixed(d) : '—';
   const money = v => Number.isFinite(Number(v)) ? '$' + Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—';
@@ -87,7 +87,8 @@ export function initStrategies({ $, esc, toast, receive }) {
     $('paper-badge').textContent = s.killSwitch ? 'KILL SWITCH ON' : s.enabled ? 'PAPER · ' + s.strategy.toUpperCase() : 'OFF';
     $('paper-badge').className = 'tag ' + (s.enabled && !s.killSwitch ? '' : 'neutral');
     const form = document.activeElement?.closest?.('#paper-form');
-    if (!form) {
+    // Background updates (refreshes, the daily update) never overwrite settings you have changed but not saved.
+    if (!form && !formDirty) {
       $('paper-enabled').checked = s.enabled; $('paper-strategy').value = s.strategy;
       $('limit-order').value = +(s.limits.maxOrderFraction * 100).toFixed(1); $('limit-orders').value = s.limits.maxOrdersPerDay;
       $('limit-loss').value = +(s.limits.dailyLossStop * 100).toFixed(2); $('limit-min').value = s.limits.minOrderNotional;
@@ -109,12 +110,15 @@ export function initStrategies({ $, esc, toast, receive }) {
     $('paper-positions').innerHTML = state.positions.length ? state.positions.map(p => '<tr><th scope="row">' + esc(p.symbol) + '</th><td class="num">' + esc(p.qty) + '</td><td class="num">' +
       money(p.market_value) + '</td><td class="num ' + (Number(p.unrealized_pl) >= 0 ? 'up' : 'down') + '">' + money(p.unrealized_pl) + '</td></tr>').join('') : '<tr><td colspan="4" class="term-note">No positions.</td></tr>';
     const p = state.proposal;
-    $('paper-submit').disabled = !p || !p.orders.length || !s.enabled || s.killSwitch;
+    const stale = p && p.strategy !== s.strategy;
+    $('paper-submit').disabled = sending || !p || stale || !p.orders.length || !s.enabled || s.killSwitch;
     if (!p) { if (!confirming) $('paper-submit').textContent = 'Submit to paper account'; }
-    $('paper-proposal').innerHTML = p ? '<p class="term-note">Signal from closes up to ' + esc(p.asOf) + ' · targets ' + esc(Object.entries(p.targets).map(([k, v]) => k + ' ' + pct(v)).join(', ') || 'all cash') +
-      ' · equity ' + money(p.equity) + '</p>' + (p.orders.length ? '<table class="term-table"><thead><tr><th scope="col">Side</th><th scope="col">Symbol</th><th scope="col" class="num">Shares</th><th scope="col" class="num">≈ Value</th><th scope="col">Why</th></tr></thead><tbody>' +
+    $('paper-proposal').innerHTML = p ? '<p class="proposal-head"><strong>Orders for ' + esc(NAMES[p.strategy] || p.strategy) + '</strong>' +
+      (stale ? ' <span class="tag neutral">NOT YOUR SAVED STRATEGY · compute again</span>' : '') + '</p>' +
+      '<p class="term-note">Signal from closes up to ' + esc(p.asOf) + (p.monthEnd ? ' (month-end: the rule rebalances now)' : '') + ' · targets ' + esc(Object.entries(p.targets).map(([k, v]) => k + ' ' + pct(v)).join(', ') || 'all cash') +
+      ' · equity ' + money(p.equity) + '</p>' + (p.note ? '<p class="term-note">' + esc(p.note) + '</p>' : '') + (p.orders.length ? '<table class="term-table"><thead><tr><th scope="col">Side</th><th scope="col">Symbol</th><th scope="col" class="num">Shares</th><th scope="col" class="num">≈ Value</th><th scope="col">Why</th></tr></thead><tbody>' +
       p.orders.map(o => '<tr><td class="' + (o.side === 'buy' ? 'up' : 'down') + '">' + o.side.toUpperCase() + '</td><th scope="row">' + esc(o.symbol) + '</th><td class="num">' + o.qty + '</td><td class="num">' + money(o.notional) + '</td><td>' + esc(o.reason) + '</td></tr>').join('') +
-      '</tbody></table>' : '<p class="term-note">No orders needed: the paper account already matches the targets.</p>') + (p.blocked.length ? '<p class="paper-warning">' + p.blocked.map(esc).join('<br>') + '</p>' : '') :
+      '</tbody></table>' : '<p class="term-note">No orders needed' + (p.note ? ' until the next rebalance.' : ': the paper account already matches the targets.') + '</p>') + (p.blocked.length ? '<p class="paper-warning">' + p.blocked.map(esc).join('<br>') + '</p>' : '') :
       '<p class="term-note">The rule uses the latest daily closes; orders are market orders for whole shares (filled now if the market is open, otherwise at the next open).</p>';
     const c = state.stage3?.checks;
     $('paper-checks').innerHTML = c ? Object.entries(c).map(([k, v]) => '<li class="' + (v.pass ? 'pass' : 'fail') + '"><span>' + (v.pass ? '✓' : '·') + '</span>' + esc(v.detail) + '</li>').join('') :
@@ -173,13 +177,17 @@ export function initStrategies({ $, esc, toast, receive }) {
     await act(() => desk.runLab(), 'Strategy lab finished.');
     $('lab-run').disabled = false; $('lab-run').textContent = 'Run strategy lab';
   });
-  $('paper-form').addEventListener('submit', event => {
+  const markDirty = () => { formDirty = true; $('paper-unsaved').classList.remove('hidden'); };
+  $('paper-form').addEventListener('input', markDirty);
+  $('paper-form').addEventListener('change', markDirty);
+  $('paper-form').addEventListener('submit', async event => {
     event.preventDefault();
-    void act(() => desk.configure({ enabled: $('paper-enabled').checked, strategy: $('paper-strategy').value, killSwitch: state.settings.killSwitch,
+    const saved = await act(() => desk.configure({ enabled: $('paper-enabled').checked, strategy: $('paper-strategy').value, killSwitch: state.settings.killSwitch,
       limits: { maxOrderFraction: Number($('limit-order').value) / 100, maxOrdersPerDay: Number($('limit-orders').value),
         dailyLossStop: Number($('limit-loss').value) / 100, minOrderNotional: Number($('limit-min').value),
         maxGrossExposure: Number($('limit-gross').value) / 100 }, dailyUpdate: $('paper-daily').checked, notify: $('paper-notify').checked,
       dailyTime: $('paper-daily-time').value, dailyZone: $('paper-daily-zone').value }), 'Paper settings saved.');
+    if (saved) { formDirty = false; $('paper-unsaved').classList.add('hidden'); render(state); }
   });
   $('paper-kill').addEventListener('click', () => { void act(() => desk.kill(!state.settings.killSwitch), state.settings.killSwitch ? 'Kill switch off.' : 'Kill switch on: open paper orders cancelled.'); });
   // Manual refresh: the button shows progress, then a message says exactly what was read and when.
@@ -212,6 +220,7 @@ export function initStrategies({ $, esc, toast, receive }) {
     } catch (error) { toast(error.message, true); }
   });
   $('paper-propose').addEventListener('click', async () => {
+    if (formDirty) { toast('You changed the paper settings but have not saved them. Press Save settings first, so the orders are for the strategy you chose.', true); return; }
     confirming = false;
     $('paper-propose').disabled = true; $('paper-propose').textContent = 'Computing…';
     await act(() => desk.propose());
@@ -223,7 +232,9 @@ export function initStrategies({ $, esc, toast, receive }) {
     if (!p) return;
     if (!confirming) { confirming = true; $('paper-submit').textContent = 'Confirm: send ' + p.orders.length + ' paper orders'; $('paper-submit').classList.add('danger'); return; }
     confirming = false; $('paper-submit').classList.remove('danger');
+    sending = true; $('paper-submit').disabled = true; $('paper-submit').textContent = 'Sending…';
     await act(() => desk.submit(p.id), 'Paper orders sent and journaled.');
+    sending = false; $('paper-submit').textContent = 'Submit to paper account'; render(state);
   });
 
   desk.onUpdate(render);
