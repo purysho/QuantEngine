@@ -5,7 +5,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { JsonRecord } from '../transport.js';
 import type { MarketService } from './service.js';
-import { PaperBroker, Journal, planOrders, riskCheck, stageThree, strategyStart, historyDate, validateSettings, proposalId, DEFAULT_SETTINGS, UNIVERSE,
+import { PaperBroker, Journal, planOrders, riskCheck, stageThree, strategyStart, historyDate, fillDate, validateSettings, proposalId, DEFAULT_SETTINGS, UNIVERSE,
   STRATEGY_SYMBOLS,
   type Account, type Order, type PaperSettings, type Position, type Proposal } from './paper.js';
 
@@ -225,7 +225,13 @@ export class StrategyDesk {
     let proposal: Proposal | null = null, signalError: string | null = null;
     try { proposal = await this.propose(); } catch (error) { signalError = (error as Error).message; }
     const equity = await this.journal.equity();
-    const first = equity[0], last = equity.at(-1)!, previous = equity.at(-2);
+    // "Since start" counts from the close before the first trade: Alpaca's history also covers the idle months
+    // before it (flat at the starting balance), which would make the market comparison meaningless.
+    const journal = await this.journal.read(1e9);
+    const firstTrade = journal.find(e => e.type === 'submitted');
+    const tradeDay = firstTrade ? fillDate(new Date(String(firstTrade.at))) : null;
+    const first = (tradeDay ? [...equity].reverse().find(p => p.date < tradeDay) : undefined) ?? equity[0];
+    const last = equity.at(-1)!, previous = equity.at(-2);
     const cumulative = (series: Record<string, number>) => Object.entries(series).filter(([d]) => first && d > first.date)
       .reduce((a, [, r]) => a * (1 + r), 1) - 1;
     this.stage3 = await this.stageThreeNow();

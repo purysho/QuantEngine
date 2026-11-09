@@ -822,4 +822,13 @@ The tester sent `QuantEngine-progress-2026-11-04.json` after trying to switch to
 - **Self-test:** a hold with no drift orders, then a full switch from sectors to multi-factor on the demo account.
 - Totals: TypeScript 52, Python 21 in the strategies suite, all passing.
 
+8. **"Since start" was misleading:** the daily summary measured from the first point of Alpaca's 3-month history, which is July 31, while the account sat idle at $100,000.
+   - The result was "SPY −1.3% vs you −6.4%", an unfair comparison, because SPY's August–October gains counted and the account's didn't.
+   - **Fix:** the summary now starts at the close before the first trade.
+
+**Second export (Nov 9, still 0.3.1):**
+- **Strategy:** saved as multi-factor (journaled). The only multi-factor order list would have bought about $97,000 of QUAL, VLUE and MTUM without selling the sector funds. It was never submitted, so the account still holds XLE, XLK and XLV.
+- **Nov 5 drop:** SPY fell 4.4% and the account about 4.5%. The rule's simulation shows multi-factor would have fallen 5.8% that day.
+- **One failed scheduled run:** it ended with "Numerical worker exceeded the 10-minute job limit". That is most likely the laptop sleeping during the run; a manual run afterwards worked.
+
 **Next:** release 0.3.2, then switch to multi-factor and test the kill switch. The 63rd paper day moves to about Feb 8–9, 2027.
